@@ -4,16 +4,16 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 const users = [
-  { name: 'ROHIT KUMAR', company: '50HERTZ', email: 'rohit.kumar@50hertz.com' },
-  { name: 'MAHESH SHUKLA', company: '50HERTZ', email: 'mahesh.shukla@50hertz.com' },
-  { name: 'CHANDAN KUSHWAHA', company: 'MPL', email: 'chandan.kushwaha@mpl.com' },
-  { name: 'AMIT KUMAR', company: 'MPL', email: 'amit.kumar@mpl.com' },
-  { name: 'MOHIT SHUKLA', company: 'MPL', email: 'mohit.shukla@mpl.com' },
-  { name: 'AKHILESH YADAV', company: 'MPL', email: 'akhilesh.yadav@mpl.com' },
-  { name: 'PARDEEP', company: 'MPL', email: 'pardeep@mpl.com' },
-  { name: 'GOURAV BEHL', company: 'MPL', email: 'gourav.behl@mpl.com' },
-  { name: 'HIMANI SHARMA', company: 'MPL', email: 'himani.sharma@mpl.com' },
-  { name: 'Surendra Yadav', company: 'MPL', email: 'surendra.yadav@mpl.com' },
+  { name: 'ROHIT KUMAR', company: '50HERTZ', email: 'rohit.kumar@50hertz.com', username: 'rohitkumar' },
+  { name: 'MAHESH SHUKLA', company: '50HERTZ', email: 'mahesh.shukla@50hertz.com', username: 'maheshshukla' },
+  { name: 'CHANDAN KUSHWAHA', company: 'MPL', email: 'chandan.kushwaha@mpl.com', username: 'chandankushwaha' },
+  { name: 'AMIT KUMAR', company: 'MPL', email: 'amit.kumar@mpl.com', username: 'amitkumar' },
+  { name: 'MOHIT SHUKLA', company: 'MPL', email: 'mohit.shukla@mpl.com', username: 'mohitshukla' },
+  { name: 'AKHILESH YADAV', company: 'MPL', email: 'akhilesh.yadav@mpl.com', username: 'akhileshyadav' },
+  { name: 'PARDEEP', company: 'MPL', email: 'pardeep@mpl.com', username: 'pardeep' },
+  { name: 'GOURAV BEHL', company: 'MPL', email: 'gourav.behl@mpl.com', username: 'gouravbehl' },
+  { name: 'HIMANI SHARMA', company: 'MPL', email: 'himani.sharma@mpl.com', username: 'himanisharma' },
+  { name: 'Surendra Yadav', company: 'MPL', email: 'surendra.yadav@mpl.com', username: 'surendrayadav' },
 ];
 
 async function main() {
@@ -26,12 +26,16 @@ async function main() {
         where: { email: user.email },
         update: {
           fullName: user.name,
+          username: user.username,
+          companyName: user.company,
           role: 'admin',
           passwordHash: passwordHash,
         },
         create: {
           fullName: user.name,
+          username: user.username,
           email: user.email,
+          companyName: user.company,
           role: 'admin',
           passwordHash: passwordHash,
           isActive: true

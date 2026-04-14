@@ -23,13 +23,34 @@ async function main() {
 
   // 2. Seed System Users (IT/Admin)
   const masterAdmin = await prisma.systemUser.create({
-    data: { fullName: 'Master Admin', email: 'admin@mams.com', passwordHash: hashedPassword, role: 'admin' },
+    data: {
+      fullName: 'Master Admin',
+      username: 'masteradmin',
+      email: 'admin@mams.com',
+      passwordHash: hashedPassword,
+      companyName: 'MAMS',
+      role: 'admin',
+    },
   });
   const hrUser = await prisma.systemUser.create({
-    data: { fullName: 'HR Jane', email: 'jane.hr@mams.com', passwordHash: hashedPassword, role: 'hr' },
+    data: {
+      fullName: 'HR Jane',
+      username: 'janehr',
+      email: 'jane.hr@mams.com',
+      passwordHash: hashedPassword,
+      companyName: 'MAMS',
+      role: 'hr',
+    },
   });
   const itUser = await prisma.systemUser.create({
-    data: { fullName: 'IT Ramesh', email: 'ramesh.it@mams.com', passwordHash: hashedPassword, role: 'it' },
+    data: {
+      fullName: 'IT Ramesh',
+      username: 'rameshit',
+      email: 'ramesh.it@mams.com',
+      passwordHash: hashedPassword,
+      companyName: 'MAMS',
+      role: 'it',
+    },
   });
 
   // 3. Seed Employees (HR)

@@ -39,7 +39,7 @@ const AssetSchema = z.object({
   cost: z.number().nonnegative().nullable().optional(),
   status: z.enum(['available', 'assigned', 'in_repair', 'retired', 'lost']).default('available'),
   notes: z.string().trim().nullable().optional(),
-  createdBy: z.string().nullable().optional(),
+  changedBy: z.string().uuid().nullable().optional(),
 });
 
 export async function POST(request: Request) {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         entityType: 'asset',
         entityId: asset.id,
         action: 'created',
-        changedBy: data.createdBy || null,
+        changedBy: data.changedBy || null,
         newValue: asset as any,
       }
     });

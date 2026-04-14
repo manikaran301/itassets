@@ -26,8 +26,10 @@ import {
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function AssetsPage() {
+  const router = useRouter();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -267,7 +269,11 @@ export default function AssetsPage() {
                 const StatusIcon = getStatusIcon(asset.status);
                 const TypeIcon = getTypeIcon(asset.type);
                 return (
-                  <tr key={asset.id} className="hover:bg-white/[0.02] transition-all bg-white/[0.01] even:bg-transparent group">
+                  <tr 
+                    key={asset.id} 
+                    className="hover:bg-white/[0.02] cursor-pointer transition-all bg-white/[0.01] even:bg-transparent group"
+                    onClick={() => router.push(`/it/assets/${asset.id}`)}
+                  >
                     {/* Asset Tag & Type */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-4">
@@ -355,12 +361,22 @@ export default function AssetsPage() {
                     {/* Actions */}
                     <td className="px-4 py-3 text-right pr-6">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 hover:bg-primary/10 text-muted-foreground/50 hover:text-primary rounded-xl border border-transparent hover:border-primary/10 transition-all font-black" title="View">
+                        <Link 
+                          href={`/it/assets/${asset.id}`}
+                          className="p-2 hover:bg-primary/10 text-muted-foreground/50 hover:text-primary rounded-xl border border-transparent hover:border-primary/10 transition-all font-black" 
+                          title="View"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="p-2 hover:bg-primary/10 text-muted-foreground/50 hover:text-primary rounded-xl border border-transparent hover:border-primary/10 transition-all font-black" title="Edit">
+                        </Link>
+                        <Link 
+                          href={`/it/assets/${asset.id}/edit`}
+                          className="p-2 hover:bg-primary/10 text-muted-foreground/50 hover:text-primary rounded-xl border border-transparent hover:border-primary/10 transition-all font-black" 
+                          title="Edit"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                        </Link>
                         <button 
                           onClick={() => handleDelete(asset.id, asset.assetTag)}
                           className="p-2 hover:bg-red-500/10 text-muted-foreground/50 hover:text-red-500 rounded-xl border border-transparent hover:border-red-500/10 transition-all font-black" 

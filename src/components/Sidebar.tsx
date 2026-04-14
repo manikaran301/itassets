@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import { 
   Users, 
   Monitor, 
@@ -16,7 +17,8 @@ import {
   UserX,
   PlusCircle,
   Truck,
-  ArrowRightLeft
+  ArrowRightLeft,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +48,11 @@ const sidebarLinks = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const userInitial = session?.user?.name ? session.user.name[0] : 'U';
+  const userName = session?.user?.name || 'User';
+  const userRole = (session?.user as any)?.role || 'Member';
 
   return (
     <aside className="w-64 h-screen border-r border-border bg-card flex flex-col glass fixed left-0 top-0 overflow-y-auto">
@@ -88,19 +95,24 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-border mt-auto">
-        <div className="bg-muted p-3 rounded-lg flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs">
-            IT
+      <div className="p-4 border-t border-border mt-auto space-y-3">
+        <div className="bg-muted p-2.5 rounded-lg flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs ring-2 ring-primary/10">
+            {userInitial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">IT Admin</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">Administrator</p>
+            <p className="text-sm font-semibold truncate">{userName}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-tighter font-black">{userRole}</p>
           </div>
-          <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
-            <Settings className="w-4 h-4" />
-          </button>
         </div>
+        
+        <button 
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="w-full flex items-center gap-3 px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Log Out</span>
+        </button>
       </div>
     </aside>
   );

@@ -28,12 +28,13 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { SearchableSelect } from '@/components/SearchableSelect';
 
 const DEVICE_TYPES = [
   { value: 'laptop', label: 'Laptop', icon: Monitor },
   { value: 'desktop', label: 'Desktop', icon: Monitor },
-  { value: 'n_computing', label: 'N-Computing', icon: ScreenShare },
+  { value: 'zero_client', label: 'Zero Client', icon: ScreenShare },
   { value: 'nuc', label: 'NUC', icon: Boxes },
   { value: 'server', label: 'Server', icon: Server },
   { value: 'other', label: 'Other', icon: HardDrive },
@@ -59,6 +60,7 @@ const BRAND_OPTIONS = [
   { value: 'Lenovo', label: 'Lenovo' },
   { value: 'ASUS', label: 'ASUS' },
   { value: 'Acer', label: 'Acer' },
+  { value: 'N-Computing', label: 'N-Computing' },
   { value: 'Microsoft', label: 'Microsoft' },
   { value: 'Samsung', label: 'Samsung' },
   { value: 'MSI', label: 'MSI' },
@@ -81,6 +83,7 @@ const BRAND_OPTIONS = [
 
 export default function NewAssetPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -147,6 +150,7 @@ export default function NewAssetPage() {
         cost: formData.cost ? parseFloat(formData.cost) : null,
         status: formData.status,
         notes: formData.notes.trim() || null,
+        changedBy: (session?.user as any)?.id || null
       };
 
       const response = await fetch('/api/assets', {
@@ -239,7 +243,7 @@ export default function NewAssetPage() {
         <div className="xl:col-span-8 space-y-6">
           
           {/* Section 1: Device Identity */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative overflow-hidden group">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none group-hover:scale-110 transition-transform" />
 
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6 relative z-10">
