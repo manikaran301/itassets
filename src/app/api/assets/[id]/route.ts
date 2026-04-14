@@ -120,7 +120,7 @@ export async function GET(
     });
 
     // Manually serialize BigInt entries in audit logs for JSON response
-    const serializedLogs = logs.map(log => ({
+    const serializedLogs = logs.map((log: any) => ({
       ...log,
       id: log.id.toString(), // Convert BigInt to string
     }));
