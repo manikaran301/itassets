@@ -33,37 +33,36 @@ export function SearchableSelect({
   );
 
   const selectedOption = options.find((opt) => opt.value === value);
-  const displayLabel = selectedOption?.label || value || '';
+
+  // Sync internal search with selected value display
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch(selectedOption?.label || '');
+    }
+  }, [value, isOpen, selectedOption]);
 
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
-        setSearch('');
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Focus search input on open
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  const handleSelect = (val: string) => {
+  const handleSelect = (val: string, label: string) => {
     onChange(val);
+    setSearch(label);
     setIsOpen(false);
-    setSearch('');
   };
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange('');
     setSearch('');
+    setIsOpen(true);
   };
 
   return (
@@ -74,61 +73,57 @@ export function SearchableSelect({
         </label>
       )}
       <div ref={containerRef} className="relative">
-        {/* Trigger Button */}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
+        {/* Trigger Input Area */}
+        <div 
           className={cn(
-            "w-full bg-muted/20 border rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-black text-left flex items-center gap-3",
-            isOpen ? "border-primary/40 shadow-sm" : "border-white/5 hover:border-white/10"
+            "relative w-full bg-muted/20 border rounded-[22px] px-6 py-4 transition-all flex items-center gap-3 cursor-text",
+            isOpen ? "border-primary/40 shadow-xl shadow-primary/5 ring-4 ring-primary/5" : "border-white/5 hover:border-white/10"
           )}
+          onClick={() => {
+            setIsOpen(true);
+            inputRef.current?.focus();
+          }}
         >
-          {icon && <span className="text-muted-foreground/20 shrink-0">{icon}</span>}
-          <span className={cn("flex-1 truncate", !displayLabel && "text-muted-foreground/30 font-normal")}>
-            {displayLabel || placeholder}
-          </span>
-          {value && (
-            <span
+          {icon && <span className={cn("shrink-0 transition-colors", isOpen ? "text-primary" : "text-muted-foreground/20")}>{icon}</span>}
+          <input
+            ref={inputRef}
+            type="text"
+            className="flex-1 bg-transparent border-none outline-none text-xs font-black placeholder:font-normal placeholder:text-muted-foreground/30"
+            placeholder={placeholder}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (!isOpen) setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+          />
+          {search && (
+            <button
+              type="button"
               onClick={handleClear}
-              className="p-0.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground/30 hover:text-foreground shrink-0"
+              className="p-1 hover:bg-primary/10 rounded-lg transition-colors text-muted-foreground/30 hover:text-primary shrink-0"
             >
-              <X className="w-3 h-3" />
-            </span>
+              <X className="w-3.5 h-3.5" />
+            </button>
           )}
           <ChevronDown className={cn(
-            "w-4 h-4 text-muted-foreground/30 shrink-0 transition-transform duration-200",
-            isOpen && "rotate-180"
+            "w-4 h-4 text-muted-foreground/30 shrink-0 transition-transform duration-300",
+            isOpen && "rotate-180 text-primary"
           )} />
-        </button>
+        </div>
 
-        {/* Dropdown */}
+        {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute z-50 mt-2 w-full bg-white dark:bg-[#0A0A0A] border border-black/10 dark:border-white/10 rounded-[20px] shadow-md overflow-hidden animate-fade-in">
-            {/* Search Input */}
-            <div className="p-3 border-b border-white/5">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full bg-muted/30 pl-9 pr-3 py-2.5 rounded-xl text-[11px] border border-transparent focus:border-primary/20 outline-none transition-all font-bold placeholder:font-normal placeholder:text-muted-foreground/20"
-                />
-              </div>
-            </div>
-
-            {/* Options */}
-            <div className="max-h-[240px] overflow-y-auto py-1.5 scrollbar-hide">
+          <div className="absolute z-[200] mt-3 w-full bg-background/95 border border-border/80 rounded-[28px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in-95 duration-200 backdrop-blur-3xl">
+            <div className="max-h-[280px] overflow-y-auto py-2 scrollbar-hide">
               {filtered.length === 0 ? (
-                <div className="px-4 py-6 text-center">
-                  <p className="text-[10px] text-muted-foreground/30 font-bold uppercase tracking-widest">No matches</p>
+                <div className="px-6 py-8 text-center">
+                  <p className="text-[10px] text-muted-foreground/30 font-bold uppercase tracking-[0.2em]">No Identity Matches</p>
                   {allowCustom && search.trim() && (
                     <button
                       type="button"
-                      onClick={() => handleSelect(search.trim())}
-                      className="mt-3 text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+                      onClick={() => handleSelect(search.trim(), search.trim())}
+                      className="mt-4 px-4 py-2 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/20 transition-all"
                     >
                       Use &ldquo;{search.trim()}&rdquo;
                     </button>
@@ -139,15 +134,15 @@ export function SearchableSelect({
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => handleSelect(opt.value)}
+                    onClick={() => handleSelect(opt.value, opt.label)}
                     className={cn(
-                      "w-full px-4 py-2.5 text-left text-[11px] font-bold flex items-center gap-3 transition-all hover:bg-white/5",
-                      value === opt.value && "bg-primary/10 text-primary"
+                      "w-full px-6 py-3 text-left text-[11px] font-bold flex items-center justify-between transition-all hover:bg-primary/5 group/opt mx-2 w-[calc(100%-16px)] rounded-2xl",
+                      value === opt.value ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <span className="flex-1 truncate">{opt.label}</span>
                     {value === opt.value && (
-                      <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <Check className="w-4 h-4 text-primary shrink-0" />
                     )}
                   </button>
                 ))

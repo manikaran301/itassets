@@ -22,7 +22,8 @@ import {
   Barcode,
   Layers,
   ScreenShare,
-  Boxes
+  Boxes,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -434,30 +435,31 @@ export default function NewAssetPage() {
               </div>
 
               {/* Antivirus */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Antivirus</label>
-                <select 
-                  value={formData.antivirusStatus}
-                  onChange={(e) => updateField('antivirusStatus', e.target.value)}
-                  className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-black uppercase tracking-widest cursor-pointer appearance-none"
-                >
-                  {ANTIVIRUS_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                label="Shield / Antivirus"
+                options={ANTIVIRUS_OPTIONS}
+                value={formData.antivirusStatus}
+                onChange={(val) => updateField('antivirusStatus', val)}
+                placeholder="Shield Status..."
+                icon={<ShieldCheck className="w-4 h-4" />}
+              />
 
               {/* OS */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Operating System</label>
-                <input 
-                  type="text" 
-                  placeholder="macOS, Windows, Linux" 
-                  value={formData.os}
-                  onChange={(e) => updateField('os', e.target.value)}
-                  className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-black" 
-                />
-              </div>
+              <SearchableSelect
+                label="Operating System"
+                options={[
+                  { value: 'Windows', label: 'Windows (Desktop/Server)' },
+                  { value: 'macOS', label: 'macOS (Apple)' },
+                  { value: 'Linux', label: 'Linux (Ubuntu/CentOS/RedHat)' },
+                  { value: 'ChromeOS', label: 'ChromeOS (Google)' },
+                  { value: 'Android', label: 'Android (Mobile/Tab)' },
+                  { value: 'iOS', label: 'iOS (iPhone/iPad)' },
+                ]}
+                value={formData.os}
+                onChange={(val) => updateField('os', val)}
+                placeholder="Select OS..."
+                allowCustom
+              />
 
               {/* OS Version */}
               <div className="group/field space-y-2">

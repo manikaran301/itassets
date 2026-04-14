@@ -9,17 +9,20 @@ import {
   Edit2, 
   Trash2, 
   Shield, 
-  Monitor, 
-  Smartphone, 
-  Mail,
-  MapPin,
-  Clock,
+  MapPin, 
+  Clock, 
   Laptop,
+  Smartphone,
   PhoneCall as SimIcon,
-  Loader2
+  Loader2,
+  ChevronRight,
+  UserCheck,
+  Building2,
+  Calendar,
+  MoreVertical,
+  Mail
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { AddEmployeeModal } from '@/components/forms/AddEmployeeModal';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -27,174 +30,197 @@ import { format } from 'date-fns';
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [departmentCount, setDepartmentCount] = useState(0);
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const response = await fetch('/api/employees');
-        const data = await response.json();
-        setEmployees(data);
-      } catch (error) {
-        console.error('Failed to fetch employees:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchEmployees();
   }, []);
 
-  return (
-    <div className="space-y-6 max-w-full mx-auto text-sm relative pb-20">
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/employees');
+      const data = await response.json();
+      setEmployees(data);
       
-      {/* Page Header */}
-      <div className="animate-fade-in space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent uppercase">Employee Directory</h2>
-            <p className="text-xs text-muted-foreground mt-0.5 font-bold uppercase tracking-widest opacity-60 italic">Central Identity & Fulfillment Tracking</p>
-          </div>
-          <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground hover:text-foreground rounded-2xl border border-white/5 transition-all text-[10px] font-black uppercase tracking-widest">
-              <Download className="w-3.5 h-3.5" />
-              <span>Export</span>
-            </button>
-            <Link 
-              href="/hr/employees/new"
-              className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:scale-105 active:scale-95 rounded-2xl shadow-xl shadow-primary/20 transition-all text-[10px] font-black uppercase tracking-widest"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Employee</span>
-            </Link>
-          </div>
-        </div>
+      // Calculate distinct departments
+      const depts = new Set(data.map((e: any) => e.department).filter(Boolean));
+      setDepartmentCount(depts.size);
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        {/* Search & Filters */}
-        <div className="flex flex-col md:flex-row gap-4 items-center bg-card p-4 rounded-3xl premium-card border border-white/5 shadow-xl">
-          <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search by ID, Name or Department..." 
-              className="w-full bg-muted/20 pl-12 pr-4 py-2.5 rounded-2xl text-xs border border-transparent focus:border-primary/20 outline-none transition-all placeholder:text-[10px] placeholder:uppercase placeholder:font-black placeholder:opacity-30"
-            />
-          </div>
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-muted rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all border border-white/5 text-muted-foreground/60">
-              <Filter className="w-3.5 h-3.5" />
-              Filters
-            </button>
-          </div>
+  return (
+    <div className="space-y-6 animate-fade-in relative pb-20">
+      
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-black tracking-tight uppercase bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Associate Directory</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+            <span className="w-8 h-px bg-primary/30" />
+            Central Workforce Registry
+          </p>
         </div>
-
-        {/* Directory Table */}
-        <div className="premium-card rounded-[32px] overflow-hidden glass border border-white/5 shadow-2xl overflow-x-auto">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Accessing Mainframe...</p>
-            </div>
-          ) : employees.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-              <div className="w-16 h-16 rounded-3xl bg-muted/20 flex items-center justify-center border border-white/5">
-                <Users className="w-8 h-8 text-muted-foreground/30" />
-              </div>
-              <div>
-                <p className="text-sm font-black uppercase tracking-widest">No Employees Found</p>
-                <p className="text-xs text-muted-foreground max-w-xs mt-1">Start by adding a new employee to the central directory.</p>
-              </div>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse min-w-[1150px]">
-              <thead>
-                <tr className="bg-white/[0.02] border-b border-white/5">
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">ID & Identity</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Reporting to & Dept</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-center">Location & Desk</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-center">Requirements</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Designation & Joining</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-center">Status</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-right pr-8">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.03]">
-                {employees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-white/[0.005] transition-all group">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-[10px] font-black text-primary border border-primary/10">
-                          {emp.fullName.split(' ').map((n: string) => n[0]).join('')}
-                        </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <p className="text-sm font-black group-hover:text-primary transition-colors truncate">{emp.fullName}</p>
-                          <p className="text-[9px] font-mono font-black tracking-widest text-muted-foreground/30 uppercase">{emp.employeeCode}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-black text-foreground/80 tracking-tight flex items-center gap-2">
-                          <Shield className="w-3 h-3 text-primary/40" />
-                          {emp.manager?.fullName || '—'}
-                        </p>
-                        <p className="text-[9px] text-muted-foreground/40 font-black uppercase tracking-widest italic">{emp.department || '—'}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-center gap-2">
-                          <MapPin className="w-3 h-3 text-secondary/50" />
-                          <p className="text-[11px] font-black text-foreground/80">{emp.locationJoining || '—'}</p>
-                        </div>
-                        <p className="text-[9px] text-secondary font-mono tracking-widest font-black uppercase bg-secondary/10 px-2 rounded-full border border-secondary/10 inline-block">{emp.deskNumber || '—'}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex justify-center gap-2">
-                        {/* Note: In a real app, requirement statuses would come from the backend relations */}
-                        <div className="w-8 h-8 rounded-xl border bg-muted/10 border-white/5 text-muted-foreground/20 flex items-center justify-center"><Laptop className="w-4 h-4" /></div>
-                        <div className="w-8 h-8 rounded-xl border bg-muted/10 border-white/5 text-muted-foreground/20 flex items-center justify-center"><SimIcon className="w-4 h-4" /></div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-black text-foreground/80 tracking-tight">{emp.designation || '—'}</p>
-                        <p className="text-[9px] text-muted-foreground/40 font-mono flex items-center gap-2">
-                          <Clock className="w-2.5 h-2.5" />
-                          {format(new Date(emp.startDate), 'MMM dd, yyyy')}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className={cn(
-                        "text-[8px] uppercase font-black px-3 py-1 rounded-full border",
-                        emp.status === 'active' 
-                          ? 'bg-green-500/10 text-green-500 border-green-500/20' 
-                          : 'bg-primary/10 text-primary border-primary/20 shadow-lg'
-                      )}>
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-right pr-8">
-                      <div className="flex items-center justify-end gap-3">
-                        <button className="p-2 hover:bg-primary/10 text-muted-foreground/40 hover:text-primary rounded-xl border border-transparent hover:border-primary/10 transition-all">
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="p-2 hover:bg-red-500/10 text-muted-foreground/40 hover:text-red-500 rounded-xl border border-transparent hover:border-red-500/10 transition-all">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <div className="flex items-center gap-3">
+          <button className="p-3 bg-card/40 border border-white/5 rounded-2xl hover:bg-card/60 transition-all text-muted-foreground hover:text-foreground">
+            <Download className="w-4 h-4" />
+          </button>
+          <Link 
+            href="/hr/employees/new" 
+            className="group flex items-center gap-3 px-8 py-3 bg-primary text-primary-foreground rounded-[22px] text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+            <span>Enroll Associate</span>
+          </Link>
         </div>
       </div>
 
-      <AddEmployeeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Stats Mini Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-primary/5 rounded-[24px] p-6 border border-primary/10 space-y-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Active Capacity</p>
+          <div className="flex items-end justify-between">
+            <h4 className="text-3xl font-black tracking-tighter">{employees.length}</h4>
+            <div className="text-[9px] font-black uppercase bg-primary/20 px-3 py-1 rounded-full text-primary">Live Associates</div>
+          </div>
+        </div>
+        <div className="bg-muted/10 rounded-[24px] p-6 border border-white/5 space-y-1">
+           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Business Units</p>
+           <div className="flex items-end justify-between">
+             <h4 className="text-3xl font-black text-foreground/80 tracking-tighter">{departmentCount.toString().padStart(2, '0')}</h4>
+             <div className="text-[9px] font-black uppercase text-muted-foreground/40">Departments</div>
+           </div>
+        </div>
+        <div className="bg-muted/10 rounded-[24px] p-6 border border-white/5 space-y-1 opacity-60">
+           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Infrastructure Load</p>
+           <div className="flex items-end justify-between">
+             <h4 className="text-3xl font-black text-muted-foreground/60 tracking-tighter">00</h4>
+             <div className="text-[9px] font-black uppercase text-muted-foreground/30 italic">Provisioning Rate</div>
+           </div>
+        </div>
+      </div>
+
+      {/* Control Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+        <div className="lg:col-span-8 relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+          <input 
+            type="text"
+            placeholder="Search by ID, Name or Department..."
+            className="w-full bg-card/40 border border-white/5 focus:border-primary/20 rounded-2xl pl-12 pr-4 py-3 text-xs outline-none transition-all font-bold placeholder:font-normal placeholder:opacity-30"
+          />
+        </div>
+        <div className="lg:col-span-4 flex gap-2">
+          <button className="flex-1 flex items-center justify-between px-5 py-3 bg-card/40 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-card/60 transition-all">
+            <div className="flex items-center gap-3">
+              <Filter className="w-3.5 h-3.5 text-primary" />
+              <span>All Departments</span>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 opacity-20" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Directory Table */}
+      <div className="bg-card/40 border border-white/5 rounded-[32px] overflow-hidden premium-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/[0.03] bg-muted/20">
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Identity & Status</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Unit & Logic</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-center">Infrastructure</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Onboarding Date</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-right pr-8">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.03]">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Synchronizing Workforce...</p>
+                  </td>
+                </tr>
+              ) : employees.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    <p className="text-sm font-bold opacity-30 uppercase tracking-widest">Registry Empty</p>
+                  </td>
+                </tr>
+              ) : (
+                employees.map((emp) => (
+                  <tr key={emp.id} className="group hover:bg-white/[0.015] transition-colors relative">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10 group-hover:bg-primary/10 transition-all">
+                          <span className="text-xs font-black text-primary uppercase">
+                            {emp.fullName.split(' ').map((n: string) => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">{emp.fullName}</p>
+                          <div className="flex items-center gap-2">
+                             <div className={cn(
+                               "w-1.5 h-1.5 rounded-full animate-pulse",
+                               emp.status === 'active' ? "bg-green-500" : "bg-amber-500"
+                             )} />
+                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-40">{emp.employeeCode}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-tight text-foreground/80">
+                          <Building2 className="w-3.5 h-3.5 text-primary opacity-40" />
+                          {emp.department || 'General'}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground/40 font-black uppercase tracking-widest">{emp.designation}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                       <div className="flex items-center justify-center gap-2">
+                         <div className="w-8 h-8 bg-muted/20 rounded-xl flex items-center justify-center text-muted-foreground/20 hover:text-primary/40 transition-colors" title="Laptop">
+                           <Laptop className="w-4 h-4" />
+                         </div>
+                         <div className="w-8 h-8 bg-muted/20 rounded-xl flex items-center justify-center text-muted-foreground/20 hover:text-primary/40 transition-colors" title="Identity Email">
+                           <Mail className="w-4 h-4" />
+                         </div>
+                       </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-4 h-4 text-muted-foreground/20" />
+                        <div>
+                          <p className="text-[11px] font-black text-foreground/80 uppercase tracking-tight">
+                            {format(new Date(emp.startDate), 'MMM dd, yyyy')}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground/40 font-black uppercase tracking-widest">Onboarding Complete</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-right pr-8">
+                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                          <button className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all border border-transparent hover:border-primary/10">
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button className="p-2 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-500/10">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                       </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

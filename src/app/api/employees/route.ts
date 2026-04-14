@@ -21,37 +21,53 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
+    
+    // Ensure empty strings are treated as null for UUID fields
+    const managerId = data.reportingManagerId && data.reportingManagerId.trim() !== "" ? data.reportingManagerId : null;
+    const creatorId = data.createdBy && data.createdBy.trim() !== "" ? data.createdBy : null;
+    
     const employee = await prisma.employee.create({
       data: {
         employeeCode: data.employeeCode,
         fullName: data.fullName,
-        personalEmail: data.personalEmail,
-        personalPhone: data.personalPhone,
-        department: data.department,
-        designation: data.designation,
-        reportingManagerId: data.reportingManagerId,
-        locationJoining: data.locationJoining,
-        deskNumber: data.deskNumber,
+        personalEmail: data.personalEmail || null,
+        personalPhone: data.personalPhone || null,
+        department: data.department || null,
+        designation: data.designation || null,
+        reportingManagerId: managerId,
+        locationJoining: data.locationJoining || null,
+        deskNumber: data.deskNumber || null,
         startDate: new Date(data.startDate),
         status: data.status || 'active',
-        createdBy: data.createdBy,
+        createdBy: creatorId,
       },
     });
     
     // Create audit log Entry
-    await prisma.auditLog.create({
-      data: {
-        entityType: 'employee',
-        entityId: employee.id,
-        action: 'created',
-        changedBy: data.createdBy,
-        newValue: employee as any,
-      }
-    });
+    try {
+      await prisma.auditLog.create({
+        data: {
+          entityType: 'employee',
+          entityId: employee.id,
+          action: 'created',
+          changedBy: creatorId,
+          newValue: JSON.parse(JSON.stringify(employee, (key, value) =>
+            typeof value === 'bigint' ? value.toString() : value
+          )),
+        }
+      });
+    } catch (auditError) {
+      console.error('Audit Log Error:', auditError);
+      // Don't fail the whole request if audit log fails
+    }
 
+    // Convert BigInt to string if any (Employee doesn't have it but good practice)
     return NextResponse.json(employee, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to create employee' }, { status: 500 });
+    console.error('Core Employee Creation Error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to create employee', 
+      details: error instanceof Error ? error.message : 'Unknown database error' 
+    }, { status: 500 });
   }
 }

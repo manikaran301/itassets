@@ -193,7 +193,7 @@ export default function NewEmailAccountPage() {
         <div className="space-y-4">
           
           {/* Identity & Discovery */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative group">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative group z-[20]">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
               <Mail className="w-32 h-32 text-primary" />
             </div>
@@ -319,7 +319,7 @@ export default function NewEmailAccountPage() {
             <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative">
                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-4 relative z-10">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
-                Intelligence Routing
+                Email Forwarding
               </div>
 
               <div className="space-y-4 relative z-10">

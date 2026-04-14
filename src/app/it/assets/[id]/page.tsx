@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, use } from 'react';
 import { cn } from '@/lib/utils';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -327,7 +328,7 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
             
             {/* Assignment Section (Focus Area) */}
             <div className="bg-card/40 rounded-[32px] p-6 border border-white/5 premium-card shadow-lg relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                 <UserPlus className="w-40 h-40 text-primary" />
               </div>
               
@@ -336,11 +337,11 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                 Resource Assignment
               </h4>
 
-              <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
                 {/* Current Assignee */}
                 <div className="flex flex-col items-center gap-4 text-center">
                   <div className="w-16 h-16 rounded-[24px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-xl font-black text-primary border border-primary/20 ring-4 ring-primary/5">
-                    {asset.currentEmployee ? asset.currentEmployee.fullName[0] : <Eraser className="w-8 h-8 opacity-20" />}
+                    {asset.currentEmployee ? asset.currentEmployee.fullName[0] : <Activity className="w-8 h-8 opacity-20" />}
                   </div>
                   <div>
                     <p className="text-sm font-black text-foreground uppercase tracking-tight">
@@ -361,23 +362,20 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                   <div className="bg-muted/10 p-4 rounded-[24px] border border-white/5 space-y-3">
                     <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Assign to Employee</label>
                     <div className="flex gap-2">
-                      <select
+                      <SearchableSelect
+                        options={employees.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})` }))}
                         value={selectedEmployee}
-                        onChange={(e) => setSelectedEmployee(e.target.value)}
-                        className="flex-1 bg-muted px-4 py-2.5 rounded-xl text-xs font-bold outline-none border border-white/5 focus:border-primary/20 transition-all cursor-pointer"
-                      >
-                        <option value="">Unassign / Inventory Pool</option>
-                        {employees.map(emp => (
-                          <option key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeCode})</option>
-                        ))}
-                      </select>
+                        onChange={setSelectedEmployee}
+                        placeholder="Select assignee..."
+                        icon={<User className="w-4 h-4" />}
+                      />
                       <button 
                         onClick={handleReassign}
                         disabled={assigning}
                         className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md shadow-primary/10 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center gap-2 disabled:opacity-50"
                       >
                         {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                        {assigning ? 'Upating...' : 'Update'}
+                        {assigning ? 'Updating...' : 'Update'}
                       </button>
                     </div>
                   </div>
@@ -486,8 +484,41 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                         {new Date(log.changedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </time>
                     </div>
-                    <p className="text-xs font-bold text-foreground mb-1">
-                      {log.action === 'created' ? 'Asset enrolled into inventory' : 'Specification data modified'}
+                    <p className="text-[11px] font-bold text-foreground mb-1">
+                      {log.action === 'created' ? (
+                        <span className="text-green-500/80">Inventory Initialization</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {(() => {
+                            const oldVal = log.oldValue as any;
+                            const newVal = log.newValue as any;
+                            if (!oldVal || !newVal) return <span className="text-muted-foreground/60 italic font-medium tracking-tight">System configuration update</span>;
+                            
+                            const changes = Object.keys(newVal).filter(key => 
+                              key !== 'updatedAt' && 
+                              key !== 'logs' &&
+                              JSON.stringify(oldVal[key]) !== JSON.stringify(newVal[key])
+                            );
+
+                            if (changes.length === 0) return <span className="text-muted-foreground/60 italic font-medium tracking-tight">Metadata refresh</span>;
+
+                            return changes.map((c, i) => (
+                              <span key={c} className="flex items-center gap-1">
+                                <span className="text-primary/70">
+                                  {(() => {
+                                    if (c === 'currentEmployeeId') {
+                                      const newEmp = newVal.currentEmployee;
+                                      return newEmp ? `Assigned to ${newEmp.fullName}` : 'Unassigned from Employee';
+                                    }
+                                    return c.charAt(0).toUpperCase() + c.slice(1).replace(/([A-Z])/g, ' $1').replace('Id', '');
+                                  })()}
+                                </span>
+                                {i < changes.length - 1 && <span className="px-1 text-muted-foreground/20 text-[8px]">•</span>}
+                              </span>
+                            ));
+                          })()}
+                        </div>
+                      )}
                     </p>
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-black text-primary">

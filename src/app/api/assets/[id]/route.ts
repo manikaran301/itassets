@@ -50,20 +50,30 @@ export async function PATCH(
 
     const updatedAsset = await prisma.asset.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...updateData,
+        currentEmployeeId: updateData.currentEmployeeId || null,
+      },
+      include: {
+        currentEmployee: true,
+      }
     });
 
     // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        entityType: 'asset',
-        entityId: id,
-        action: 'updated',
-        oldValue: oldAsset as any,
-        newValue: updatedAsset as any,
-        changedBy: changedBy || null,
-      }
-    });
+    try {
+      await prisma.auditLog.create({
+        data: {
+          entityType: 'asset',
+          entityId: id,
+          action: 'updated',
+          oldValue: oldAsset as any,
+          newValue: updatedAsset as any,
+          changedBy: changedBy || null,
+        }
+      });
+    } catch (auditError) {
+      console.error('Audit log error:', auditError);
+    }
 
     return NextResponse.json(updatedAsset);
   } catch (error) {
