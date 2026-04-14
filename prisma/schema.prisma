@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+enum EmployeeStatus {
+  active
+  exit_pending
+  inactive
+}
+
+enum AssetDeviceType {
+  laptop
+  desktop
+  n_computing
+  nuc
+  server
+  other
+}
+
+enum AccessoryType {
+  mouse
+  keyboard
+  monitor
+  headset
+  docking_station
+  webcam
+  other
+}
+
+enum AssetStatus {
+  available
+  assigned
+  in_repair
+  retired
+  lost
+}
+
+enum ConditionType {
+  excellent
+  good
+  fair
+  needs_service
+  damaged
+}
+
+enum AntivirusStatus {
+  yes
+  no
+  expired
+}
+
+enum RequirementAssetType {
+  desktop
+  laptop
+  phone
+  tablet
+  sim
+}
+
+enum RequirementStatus {
+  pending
+  approved
+  fulfilled
+  cancelled
+}
+
+enum ProvisionStatus {
+  pending
+  in_progress
+  fulfilled
+  cancelled
+}
+
+enum ProvisionPriority {
+  normal
+  urgent
+}
+
+enum AssignmentAction {
+  new_assignment
+  reassignment
+  recovery_exit
+  repair_send
+  repair_return
+}
+
+enum EmailAccountType {
+  personal
+  shared
+  alias
+  distribution
+  service
+}
+
+enum EmailStatus {
+  active
+  suspended
+  deactivated
+  deleted
+}
+
+enum EmailPlatform {
+  google_workspace
+  microsoft_365
+  zoho
+  other
+}
+
+enum ForwardType {
+  copy
+  redirect
+}
+
+enum SystemRole {
+  hr
+  it
+  admin
+  readonly
+}
+
+enum AuditEntityType {
+  employee
+  asset
+  accessory
+  email_account
+  assignment_history
+  provisioning_request
+  employee_asset_requirement
+  system_user
+}
+
+enum AuditAction {
+  created
+  updated
+  deleted
+  status_changed
+}
+
+// Tables
+model SystemUser {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName             String        @db.VarChar(100)
+  username             String        @unique @db.VarChar(50)
+  email                 String        @unique @db.VarChar(150)
+  role                  SystemRole
+  passwordHash         String        @db.VarChar(255)
+  companyName          String?       @db.VarChar(100)
+  isActive             Boolean       @default(true)
+  lastLogin            DateTime?     @db.Timestamp
+  createdAt            DateTime      @default(now()) @db.Timestamp
+  updatedAt            DateTime      @default(now()) @db.Timestamp
+
+  employeesCreated      Employee[]    @relation("CreatedBy")
+  fulfilledRequirements EmployeeAssetRequirement[] @relation("FulfilledBy")
+  fulfilledProvisioning ProvisioningRequest[] @relation("FulfilledBy")
+  createdProvisioning  ProvisioningRequest[] @relation("RequestedBy")
+  createdEmails        EmailAccount[] @relation("CreatedBy")
+  deactivatedEmails    EmailAccount[] @relation("DeactivatedBy")
+  createdForwarding    EmailForwarding[] @relation("CreatedBy")
+  assignedAssignments   AssignmentHistory[] @relation("AssignedBy")
+  returnedAssignments   AssignmentHistory[] @relation("ReturnedBy")
+  auditLogs            AuditLog[]
+
+  @@map("system_users")
+}
+
+model Employee {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeCode        String        @unique @db.VarChar(20)
+  fullName            String        @db.VarChar(100)
+  personalEmail       String?       @db.VarChar(150)
+  personalPhone       String?       @db.VarChar(20)
+  department          String?       @db.VarChar(80)
+  designation         String?       @db.VarChar(80)
+  reportingManagerId  String?       @db.Uuid
+  locationJoining     String?       @db.VarChar(100)
+  deskNumber          String?       @db.VarChar(20)
+  startDate           DateTime      @db.Date
+  exitDate            DateTime?     @db.Date
+  status              EmployeeStatus @default(active)
+  createdBy           String?       @db.Uuid
+  createdAt           DateTime      @default(now()) @db.Timestamp
+  updatedAt           DateTime      @default(now()) @db.Timestamp
+
+  manager             Employee?     @relation("ReportingManager", fields: [reportingManagerId], references: [id])
+  subordinates        Employee[]    @relation("ReportingManager")
+  creator             SystemUser?   @relation("CreatedBy", fields: [createdBy], references: [id])
+  
+  assetRequirements   EmployeeAssetRequirement[]
+  currentAssets       Asset[]
+  currentAccessories   Accessory[]
+  assignmentHistory   AssignmentHistory[]
+  provisioningRequests ProvisioningRequest[]
+  emailAccounts        EmailAccount[] @relation("CurrentEmployee")
+  previouslyHeldEmails EmailAccount[] @relation("PreviousUser")
+
+  @@index([status])
+  @@index([department])
+  @@index([reportingManagerId])
+  @@index([locationJoining])
+  @@map("employees")
+}
+
+model EmployeeAssetRequirement {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId    String            @db.Uuid
+  assetType     RequirementAssetType
+  isRequired    Boolean           @default(true)
+  quantity      Int               @default(1)
+  specialNotes  String?           @db.Text
+  status        RequirementStatus @default(pending)
+  fulfilledBy   String?           @db.Uuid
+  fulfilledAt   DateTime?         @db.Timestamp
+  createdAt     DateTime          @default(now()) @db.Timestamp
+  updatedAt     DateTime          @default(now()) @db.Timestamp
+
+  employee      Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  fulfiller     SystemUser?       @relation("FulfilledBy", fields: [fulfilledBy], references: [id])
+
+  @@unique([employeeId, assetType])
+  @@index([employeeId])
+  @@index([status])
+  @@index([assetType])
+  @@map("employee_asset_requirements")
+}
+
+model Asset {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetTag            String           @unique @db.VarChar(30)
+  type                AssetDeviceType
+  make                String?          @db.VarChar(50)
+  model               String?          @db.VarChar(80)
+  cpu                 String?          @db.VarChar(100)
+  ramGb               String?          @db.VarChar(10)
+  ssdGb               Int?
+  hddGb               Int?
+  serialNumber        String?          @unique @db.VarChar(60)
+  macAddress          String?          @unique @db.VarChar(17)
+  ipAddress           String?          @db.VarChar(15)
+  os                  String?          @db.VarChar(30)
+  osVersion           String?          @db.VarChar(40)
+  antivirusStatus     AntivirusStatus  @default(no)
+  warrantyExpiry      DateTime?        @db.Date
+  purchaseDate        DateTime?        @db.Date
+  cost                Decimal?         @db.Decimal(10, 2)
+  status              AssetStatus      @default(available)
+  currentEmployeeId   String?          @db.Uuid
+  notes               String?          @db.Text
+  createdAt           DateTime          @default(now()) @db.Timestamp
+  updatedAt           DateTime          @default(now()) @db.Timestamp
+
+  currentEmployee     Employee?        @relation(fields: [currentEmployeeId], references: [id])
+  assignments         AssignmentHistory[]
+  provisioning        ProvisioningRequest[]
+
+  @@index([status])
+  @@index([currentEmployeeId])
+  @@index([warrantyExpiry])
+  @@index([type])
+  @@index([make])
+  @@map("assets")
+}
+
+model Accessory {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetTag            String           @unique @db.VarChar(30)
+  type                AccessoryType
+  make                String?          @db.VarChar(50)
+  model               String?          @db.VarChar(80)
+  serialNumber        String?          @unique @db.VarChar(60)
+  purchaseDate        DateTime?        @db.Date
+  warrantyExpiry      DateTime?        @db.Date
+  status              AssetStatus      @default(available)
+  currentEmployeeId   String?          @db.Uuid
+  condition           ConditionType    @default(good)
+  notes               String?          @db.Text
+  createdAt           DateTime          @default(now()) @db.Timestamp
+  updatedAt           DateTime          @default(now()) @db.Timestamp
+
+  currentEmployee     Employee?        @relation(fields: [currentEmployeeId], references: [id])
+  assignments         AssignmentHistory[]
+
+  @@index([currentEmployeeId])
+  @@index([status])
+  @@index([type])
+  @@map("accessories")
+}
+
+model AssignmentHistory {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  logCode            String           @unique @db.VarChar(20)
+  assetId            String?          @db.Uuid
+  accessoryId        String?          @db.Uuid
+  employeeId         String           @db.Uuid
+  assetCategory      String           @db.VarChar(10) // 'asset' or 'accessory'
+  actionType         AssignmentAction
+  assignedDate       DateTime         @db.Date
+  returnedDate       DateTime?        @db.Date
+  assignedBy         String?          @db.Uuid
+  returnedBy         String?          @db.Uuid
+  conditionOnReturn ConditionType?
+  reason             String?          @db.Text
+  notes              String?          @db.Text
+  createdAt          DateTime         @default(now()) @db.Timestamp
+
+  asset              Asset?           @relation(fields: [assetId], references: [id])
+  accessory          Accessory?       @relation(fields: [accessoryId], references: [id])
+  employee           Employee         @relation(fields: [employeeId], references: [id])
+  assigner           SystemUser?      @relation("AssignedBy", fields: [assignedBy], references: [id])
+  returner           SystemUser?      @relation("ReturnedBy", fields: [returnedBy], references: [id])
+
+  @@index([assetId])
+  @@index([accessoryId])
+  @@index([employeeId])
+  @@index([returnedDate])
+  @@index([actionType])
+  @@map("assignment_history")
+}
+
+model ProvisioningRequest {
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestCode         String               @unique @db.VarChar(20)
+  employeeId          String               @db.Uuid
+  requestedBy         String               @db.Uuid
+  deviceTypeNeeded    RequirementAssetType?
+  specialRequirements String?              @db.Text
+  priority            ProvisionPriority    @default(normal)
+  dueDate             DateTime?            @db.Date
+  status              ProvisionStatus      @default(pending)
+  assignedAssetId     String?              @db.Uuid
+  emailProvisioned    String?              @db.VarChar(150)
+  fulfilledBy         String?              @db.Uuid
+  fulfilledAt         DateTime?            @db.Timestamp
+  notes               String?              @db.Text
+  createdAt           DateTime             @default(now()) @db.Timestamp
+  updatedAt           DateTime             @default(now()) @db.Timestamp
+
+  employee            Employee             @relation(fields: [employeeId], references: [id])
+  requester           SystemUser           @relation("RequestedBy", fields: [requestedBy], references: [id])
+  asset               Asset?               @relation(fields: [assignedAssetId], references: [id])
+  fulfiller           SystemUser?          @relation("FulfilledBy", fields: [fulfilledBy], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("provisioning_requests")
+}
+
+model EmailAccount {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId        String           @db.Uuid
+  accountType       EmailAccountType @default(personal)
+  emailAddress      String           @unique @db.VarChar(150)
+  displayName       String           @db.VarChar(150)
+  passwordHash      String?          @db.VarChar(255)
+  status            EmailStatus      @default(active)
+  forwardingEnabled Boolean          @default(false)
+  previousUserId    String?          @db.Uuid
+  previousEmail     String?          @db.VarChar(150)
+  platform          EmailPlatform
+  createdDate       DateTime?        @db.Date
+  deactivatedDate   DateTime?        @db.Date
+  createdBy         String?          @db.Uuid
+  deactivatedBy     String?          @db.Uuid
+  createdAt         DateTime         @default(now()) @db.Timestamp
+  updatedAt         DateTime         @default(now()) @db.Timestamp
+
+  employee          Employee         @relation("CurrentEmployee", fields: [employeeId], references: [id])
+  previousUser      Employee?        @relation("PreviousUser", fields: [previousUserId], references: [id])
+  creator           SystemUser?      @relation("CreatedBy", fields: [createdBy], references: [id])
+  deactivator       SystemUser?      @relation("DeactivatedBy", fields: [deactivatedBy], references: [id])
+  forwarding        EmailForwarding[]
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([previousUserId])
+  @@map("email_accounts")
+}
+
+model EmailForwarding {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  emailAccountId   String      @db.Uuid
+  forwardToAddress String      @db.VarChar(150)
+  forwardType      ForwardType @default(copy)
+  isActive         Boolean     @default(true)
+  createdBy        String?     @db.Uuid
+  createdAt        DateTime    @default(now()) @db.Timestamp
+  deactivatedAt    DateTime?   @db.Timestamp
+
+  account          EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+  creator          SystemUser?  @relation("CreatedBy", fields: [createdBy], references: [id])
+
+  @@index([emailAccountId])
+  @@index([isActive])
+  @@map("email_forwarding")
+}
+
+model AuditLog {
+  id           BigInt          @id @default(autoincrement())
+  entityType   AuditEntityType
+  entityId     String          @db.Uuid
+  action       AuditAction
+  changedBy    String?         @db.Uuid
+  changedAt    DateTime        @default(now()) @db.Timestamp
+  oldValue     Json?           @db.JsonB
+  newValue     Json?           @db.JsonB
+  ipAddress    String?         @db.VarChar(45)
+
+  user         SystemUser?     @relation(fields: [changedBy], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([changedAt])
+  @@index([changedBy])
+  @@map("audit_log")
+}

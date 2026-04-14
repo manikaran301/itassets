@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# M_AMS (The Asset Management System) █ 2026 Edition
 
-## Getting Started
+A premium, next-generation Asset Management System (AMS) built with the 2026 state-of-the-art tech stack. Designed for modern HR, IT, and Admin teams to manage enterprise identities and infrastructure.
 
-First, run the development server:
+## 🚀 Architectural Vision & Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This project follows the architecture defined in `full_stack_architecture.svg`:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Frontend**: Next.js 15+ (App Router), React 19, TypeScript 5. 
+- **Styling**: Tailwind CSS 4 with custom premium design tokens and glassmorphism components.
+- **Backend**: Next.js API Routes (Serverless ready).
+- **ORM**: Prisma 7 for PostgreSQL with full type safety.
+- **Auth**: NextAuth.js (Auth.js) with role-based access control.
+- **Jobs**: `node-cron` for automated hardware health pings and warranty alerts.
+- **Notifications**: `Nodemailer` for IT and HR workflow alerts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🏗 Directory Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app/`: Logic and routing for modules:
+  - `(dashboard)`: Real-time metrics and analytics.
+  - `hr/`: Employee directory, joiners, exits, and seating management.
+  - `it/`: Asset lifecycle, provisioning, assignments, and email identities.
+  - `admin/`: Audit logs, system reports, and user management.
+- `src/components/`: Reusable premium UI components (StatsCard, Sidebar, Tables, Forms).
+- `src/lib/`: Core singletons (Prisma client, Auth configuration, Utils).
+- `prisma/`: Database schema, migrations, and seed data.
+- `jobs/`: Background service definitions for scheduling tasks.
 
-## Learn More
+## 🛠 Getting Started
 
-To learn more about Next.js, take a look at the following resources:
+1. **Environment Setup**:
+   Copy `.env.example` to `.env` and provide your PostgreSQL connection string.
+   ```bash
+   DATABASE_URL="postgresql://user:password@localhost:5432/m_ams"
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Initialize Database**:
+   ```bash
+   npx prisma migrate dev --name init
+   npx prisma generate
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Development Mode**:
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
+4. **Production Build**:
+   ```bash
+   npm run build
+   npm run start
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔒 Security & Auditing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Every action in the system is automatically recorded in the `audit_log` table with point-in-time state comparisons, providing an immutable record for compliance.
+
+---
+Built with ❤️ by **Antigravity** (2026-04-02)
