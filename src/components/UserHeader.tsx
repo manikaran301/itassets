@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { Search } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function UserHeader() {
   const { data: session } = useSession();
@@ -19,6 +20,7 @@ export function UserHeader() {
             className="bg-muted px-4 py-1.5 rounded-full text-sm border border-transparent focus:border-primary/30 outline-none transition-all w-64 group-hover:w-80"
           />
         </div>
+        <ThemeToggle />
         <div className="flex items-center gap-3">
           <div className="hidden md:block text-right">
             <p className="text-xs font-bold leading-none">{userName}</p>
