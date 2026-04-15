@@ -13,45 +13,54 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        console.log("Login attempt with:", credentials?.identifier);
+        const identifier = credentials?.identifier?.trim();
+
+        console.log("Login attempt with:", identifier);
         
-        if (!credentials?.identifier || !credentials?.password) {
-          throw new Error("Invalid credentials");
+        if (!identifier || !credentials?.password) {
+          console.warn("Login rejected: missing identifier or password");
+          return null;
         }
 
-        // Search by email or username
-        const user = await prisma.systemUser.findFirst({
-          where: {
-            OR: [
-              { email: credentials.identifier },
-              { username: credentials.identifier }
-            ]
+        try {
+          const user = await prisma.systemUser.findFirst({
+            where: {
+              OR: [
+                { email: identifier },
+                { username: identifier }
+              ]
+            }
+          });
+          
+          console.log("DB lookup returned:", user ? user.email : "Not found");
+
+          if (!user || !user.isActive) {
+            console.warn("Login rejected: user not found or inactive");
+            return null;
           }
-        });
-        
-        console.log("DB lookup returned:", user ? user.email : "Not found");
 
-        if (!user || !user.isActive) {
-          throw new Error("User not found or inactive");
+          const isPasswordCorrect = await bcrypt.compare(
+            credentials.password,
+            user.passwordHash
+          );
+          
+          console.log("Password match:", isPasswordCorrect);
+
+          if (!isPasswordCorrect) {
+            console.warn("Login rejected: invalid password");
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.fullName,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("Credentials authorize failed:", error);
+          throw error;
         }
-
-        const isPasswordCorrect = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
-        
-        console.log("Password match:", isPasswordCorrect);
-
-        if (!isPasswordCorrect) {
-          throw new Error("Invalid password");
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.fullName,
-          role: user.role,
-        };
       }
     })
   ],
@@ -78,6 +87,7 @@ const handler = NextAuth({
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV !== "production",
 });
 
 export { handler as GET, handler as POST };
