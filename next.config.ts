@@ -2,8 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Allow dev server access from specific origins (configure via env if needed)
-  allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(',') || [],
+  // Allow dev server access from network IPs (for HMR WebSocket)
+  allowedDevOrigins: [
+    "172.16.4.249",
+    "localhost",
+    "127.0.0.1",
+  ],
   // External image domains
   images: {
     remotePatterns: [
