@@ -21,7 +21,7 @@ import { z } from 'zod';
 
 const AssetSchema = z.object({
   assetTag: z.string().min(1, "Asset Tag is required").trim(),
-  type: z.enum(['laptop', 'desktop', 'n_computing', 'nuc', 'server', 'other']),
+  type: z.enum(['laptop', 'desktop', 'zero_client', 'n_computing', 'nuc', 'server', 'other']),
   make: z.string().trim().nullable().optional(),
   model: z.string().trim().nullable().optional(),
   serialNumber: z.string().trim().nullable().optional(),
@@ -29,11 +29,15 @@ const AssetSchema = z.object({
   ipAddress: z.string().trim().nullable().optional(),
   cpu: z.string().trim().nullable().optional(),
   ramGb: z.string().trim().nullable().optional(),
+  ramType: z.string().trim().nullable().optional(),
   ssdGb: z.number().int().positive().nullable().optional(),
+  ssdType: z.string().trim().nullable().optional(),
   hddGb: z.number().int().positive().nullable().optional(),
+  hddType: z.string().trim().nullable().optional(),
   os: z.string().trim().nullable().optional(),
   osVersion: z.string().trim().nullable().optional(),
   antivirusStatus: z.enum(['yes', 'no', 'expired']).default('no'),
+  antivirusName: z.string().trim().nullable().optional(),
   warrantyExpiry: z.string().nullable().optional(),
   purchaseDate: z.string().nullable().optional(),
   cost: z.number().nonnegative().nullable().optional(),
@@ -56,11 +60,12 @@ export async function POST(request: Request) {
     }
 
     const data = validatedResult.data;
+    const normalizedType = data.type === 'zero_client' ? 'n_computing' : data.type;
 
     const asset = await prisma.asset.create({
       data: {
         assetTag: data.assetTag,
-        type: data.type,
+        type: normalizedType,
         make: data.make || null,
         model: data.model || null,
         serialNumber: data.serialNumber || null,
@@ -68,11 +73,15 @@ export async function POST(request: Request) {
         ipAddress: data.ipAddress || null,
         cpu: data.cpu || null,
         ramGb: data.ramGb || null,
+        ramType: data.ramType || null,
         ssdGb: data.ssdGb || null,
+        ssdType: data.ssdType || null,
         hddGb: data.hddGb || null,
+        hddType: data.hddType || null,
         os: data.os || null,
         osVersion: data.osVersion || null,
         antivirusStatus: data.antivirusStatus,
+        antivirusName: data.antivirusName || null,
         warrantyExpiry: data.warrantyExpiry ? new Date(data.warrantyExpiry) : null,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
         cost: data.cost || null,

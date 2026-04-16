@@ -1,154 +1,228 @@
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Filter, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Shield, 
-  MoreVertical, 
-  Edit2, 
-  Trash2, 
-  Lock, 
+import {
+  Lock,
+  Shield,
+  ShieldCheck,
   Unlock,
-  LucideIcon
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  Users,
+  Edit2, // Added Edit icon
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import prisma from "@/lib/prisma";
+import { cn } from "@/lib/utils";
 
-interface SystemUser {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'hr' | 'it' | 'readonly';
-  isActive: boolean;
-  lastLogin: string;
-}
+const roleConfig = {
+  admin: {
+    icon: ShieldCheck,
+    color: "bg-red-500/10 text-red-600 border-red-500/20",
+  },
+  hr: {
+    icon: Users,
+    color: "bg-primary/10 text-primary border-primary/20",
+  },
+  it: {
+    icon: Shield,
+    color: "bg-secondary/10 text-secondary border-secondary/20",
+  },
+  readonly: {
+    icon: Lock,
+    color: "bg-muted text-muted-foreground border-border",
+  },
+} as const;
 
-export default function UsersPage() {
-  const users: SystemUser[] = [
-    { id: 'usr-001', name: 'Master Admin', email: 'admin.master@mams.com', role: 'admin', isActive: true, lastLogin: '10 mins ago' },
-    { id: 'usr-002', name: 'HR Jane', email: 'jane.hr@mams.com', role: 'hr', isActive: true, lastLogin: '2 hours ago' },
-    { id: 'usr-003', name: 'IT Ramesh', email: 'ramesh.it@mams.com', role: 'it', isActive: true, lastLogin: 'Yesterday' },
-    { id: 'usr-004', name: 'Auditor Sam', email: 'sam.audit@mams.com', role: 'readonly', isActive: false, lastLogin: '5 days ago' },
-    { id: 'usr-005', name: 'IT Suresh', email: 'suresh.it@mams.com', role: 'it', isActive: true, lastLogin: '3 hours ago' },
-  ];
+export default async function UsersPage() {
+  const users = await prisma.systemUser.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      fullName: true,
+      username: true,
+      email: true,
+      role: true,
+      isActive: true,
+      companyName: true,
+      createdAt: true,
+      lastLogin: true,
+    },
+  });
 
-  const getRoleIcon = (role: string): LucideIcon => {
-    switch (role) {
-      case 'admin': return ShieldCheck;
-      case 'hr': return Users;
-      case 'it': return Shield;
-      case 'readonly': return Lock;
-      default: return Users;
-    }
-  };
-
-  const roleColors = {
-    'admin': 'bg-red-500/10 text-red-600 border-red-500/20',
-    'hr': 'bg-primary/10 text-primary border-primary/20',
-    'it': 'bg-secondary/10 text-secondary border-secondary/20',
-    'readonly': 'bg-muted text-muted-foreground border-border',
-  };
+  const roleSummary = Object.entries(
+    users.reduce<Record<string, number>>((accumulator, user) => {
+      accumulator[user.role] = (accumulator[user.role] ?? 0) + 1;
+      return accumulator;
+    }, {}),
+  ).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between rounded-2xl border border-border bg-card/50 backdrop-blur-xl px-6 py-4 shadow-sm">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">System Access Control</h2>
-          <p className="text-muted-foreground mt-1">Manage role-based permissions for HR, IT, and Admin modules.</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+            Governance Center
+          </p>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl font-black tracking-tighter">{users.length}</h1>
+            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase">Total User Accounts</span>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:opacity-90 rounded-xl shadow-xl shadow-primary/10 transition-all font-semibold">
-            <Plus className="w-5 h-5" />
-            <span>Enroll User</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-4 items-center bg-card p-4 rounded-2xl premium-card border-border/50">
-        <div className="relative flex-1 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search system users by name or email..." 
-            className="w-full bg-muted/50 pl-10 pr-4 py-2 rounded-xl text-sm border border-transparent focus:border-primary/20 outline-none transition-all"
-          />
-        </div>
-        <div className="flex gap-2 text-xs font-black tracking-widest uppercase items-center text-muted-foreground">
-          <Filter className="w-4 h-4" />
-          <span>Filter by Status</span>
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <p className="text-xs font-bold text-primary">Status</p>
+            <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
+              {users.filter((user) => user.isActive).length} active, {users.filter((user) => !user.isActive).length} inactive
+            </p>
+          </div>
+          <a href="/admin/users/new" className="px-5 py-2 bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest rounded-full hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            <span>Add Member</span>
+          </a>
         </div>
       </div>
 
-      <div className="premium-card rounded-2xl overflow-hidden glass border-border/50 shadow-2xl animate-fade-in delay-100">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-muted/50 border-b border-border">
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Identity</th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Access Role</th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Status</th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Last Login</th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground text-right border-l border-border/10">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {users.map((user) => {
-              const RoleIcon = getRoleIcon(user.role);
-              return (
-                <tr key={user.id} className="hover:bg-muted/20 transition-all group">
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group-hover:scale-110",
-                        user.isActive ? "bg-primary/5 border-primary/20 text-primary" : "bg-muted border-border text-muted-foreground"
-                      )}>
-                        <RoleIcon className="w-5 h-5" />
+        {roleSummary.slice(0, 2).map(([role, count]) => (
+          <div
+            key={role}
+            className="premium-card rounded-[28px] border border-border bg-card p-5 hidden"
+          >
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+              {role} accounts
+            </p>
+            <p className="mt-3 text-4xl font-black tracking-tight">{count}</p>
+          </div>
+        ))}
+
+      <div className="premium-card overflow-hidden rounded-[32px] border border-border bg-card">
+        <div className="border-b border-border bg-muted/20 px-6 py-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+            Access roster
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-border bg-muted/10">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+                  Identity
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+                  Role
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+                  Company
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+                  Last login
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+                  Created
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70 text-right">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {users.map((user) => {
+                const config = roleConfig[user.role];
+                const RoleIcon = config.icon;
+
+                return (
+                  <tr key={user.id} className="hover:bg-muted/10 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-muted/30 text-primary">
+                          <RoleIcon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black tracking-tight">
+                            {user.fullName}
+                          </p>
+                          <p className="text-[10px] font-black tracking-[0.05em] text-muted-foreground/70">
+                            @{user.username}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-bold tracking-tight group-hover:text-primary transition-colors">{user.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">{user.email}</p>
+                    </td>
+
+                    <td className="px-6 py-5">
+                      <span
+                        className={cn(
+                          "rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em]",
+                          config.color,
+                        )}
+                      >
+                        {user.role}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-2">
+                        {user.isActive ? (
+                          <>
+                            <Unlock className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-black text-green-600">
+                              Active
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-4 w-4 text-red-600" />
+                            <span className="text-sm font-black text-red-600">
+                              Inactive
+                            </span>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <span className={cn(
-                      "text-[10px] uppercase font-black px-3 py-1 rounded-full border shadow-sm",
-                      roleColors[user.role as keyof typeof roleColors]
-                    )}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-2">
-                       {user.isActive ? (
-                         <>
-                           <Unlock className="w-3 h-3 text-green-500" />
-                           <span className="text-[10px] uppercase font-bold text-green-600">Authorized</span>
-                         </>
-                       ) : (
-                         <>
-                           <Lock className="w-3 h-3 text-red-500" />
-                           <span className="text-[10px] uppercase font-bold text-red-600">Deactivated</span>
-                         </>
-                       )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-xs font-medium text-muted-foreground">{user.lastLogin}</td>
-                  <td className="px-6 py-5 border-l border-border/10 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 hover:bg-secondary/10 hover:text-secondary rounded-lg transition-all" title="Modify Access">
+                    </td>
+
+                    <td className="px-6 py-5 text-sm font-semibold text-muted-foreground">
+                      {user.companyName || "Unassigned"}
+                    </td>
+
+                    <td className="px-6 py-5">
+                      {user.lastLogin ? (
+                        <div>
+                          <p className="text-sm font-black tracking-tight">
+                            {formatDistanceToNow(new Date(user.lastLogin), {
+                              addSuffix: true,
+                            })}
+                          </p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">
+                            {new Date(user.lastLogin).toLocaleString()}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-semibold text-muted-foreground">
+                          Never signed in
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-5">
+                      <p className="text-sm font-black tracking-tight">
+                        {formatDistanceToNow(new Date(user.createdAt), {
+                          addSuffix: true,
+                        })}
+                      </p>
+                    </td>
+
+                    <td className="px-6 py-5 text-right">
+                      <a href={`/admin/users/${user.id}/edit`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
                         <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-all" title="Suspension">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

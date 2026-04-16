@@ -205,7 +205,7 @@ export default function NewEmailAccountPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Email Address</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">Email Address</label>
                 <div className="relative group/field">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
                   <input 
@@ -213,13 +213,13 @@ export default function NewEmailAccountPage() {
                     placeholder="name@company.com" 
                     value={formData.emailAddress}
                     onChange={(e) => updateField('emailAddress', e.target.value)}
-                    className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 rounded-2xl pl-12 pr-6 py-3 text-xs outline-none transition-all font-bold placeholder:font-normal placeholder:opacity-20 shadow-sm" 
+                    className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 rounded-2xl pl-12 pr-6 py-3 text-xs text-foreground outline-none transition-all font-bold placeholder:font-semibold placeholder:text-muted-foreground/70 shadow-sm" 
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Display Name</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">Display Name</label>
                 <div className="relative group/field">
                   <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
                   <input 
@@ -227,7 +227,7 @@ export default function NewEmailAccountPage() {
                     placeholder="Full Name / Display Title" 
                     value={formData.displayName}
                     onChange={(e) => updateField('displayName', e.target.value)}
-                    className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 rounded-2xl pl-12 pr-6 py-3 text-xs outline-none transition-all font-bold placeholder:font-normal placeholder:opacity-20 shadow-sm" 
+                    className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 rounded-2xl pl-12 pr-6 py-3 text-xs text-foreground outline-none transition-all font-bold placeholder:font-semibold placeholder:text-muted-foreground/70 shadow-sm" 
                   />
                 </div>
               </div>
@@ -235,7 +235,7 @@ export default function NewEmailAccountPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 relative z-10">
                <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Account Holder</label>
+                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">Account Holder</label>
                  <SearchableSelect 
                    options={employees}
                    value={formData.employeeId}

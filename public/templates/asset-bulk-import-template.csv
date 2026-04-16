@@ -1,0 +1,4 @@
+assetTag,type,make,model,serialNumber,macAddress,ipAddress,cpu,ramGb,ramType,ssdGb,ssdType,hddGb,hddType,os,osVersion,antivirusStatus,antivirusName,warrantyExpiry,purchaseDate,cost,status,notes
+LPT-2301,laptop,Apple,MacBook Pro M3 Max,SN-APPLE-8822,00:1A:2B:3C:4D:5E,10.10.20.11,M3 Max 14-core,64,DDR5,1024,NVMe,,,,"macOS",Sonoma 14.5,yes,SentinelOne,2028-06-30,2026-01-15,320000,assigned,Assigned to Engineering user
+DSK-9901,desktop,Dell,Optiplex 7000,SN-DELL-P092,00:1A:2B:AA:BB:CC,10.10.20.25,Intel i7-12700,16,DDR4,512,SATA,1000,SATA,Windows,11 Pro,yes,Windows Defender,2027-12-31,2025-11-20,85000,available,Kept in IT inventory
+ZC-1101,n_computing,N-Computing,L300,SN-NC-1101,00:1A:2B:11:22:33,10.10.30.12,ARM SoC,4,DDR3,,,,,Linux,ThinPro,no,,2027-03-31,2026-03-01,18000,available,Zero client endpoint

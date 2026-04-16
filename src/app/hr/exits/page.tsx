@@ -1,28 +1,34 @@
 import { 
   UserX, 
-  Search, 
-  Filter, 
-  Download, 
   Briefcase, 
   Calendar, 
   Trash2, 
-  Monitor, 
   Mail, 
   Truck, 
-  MoreVertical, 
   AlertTriangle, 
   ShieldAlert, 
   RefreshCcw,
   CheckCircle2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import prisma from "@/lib/prisma";
 
-export default function ExitsPage() {
-  const exits = [
-    { id: 'EMP-401', name: 'Lisa White', dept: 'Sales', role: 'Executive', lastDay: '2026-10-30', assets: 'pending', email: 'pending', priority: 'High' },
-    { id: 'EMP-110', name: 'Vikram Singh', dept: 'Engineering', role: 'Staff Engineer', lastDay: '2026-10-25', assets: 'done', email: 'pending', priority: 'Normal' },
-    { id: 'EMP-992', name: 'Priya Verma', dept: 'Marketing', role: 'Support', lastDay: '2026-10-28', assets: 'done', email: 'done', priority: 'Normal' },
-  ];
+export default async function ExitsPage() {
+  const exits = await prisma.employee.findMany({
+    where: {
+      OR: [{ status: "exit_pending" }, { status: "inactive" }],
+    },
+    orderBy: { exitDate: "asc" },
+    include: {
+      currentAssets: { select: { id: true } },
+      currentAccessories: { select: { id: true } },
+      emailAccounts: {
+        where: {
+          status: { in: ["active", "suspended"] },
+        },
+        select: { id: true },
+      },
+    },
+  });
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -40,9 +46,14 @@ export default function ExitsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in delay-100">
-        {exits.map((exit) => (
+        {exits.map((exit) => {
+          const pendingAssets = exit.currentAssets.length + exit.currentAccessories.length;
+          const pendingEmail = exit.emailAccounts.length;
+          const priority = pendingAssets > 0 || pendingEmail > 0 ? "High" : "Normal";
+
+          return (
           <div key={exit.id} className="premium-card rounded-2xl overflow-hidden glass border-border/50 group flex flex-col h-full bg-card/60 relative overflow-hidden">
-             {exit.priority === 'High' && (
+             {priority === 'High' && (
                 <div className="absolute top-0 right-0 p-1.5 bg-red-500 text-white rounded-bl-xl text-[8px] font-black uppercase tracking-tighter shadow-lg transform translate-x-1 -translate-y-1 group-hover:translate-x-0 group-hover:translate-y-0 transition-transform">
                   High Risk Exit
                 </div>
@@ -52,13 +63,13 @@ export default function ExitsPage() {
                 <div className="flex items-center justify-between">
                    <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center text-xl font-black text-muted-foreground group-hover:text-red-500 transition-colors">
-                         {exit.name[0]}
+                         {exit.fullName[0]}
                       </div>
                       <div>
-                         <h4 className="text-lg font-bold tracking-tight group-hover:text-red-500 transition-colors">{exit.name}</h4>
+                         <h4 className="text-lg font-bold tracking-tight group-hover:text-red-500 transition-colors">{exit.fullName}</h4>
                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-1.5">
                            <Briefcase className="w-3 h-3" />
-                           {exit.dept} · {exit.id}
+                           {exit.department || "Unassigned"} · {exit.employeeCode}
                          </p>
                       </div>
                    </div>
@@ -69,7 +80,7 @@ export default function ExitsPage() {
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Last Working Day</span>
                       <span className="text-xs font-semibold flex items-center gap-1.5 bg-red-500/10 text-red-600 px-3 py-1.5 rounded-xl border border-red-500/20 w-fit">
                         <Calendar className="w-4 h-4" />
-                        {exit.lastDay}
+                        {exit.exitDate ? new Date(exit.exitDate).toLocaleDateString() : "Not set"}
                       </span>
                    </div>
 
@@ -80,7 +91,7 @@ export default function ExitsPage() {
                            Hardware
                          </span>
                          <span className="text-sm font-semibold flex items-center gap-1.5">
-                           {exit.assets === 'done' ? (
+                           {pendingAssets === 0 ? (
                              <><CheckCircle2 className="w-4 h-4 text-green-500" /> <span className="text-xs text-green-600 font-bold uppercase">Returned</span></>
                            ) : (
                              <><AlertTriangle className="w-4 h-4 text-accent animate-pulse" /> <span className="text-xs text-accent font-bold uppercase">Pending</span></>
@@ -93,7 +104,7 @@ export default function ExitsPage() {
                            Identity
                          </span>
                          <span className="text-sm font-semibold flex items-center gap-1.5">
-                           {exit.email === 'done' ? (
+                           {pendingEmail === 0 ? (
                              <><CheckCircle2 className="w-4 h-4 text-green-500" /> <span className="text-xs text-green-600 font-bold uppercase">Deleted</span></>
                            ) : (
                              <><ShieldAlert className="w-4 h-4 text-accent animate-pulse" /> <span className="text-xs text-accent font-bold uppercase">Active</span></>
@@ -114,7 +125,7 @@ export default function ExitsPage() {
                 </div>
              </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );

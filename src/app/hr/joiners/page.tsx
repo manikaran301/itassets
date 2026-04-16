@@ -1,75 +1,32 @@
-'use client';
-
 import { 
   Users, 
-  Monitor, 
   ShieldCheck, 
   Mail, 
-  CheckCircle2, 
-  Clock, 
-  ChevronRight, 
-  Search, 
-  Filter,
-  Plus,
-  ArrowUpRight,
-  LayoutGrid,
   Laptop,
-  Smartphone,
   MapPin,
-  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import prisma from "@/lib/prisma";
 
-const joiners = [
-  {
-    id: 'JNR-2024-001',
-    name: 'Liam Pierce',
-    dept: 'Engineering',
-    joinDate: '2024-04-10',
-    location: 'Bangalore HQ',
-    steps: {
-       identity: 'Ready',
-       hardware: 'Procuring',
-       seating: 'Allocated',
-       access: 'Pending'
+export default async function JoinersPage() {
+  const joiners = await prisma.employee.findMany({
+    where: {
+      status: "active",
+      startDate: {
+        gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 120),
+      },
     },
-    hardware: ['Laptop', 'SIM'],
-    seat: 'F1-WS-028'
-  },
-  {
-    id: 'JNR-2024-002',
-    name: 'Sarah Chen',
-    dept: 'Growth Marketing',
-    joinDate: '2024-04-12',
-    location: 'Remote (Mumbai)',
-    steps: {
-       identity: 'Ready',
-       hardware: 'Ready',
-       seating: 'Skip',
-       access: 'Ready'
+    orderBy: { startDate: "desc" },
+    include: {
+      assetRequirements: true,
+      emailAccounts: {
+        where: { status: "active" },
+        select: { id: true },
+      },
     },
-    hardware: ['Desktop', 'Phone'],
-    seat: 'REMOTE-01'
-  },
-  {
-    id: 'JNR-2024-003',
-    name: 'Marcus Thorne',
-    dept: 'Enterprise Sales',
-    joinDate: '2024-04-15',
-    location: 'Hyderabad Tech Park',
-    steps: {
-       identity: 'Ready',
-       hardware: 'Awaiting IT',
-       seating: 'No Seat ID',
-       access: 'Pending'
-    },
-    hardware: ['Laptop', 'Phone', 'SIM'],
-    seat: 'PENDING'
-  }
-];
+    take: 50,
+  });
 
-export default function JoinersPage() {
   return (
     <div className="space-y-6 animate-fade-in text-sm relative pb-20">
       
@@ -120,31 +77,41 @@ export default function JoinersPage() {
                 </tr>
              </thead>
              <tbody className="divide-y divide-white/[0.03]">
-                {joiners.map((joiner) => (
+                {joiners.map((joiner) => {
+                  const hardwareReady = joiner.assetRequirements.some((req) => req.status === "fulfilled");
+                  const hardwarePending = joiner.assetRequirements.some((req) => req.status === "pending" || req.status === "approved");
+                  const steps = {
+                    identity: "Ready",
+                    hardware: hardwareReady ? "Ready" : hardwarePending ? "Awaiting IT" : "Pending",
+                    seating: joiner.deskNumber ? "Allocated" : "No Seat ID",
+                    access: joiner.emailAccounts.length > 0 ? "Ready" : "Pending",
+                  };
+
+                  return (
                   <tr key={joiner.id} className="group hover:bg-white/[0.005] transition-all">
                     <td className="px-6 py-5">
                        <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-sm border border-primary/10 group-hover:scale-110 transition-all duration-500">
-                             {joiner.name[0]}
+                             {joiner.fullName[0]}
                           </div>
                           <div>
-                             <p className="text-sm font-black group-hover:text-primary transition-colors">{joiner.name}</p>
-                             <p className="text-[9px] font-black tracking-widest opacity-20 uppercase">{joiner.dept}</p>
+                             <p className="text-sm font-black group-hover:text-primary transition-colors">{joiner.fullName}</p>
+                             <p className="text-[9px] font-black tracking-widest opacity-20 uppercase">{joiner.department || "Unassigned"}</p>
                           </div>
                        </div>
                     </td>
                     <td className="px-6 py-5">
                        <div className="space-y-1">
-                          <p className="text-xs font-black text-foreground/80">{joiner.location}</p>
+                          <p className="text-xs font-black text-foreground/80">{joiner.locationJoining || "Not set"}</p>
                           <p className="text-[10px] font-mono font-black text-secondary/60 uppercase tracking-tighter italic">
-                             SEAT: {joiner.seat}
+                             SEAT: {joiner.deskNumber || "PENDING"}
                           </p>
                        </div>
                     </td>
                     <td className="px-6 py-5">
                        {/* 🚥 EXPLICIT STATUS PILLS */}
                        <div className="flex items-center justify-between gap-2 max-w-[500px] mx-auto">
-                          {Object.entries(joiner.steps).map(([key, label], idx) => (
+                          {Object.entries(steps).map(([key, label]) => (
                             <div key={key} className="flex flex-col items-center gap-2 flex-1">
                                <p className="text-[7px] font-black uppercase tracking-[0.1em] opacity-40 text-center truncate w-full">{key}</p>
                                <div className={cn(
@@ -161,11 +128,11 @@ export default function JoinersPage() {
                        </div>
                     </td>
                     <td className="px-6 py-5 text-right">
-                       <p className="text-xs font-black text-foreground font-mono">{joiner.joinDate}</p>
+                       <p className="text-xs font-black text-foreground font-mono">{new Date(joiner.startDate).toLocaleDateString()}</p>
                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20 italic">Day 0 Deadline</p>
                     </td>
                   </tr>
-                ))}
+                )})}
              </tbody>
           </table>
         </div>

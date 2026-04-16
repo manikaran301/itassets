@@ -7,6 +7,13 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
+    // Admin-only paths
+    if (path.startsWith("/admin")) {
+      if (token?.role !== "admin") {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+    }
+
     if (path.startsWith("/it")) {
       if (token?.role !== "it" && token?.role !== "admin") {
         return NextResponse.redirect(new URL("/", req.url));
@@ -15,12 +22,6 @@ export default withAuth(
 
     if (path.startsWith("/hr")) {
       if (token?.role !== "hr" && token?.role !== "admin") {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
-    }
-
-    if (path.startsWith("/admin")) {
-      if (token?.role !== "admin") {
         return NextResponse.redirect(new URL("/", req.url));
       }
     }

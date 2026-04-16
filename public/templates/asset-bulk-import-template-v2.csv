@@ -1,0 +1,3 @@
+assetTag,type,make,model,serialNumber,macAddress,ipAddress,cpu,ramGb,ramType,ssdGb,ssdType,hddGb,hddType,os,osVersion,antivirusStatus,antivirusName,warrantyExpiry,purchaseDate,cost,status,employeeCode,seatNumber,notes
+DSK-9901,desktop,Dell,Optiplex 7000,SN-DELL-P092,00:1A:2B:AA:BB:CC,10.10.20.25,Intel i7-12700,16,DDR4,512,SATA,1000,SATA,Windows,11 Pro,yes,Windows Defender,31-12-2027,20-11-2025,85000,available,,,
+ZC-1101,zero_client,N-Computing,L300,SN-NC-1101,00:1A:2B:11:22:33,10.10.30.12,ARM SoC,4,DDR3,,,,,Linux,ThinPro,no,,31-03-2027,01-03-2026,18000,assigned,DIR-001,F2-D01,

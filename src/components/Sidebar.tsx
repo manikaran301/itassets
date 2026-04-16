@@ -26,20 +26,20 @@ const sidebarLinks = [
   { group: 'Overview', links: [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   ]},
-  { group: 'HR Module', links: [
+  { group: 'HR Module', roles: ['hr', 'admin'], links: [
     { name: 'Employees', href: '/hr/employees', icon: Users },
     { name: 'Joiners', href: '/hr/joiners', icon: UserCheck },
     { name: 'Exits', href: '/hr/exits', icon: UserX },
     { name: 'Seats', href: '/hr/seats', icon: ShieldCheck },
   ]},
-  { group: 'IT Module', links: [
+  { group: 'IT Module', roles: ['it', 'admin'], links: [
     { name: 'Assets', href: '/it/assets', icon: Monitor },
     { name: 'Provisioning', href: '/it/provisioning', icon: Truck },
     { name: 'Assignments', href: '/it/assignments', icon: ArrowRightLeft },
     { name: 'Email Accounts', href: '/it/email', icon: Mail },
     { name: 'Accessories', href: '/it/accessories', icon: HardDrive },
   ]},
-  { group: 'Management', links: [
+  { group: 'Management', roles: ['admin'], links: [
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { name: 'Audit Log', href: '/admin/audit', icon: History },
     { name: 'Users', href: '/admin/users', icon: Settings },
@@ -62,7 +62,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 pb-6 space-y-4">
-        {sidebarLinks.map((group) => (
+        {sidebarLinks.filter(group => !group.roles || group.roles.includes(userRole)).map((group) => (
           <div key={group.group}>
             <h2 className="text-[9px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-2 flex items-center px-2">
               <span>{group.group}</span>

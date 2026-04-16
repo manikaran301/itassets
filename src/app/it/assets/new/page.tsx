@@ -54,6 +54,20 @@ const ANTIVIRUS_OPTIONS = [
   { value: 'expired', label: 'Expired' },
 ];
 
+const ANTIVIRUS_NAMES = [
+  { value: 'McAfee', label: 'McAfee Endpoint Security' },
+  { value: 'Norton', label: 'Norton 360' },
+  { value: 'Windows Defender', label: 'Windows Defender' },
+  { value: 'SentinelOne', label: 'SentinelOne' },
+  { value: 'CrowdStrike', label: 'CrowdStrike Falcon' },
+  { value: 'Bitdefender', label: 'Bitdefender GravityZone' },
+  { value: 'Kaspersky', label: 'Kaspersky Endpoint' },
+  { value: 'Sophos', label: 'Sophos Intercept X' },
+  { value: 'ESET', label: 'ESET Endpoint Security' },
+  { value: 'Trend Micro', label: 'Trend Micro Apex One' },
+  { value: 'Other', label: 'Other/Custom' },
+];
+
 const BRAND_OPTIONS = [
   { value: 'Apple', label: 'Apple' },
   { value: 'HP', label: 'HP' },
@@ -82,6 +96,26 @@ const BRAND_OPTIONS = [
   { value: 'Other', label: 'Other' },
 ];
 
+const SSD_TYPES = [
+  { value: 'NVMe', label: 'NVMe / PCIe' },
+  { value: 'M.2', label: 'M.2 SATA' },
+  { value: 'SATA', label: 'SATA 2.5"' },
+];
+
+const HDD_TYPES = [
+  { value: 'SATA', label: 'SATA 3.5" / 2.5"' },
+  { value: 'SAS', label: 'SAS (Server)' },
+  { value: 'SCSI', label: 'SCSI' },
+];
+
+const RAM_TYPES = [
+  { value: 'DDR3', label: 'DDR3' },
+  { value: 'DDR4', label: 'DDR4' },
+  { value: 'DDR5', label: 'DDR5' },
+  { value: 'LPDDR4', label: 'LPDDR4 (Mobile/Thin)' },
+  { value: 'LPDDR5', label: 'LPDDR5' },
+];
+
 export default function NewAssetPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -96,13 +130,17 @@ export default function NewAssetPage() {
     model: '',
     cpu: '',
     ramGb: '',
+    ramType: '',
     ssdGb: '',
+    ssdType: '',
     hddGb: '',
+    hddType: '',
     serialNumber: '',
     macAddress: '',
     ipAddress: '',
     os: '',
     osVersion: '',
+    antivirusName: '',
     antivirusStatus: 'no',
     warrantyExpiry: '',
     purchaseDate: '',
@@ -133,18 +171,22 @@ export default function NewAssetPage() {
     try {
       const payload = {
         assetTag: formData.assetTag.trim(),
-        type: formData.type,
+        type: formData.type === 'zero_client' ? 'n_computing' : formData.type,
         make: formData.make.trim() || null,
         model: formData.model.trim() || null,
         cpu: formData.cpu.trim() || null,
         ramGb: formData.ramGb.trim() || null,
+        ramType: formData.ramType || null,
         ssdGb: formData.ssdGb ? parseInt(formData.ssdGb) : null,
+        ssdType: formData.ssdType || null,
         hddGb: formData.hddGb ? parseInt(formData.hddGb) : null,
+        hddType: formData.hddType || null,
         serialNumber: formData.serialNumber.trim() || null,
         macAddress: formData.macAddress.trim() || null,
         ipAddress: formData.ipAddress.trim() || null,
         os: formData.os.trim() || null,
         osVersion: formData.osVersion.trim() || null,
+        antivirusName: formData.antivirusName || null,
         antivirusStatus: formData.antivirusStatus,
         warrantyExpiry: formData.warrantyExpiry || null,
         purchaseDate: formData.purchaseDate || null,
@@ -244,7 +286,7 @@ export default function NewAssetPage() {
         <div className="xl:col-span-8 space-y-6">
           
           {/* Section 1: Device Identity */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-50">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none group-hover:scale-110 transition-transform" />
 
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6 relative z-10">
@@ -255,7 +297,7 @@ export default function NewAssetPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 relative z-[60]">
               {/* Asset Tag */}
               <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Asset Tag *</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">Asset Tag *</label>
                 <div className="relative">
                   <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
                   <input 
@@ -263,7 +305,7 @@ export default function NewAssetPage() {
                     placeholder="LPT-001" 
                     value={formData.assetTag}
                     onChange={(e) => updateField('assetTag', e.target.value)}
-                    className="w-full bg-muted/20 border border-white/5 focus:border-primary/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono tracking-widest font-black uppercase" 
+                    className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-[22px] pl-12 pr-4 py-4 text-xs text-foreground outline-none transition-all font-mono tracking-widest font-black uppercase placeholder:font-semibold placeholder:text-muted-foreground/70" 
                   />
                 </div>
               </div>
@@ -280,19 +322,19 @@ export default function NewAssetPage() {
 
               {/* Model */}
               <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Model</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">Model</label>
                 <input 
                   type="text" 
                   placeholder="MacBook Pro M3 Max" 
                   value={formData.model}
                   onChange={(e) => updateField('model', e.target.value)}
-                  className="w-full bg-muted/20 border border-white/5 focus:border-primary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold" 
+                  className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-[22px] px-6 py-4 text-xs text-foreground outline-none transition-all font-bold placeholder:font-semibold placeholder:text-muted-foreground/70" 
                 />
               </div>
 
               {/* Serial Number */}
               <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Serial Number</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">Serial Number</label>
                 <div className="relative">
                   <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
                   <input 
@@ -300,7 +342,7 @@ export default function NewAssetPage() {
                     placeholder="SN-XXXX-XXXX" 
                     value={formData.serialNumber}
                     onChange={(e) => updateField('serialNumber', e.target.value)}
-                    className="w-full bg-muted/20 border border-white/5 focus:border-primary/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono tracking-wider font-bold" 
+                    className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-[22px] pl-12 pr-4 py-4 text-xs text-foreground outline-none transition-all font-mono tracking-wider font-bold placeholder:font-semibold placeholder:text-muted-foreground/70" 
                   />
                 </div>
               </div>
@@ -332,7 +374,7 @@ export default function NewAssetPage() {
           </div>
 
           {/* Section 2: Hardware Specifications */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative overflow-hidden group">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40">
             <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
 
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-secondary mb-6 relative z-10">
@@ -340,7 +382,7 @@ export default function NewAssetPage() {
               <span>2. Hardware Specifications</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 relative z-10">
               {/* CPU */}
               <div className="group/field space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">CPU / Processor</label>
@@ -356,7 +398,7 @@ export default function NewAssetPage() {
                 </div>
               </div>
 
-              {/* RAM */}
+              {/* RAM (GB) */}
               <div className="group/field space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">RAM (GB)</label>
                 <input 
@@ -368,34 +410,67 @@ export default function NewAssetPage() {
                 />
               </div>
 
-              {/* SSD */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">SSD (GB)</label>
-                <input 
-                  type="number" 
-                  placeholder="512" 
-                  value={formData.ssdGb}
-                  onChange={(e) => updateField('ssdGb', e.target.value)}
-                  className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black" 
-                />
-              </div>
+              {/* RAM Type */}
+              <SearchableSelect
+                label="RAM Type"
+                options={RAM_TYPES}
+                value={formData.ramType}
+                onChange={(val) => updateField('ramType', val)}
+                placeholder="Select RAM Type..."
+                allowCustom
+              />
 
-              {/* HDD */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">HDD (GB)</label>
-                <input 
-                  type="number" 
-                  placeholder="1000" 
-                  value={formData.hddGb}
-                  onChange={(e) => updateField('hddGb', e.target.value)}
-                  className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black" 
+              {/* Storage Devices (All on 1 Line) */}
+              <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+                {/* SSD Storage */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">SSD (GB)</label>
+                  <input 
+                    type="number" 
+                    placeholder="512" 
+                    value={formData.ssdGb}
+                    onChange={(e) => updateField('ssdGb', e.target.value)}
+                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black" 
+                  />
+                </div>
+
+                {/* SSD Type */}
+                <SearchableSelect
+                  label="SSD Type"
+                  options={SSD_TYPES}
+                  value={formData.ssdType}
+                  onChange={(val) => updateField('ssdType', val)}
+                  placeholder="Select SSD Type..."
+                  allowCustom
+                />
+
+                {/* HDD Storage */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">HDD (GB)</label>
+                  <input 
+                    type="number" 
+                    placeholder="1000" 
+                    value={formData.hddGb}
+                    onChange={(e) => updateField('hddGb', e.target.value)}
+                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black" 
+                  />
+                </div>
+
+                {/* HDD Type */}
+                <SearchableSelect
+                  label="HDD Type"
+                  options={HDD_TYPES}
+                  value={formData.hddType}
+                  onChange={(val) => updateField('hddType', val)}
+                  placeholder="Select HDD Type..."
+                  allowCustom
                 />
               </div>
             </div>
           </div>
 
           {/* Section 3: Network & Software */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative overflow-hidden group">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-30">
             <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
 
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-6 relative z-10">
@@ -403,7 +478,7 @@ export default function NewAssetPage() {
               <span>3. Network & Software</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4 relative z-10">
               {/* MAC Address */}
               <div className="group/field space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">MAC Address</label>
@@ -434,14 +509,24 @@ export default function NewAssetPage() {
                 </div>
               </div>
 
-              {/* Antivirus */}
+              {/* Antivirus Name */}
               <SearchableSelect
-                label="Shield / Antivirus"
+                label="Antivirus Software"
+                options={ANTIVIRUS_NAMES}
+                value={formData.antivirusName}
+                onChange={(val) => updateField('antivirusName', val)}
+                placeholder="Software Name..."
+                icon={<ShieldCheck className="w-4 h-4" />}
+                allowCustom
+              />
+
+              {/* Antivirus Status */}
+              <SearchableSelect
+                label="Shield Status"
                 options={ANTIVIRUS_OPTIONS}
                 value={formData.antivirusStatus}
                 onChange={(val) => updateField('antivirusStatus', val)}
-                placeholder="Shield Status..."
-                icon={<ShieldCheck className="w-4 h-4" />}
+                placeholder="Status..."
               />
 
               {/* OS */}
@@ -476,7 +561,7 @@ export default function NewAssetPage() {
           </div>
 
           {/* Section 4: Purchase & Status */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative overflow-hidden group">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative overflow-hidden group z-20">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6 relative z-10">

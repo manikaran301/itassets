@@ -1,0 +1,4 @@
+emailAddress,displayName,employeeCode,accountType,platform,status,passwordHash,forwardingAddresses,notes
+anjali.gupta@mams.com,Anjali Gupta,EMP-102,personal,google_workspace,active,,anjali.g@personal.com,Primary corporate identity
+eng.shared@mams.com,Engineering Shared,DIR-001,shared,google_workspace,active,,rahul.eng@personal.com;teamlead@company.com,Shared mailbox for engineering leadership
+it.service.bot@mams.com,IT Service Bot,EMP-102,service,microsoft_365,active,,alerts@company.com,Automation and alerts account

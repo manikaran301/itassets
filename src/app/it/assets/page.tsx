@@ -21,7 +21,8 @@ import {
   HardDrive,
   ChevronDown,
   ScreenShare,
-  Boxes
+  Boxes,
+  Copy
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -107,6 +108,28 @@ export default function AssetsPage() {
     return matchesSearch && matchesType && matchesStatus;
   });
 
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text);
+    } else {
+      // Fallback for non-HTTPS HTTP environments (execCommand)
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (error) {
+        console.error('Fallback copy failed', error);
+      }
+      textArea.remove();
+    }
+  };
+
   const handleDelete = async (id: string, tag: string) => {
     if (!confirm(`Are you sure you want to delete asset ${tag}?`)) return;
 
@@ -136,12 +159,7 @@ export default function AssetsPage() {
   return (
     <div className="space-y-4 animate-fade-in max-w-full pb-20 text-sm">
 
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent uppercase">Enterprise Assets</h2>
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5 font-bold uppercase tracking-widest italic opacity-80">Lifecycle & Infrastructure Inventory</p>
-        </div>
+      <div className="flex justify-end">
         <div className="flex gap-3">
           <button className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground hover:text-foreground rounded-2xl border border-white/5 transition-all text-[10px] font-black uppercase tracking-widest">
             <Download className="w-3.5 h-3.5" />
@@ -258,8 +276,8 @@ export default function AssetsPage() {
                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Asset Tag & Type</th>
                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Make & Model</th>
                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Specifications</th>
-                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Serial / MAC</th>
-                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Assigned To</th>
+                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">IP Address</th>
+                <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Assigned To / Seat</th>
                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground text-center">Status</th>
                 <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground text-right pr-6">Actions</th>
               </tr>
@@ -316,30 +334,48 @@ export default function AssetsPage() {
                       </div>
                     </td>
 
-                    {/* Serial / MAC */}
+                    {/* IP Address */}
                     <td className="px-4 py-3">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-mono font-black text-foreground/90 truncate max-w-[140px]" title={asset.serialNumber}>
-                          {asset.serialNumber || '—'}
-                        </p>
-                        {asset.macAddress && (
-                          <p className="text-[9px] font-mono text-muted-foreground/80 font-bold truncate max-w-[140px]" title={asset.macAddress}>
-                            {asset.macAddress}
+                        {asset.ipAddress ? (
+                          <div className="flex items-center gap-1.5 group/ip">
+                            <p className="text-[10px] font-mono text-foreground/90 font-bold truncate max-w-[120px]" title={asset.ipAddress}>
+                              {asset.ipAddress}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(asset.ipAddress);
+                                // Optional visual feedback can be added securely
+                              }}
+                              className="opacity-0 group-hover/ip:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded-md text-muted-foreground hover:text-primary"
+                              title="Copy IP"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] font-mono text-muted-foreground/30 font-bold truncate max-w-[140px]">
+                            —
                           </p>
                         )}
                       </div>
                     </td>
 
-                    {/* Assigned To */}
+                    {/* Assigned To / Seat */}
                     <td className="px-4 py-3">
                       {asset.currentEmployee ? (
                         <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center text-[8px] font-black text-secondary border border-secondary/10">
+                          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center text-[8px] font-black text-secondary border border-secondary/10 shrink-0">
                             {asset.currentEmployee.fullName.split(' ').map((n: string) => n[0]).join('')}
                           </div>
                           <div className="space-y-0.5 min-w-0">
                             <p className="text-[11px] font-black text-foreground/90 truncate max-w-[120px]">{asset.currentEmployee.fullName}</p>
-                            <p className="text-[8px] font-mono text-muted-foreground/60 font-bold uppercase tracking-widest">{asset.currentEmployee.employeeCode}</p>
+                            <p className="text-[8px] font-mono text-muted-foreground/60 font-bold uppercase tracking-widest">
+                              {asset.currentEmployee.employeeCode} 
+                              {asset.currentEmployee.deskNumber ? <span className="ml-1 text-secondary/70">· SEAT: {asset.currentEmployee.deskNumber}</span> : ''}
+                            </p>
                           </div>
                         </div>
                       ) : (

@@ -91,15 +91,7 @@ export default function EmailAccountsPage() {
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
       
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-black tracking-tight uppercase bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Email Identities</h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
-            <span className="w-8 h-px bg-primary/30" />
-            Active Communication Registry
-          </p>
-        </div>
+      <div className="flex justify-end">
         <div className="flex items-center gap-3">
           <Link 
             href="/it/email/new" 

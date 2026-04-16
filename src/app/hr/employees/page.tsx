@@ -55,15 +55,7 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-6 animate-fade-in relative pb-20">
       
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-black tracking-tight uppercase bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Associate Directory</h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
-            <span className="w-8 h-px bg-primary/30" />
-            Central Workforce Registry
-          </p>
-        </div>
+      <div className="flex justify-end">
         <div className="flex items-center gap-3">
           <button className="p-3 bg-card/40 border border-white/5 rounded-2xl hover:bg-card/60 transition-all text-muted-foreground hover:text-foreground">
             <Download className="w-4 h-4" />
@@ -206,9 +198,9 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-6 py-5 text-right pr-8">
                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                          <button className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all border border-transparent hover:border-primary/10">
+                          <Link href={`/hr/employees/${emp.id}/edit`} className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all border border-transparent hover:border-primary/10 block">
                             <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                          </Link>
                           <button className="p-2 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-500/10">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

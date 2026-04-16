@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         personalPhone: data.personalPhone || null,
         department: data.department || null,
         designation: data.designation || null,
+        companyName: data.companyName || null,
         reportingManagerId: managerId,
         locationJoining: data.locationJoining || null,
         deskNumber: data.deskNumber || null,

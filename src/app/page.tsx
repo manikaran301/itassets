@@ -1,23 +1,74 @@
-import { 
-  Users, 
-  Monitor, 
-  Mail, 
-  Truck, 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock, 
-  Plus,
+import {
+  Users,
+  Monitor,
+  Mail,
+  Truck,
+  AlertCircle,
+  Clock,
   ArrowUpRight,
   TrendingUp,
   Cpu,
   History,
   ShieldCheck,
-  BarChart3
-} from 'lucide-react';
+  BarChart3,
+} from "lucide-react";
 import { StatsCard } from '@/components/StatsCard';
 import { cn } from '@/lib/utils';
+import prisma from "@/lib/prisma";
+import Link from "next/link";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [
+    employeeCount,
+    activeEmployeeCount,
+    assetCount,
+    inRepairAssetCount,
+    provisioningCount,
+    pendingProvisioningCount,
+    emailCount,
+    activeEmailCount,
+    recentAssignments,
+  ] = await Promise.all([
+    prisma.employee.count(),
+    prisma.employee.count({ where: { status: "active" } }),
+    prisma.asset.count(),
+    prisma.asset.count({ where: { status: "in_repair" } }),
+    prisma.provisioningRequest.count(),
+    prisma.provisioningRequest.count({ where: { status: "pending" } }),
+    prisma.emailAccount.count(),
+    prisma.emailAccount.count({ where: { status: "active" } }),
+    prisma.assignmentHistory.findMany({
+      take: 5,
+      orderBy: { assignedDate: "desc" },
+      include: {
+        employee: { select: { fullName: true } },
+        asset: { select: { assetTag: true } },
+        accessory: { select: { assetTag: true } },
+      },
+    }),
+  ]);
+
+  const alertCards = [
+    {
+      title: "Assets in Repair",
+      desc: `${inRepairAssetCount} assets currently marked in repair.`,
+      type: "warning" as const,
+      icon: Clock,
+    },
+    {
+      title: "Pending Provisioning",
+      desc: `${pendingProvisioningCount} requests need IT action.`,
+      type: "danger" as const,
+      icon: Cpu,
+    },
+    {
+      title: "Active Accounts",
+      desc: `${activeEmailCount} email identities are active.`,
+      type: "info" as const,
+      icon: ShieldCheck,
+    },
+  ];
+
   return (
     <div className="space-y-12 max-w-7xl mx-auto">
       <section className="animate-fade-in">
@@ -27,56 +78,56 @@ export default function DashboardPage() {
             <p className="text-muted-foreground mt-1">Real-time metrics for HR, IT, and Asset Management.</p>
           </div>
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border transition-all">
+            <Link href="/admin/audit" className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border transition-all">
               <History className="w-4 h-4" />
               <span>Audit Log</span>
-            </button>
-            <button className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:opacity-90 rounded-xl shadow-lg shadow-primary/20 transition-all font-semibold">
-              <Plus className="w-5 h-5" />
-              <span>New Request</span>
-            </button>
+            </Link>
+            <Link href="/it/provisioning" className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:opacity-90 rounded-xl shadow-lg shadow-primary/20 transition-all font-semibold">
+              <Truck className="w-5 h-5" />
+              <span>Provisioning</span>
+            </Link>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard 
             title="Total Employees"
-            value="1,280"
-            count="+24 new"
+            value={employeeCount}
+            count={`${activeEmployeeCount} active`}
             description="Active workforce tracking across 8 departments."
             icon={Users}
-            trend="up"
-            trendValue="12.4%"
+            trend="neutral"
+            trendValue="Live"
             className="border-l-4 border-l-primary"
           />
           <StatsCard 
             title="Active Assets"
-            value="2,450"
-            count="32 in repair"
+            value={assetCount}
+            count={`${inRepairAssetCount} in repair`}
             description="Laptops, desktops, and mobile devices managed."
             icon={Monitor}
-            trend="up"
-            trendValue="3.1%"
+            trend="neutral"
+            trendValue="Live"
             className="border-l-4 border-l-secondary"
           />
           <StatsCard 
             title="Provisioning"
-            value="18"
-            count="Pending IT"
+            value={provisioningCount}
+            count={`${pendingProvisioningCount} pending`}
             description="Hardware and software setup for new joiners."
             icon={Truck}
-            trend="down"
-            trendValue="8.2%"
+            trend="neutral"
+            trendValue="Live"
             className="border-l-4 border-l-accent"
           />
           <StatsCard 
             title="Email Accounts"
-            value="1,310"
-            count="42 shared"
+            value={emailCount}
+            count={`${activeEmailCount} active`}
             description="Workplace identities managed on Google Workspace."
             icon={Mail}
             trend="neutral"
-            trendValue="0%"
+            trendValue="Live"
             className="border-l-4 border-l-muted-foreground"
           />
         </div>
@@ -89,7 +140,7 @@ export default function DashboardPage() {
               <TrendingUp className="w-5 h-5 text-primary" />
               Recent Asset Movements
             </h3>
-            <button className="text-xs font-semibold text-primary hover:underline uppercase tracking-widest">View All</button>
+            <Link href="/it/assignments" className="text-xs font-semibold text-primary hover:underline uppercase tracking-widest">View All</Link>
           </div>
           
           <div className="premium-card rounded-2xl overflow-hidden glass border-border/50">
@@ -104,37 +155,31 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {[
-                  { id: 'LOG-001', emp: 'Rahul Sharma', asset: 'LPT-230', action: 'Assigned', date: 'Oct 12, 2026', status: 'primary' },
-                  { id: 'LOG-002', emp: 'Anjali Gupta', asset: 'ACC-M01', action: 'Return', date: 'Oct 11, 2026', status: 'secondary' },
-                  { id: 'LOG-003', emp: 'Vikram Singh', asset: 'DSK-990', action: 'Repair', date: 'Oct 10, 2026', status: 'accent' },
-                  { id: 'LOG-004', emp: 'Priya Verma', asset: 'LPT-401', action: 'Assigned', date: 'Oct 09, 2026', status: 'primary' },
-                  { id: 'LOG-005', emp: 'Amit Patel', asset: 'SIM-012', action: 'Assigned', date: 'Oct 08, 2026', status: 'primary' },
-                ].map((row) => (
+                {recentAssignments.map((row) => (
                   <tr key={row.id} className="hover:bg-muted/30 transition-colors group cursor-default">
                     <td className="px-6 py-4">
-                      <span className="text-xs font-mono font-semibold bg-muted px-2 py-1 rounded border border-border group-hover:bg-primary/10 transition-colors">{row.id}</span>
+                      <span className="text-xs font-mono font-semibold bg-muted px-2 py-1 rounded border border-border group-hover:bg-primary/10 transition-colors">{row.logCode}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold ring-1 ring-border shadow-sm">
-                          {row.emp.split(' ').map(n => n[0]).join('')}
+                          {row.employee.fullName.split(" ").map((n) => n[0]).join("")}
                         </div>
-                        <span className="text-sm font-medium">{row.emp}</span>
+                        <span className="text-sm font-medium">{row.employee.fullName}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-muted-foreground">{row.asset}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-muted-foreground">{row.asset?.assetTag ?? row.accessory?.assetTag ?? "-"}</td>
                     <td className="px-6 py-4">
                       <span className={cn(
                         "text-[10px] uppercase font-bold px-2 py-1 rounded-full",
-                        row.action === 'Assigned' ? "bg-primary/10 text-primary" : 
-                        row.action === 'Return' ? "bg-secondary/10 text-secondary" : 
+                        row.actionType === "new_assignment" ? "bg-primary/10 text-primary" :
+                        row.actionType === "reassignment" ? "bg-secondary/10 text-secondary" :
                         "bg-accent/10 text-accent"
                       )}>
-                        {row.action}
+                        {row.actionType.replaceAll("_", " ")}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{row.date}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(row.assignedDate).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -152,11 +197,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-4">
-            {[
-              { title: 'Warranty Expiry', desc: '5 Laptops (Dell XPS 13) expiring in 15 days.', type: 'warning', icon: Clock },
-              { title: 'Provisioning Overdue', desc: 'Employee ID EMP-992 (Joining Tomorrow) pending phone setup.', type: 'danger', icon: Cpu },
-              { title: 'Suspicious Login', desc: 'Failed login attempt detected from admin-backup account.', type: 'info', icon: ShieldCheck },
-            ].map((alert, i) => (
+            {alertCards.map((alert, i) => (
               <div key={i} className="p-4 rounded-2xl bg-card border border-border premium-card flex gap-4 group">
                 <div className={cn(
                   "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",

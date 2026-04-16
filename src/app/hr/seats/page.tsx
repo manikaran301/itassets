@@ -1,30 +1,30 @@
 import { 
-  MapPin, 
-  Search, 
-  Filter, 
-  Map, 
+  MapPin,
   User, 
   Monitor, 
-  CheckCircle2, 
-  AlertCircle, 
-  HelpCircle, 
   Plus, 
   Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import prisma from "@/lib/prisma";
 
-export default function SeatsPage() {
+export default async function SeatsPage() {
   const floors = ['Floor 1', 'Floor 2', 'Floor 3', 'Terrace'];
-  const seats = [
-    { id: 'F2-D01', user: 'Rahul Sharma', status: 'Occupied', icon: User },
-    { id: 'F2-D02', user: 'Anjali Gupta', status: 'Occupied', icon: User },
-    { id: 'F2-D03', user: null, status: 'Available', icon: CheckCircle2 },
-    { id: 'F2-D04', user: 'Vikram Singh', status: 'In Repair', icon: AlertCircle },
-    { id: 'F2-D05', user: null, status: 'Reserved', icon: HelpCircle },
-    { id: 'F2-D06', user: 'Priya Verma', status: 'Occupied', icon: User },
-    { id: 'F2-D07', user: null, status: 'Available', icon: CheckCircle2 },
-    { id: 'F2-D08', user: 'Amit Patel', status: 'Occupied', icon: User },
-  ];
+  const employees = await prisma.employee.findMany({
+    where: { status: "active" },
+    select: {
+      id: true,
+      fullName: true,
+      deskNumber: true,
+    },
+    orderBy: { fullName: "asc" },
+  });
+
+  const seats = employees.slice(0, 24).map((employee) => ({
+    id: employee.deskNumber || `UNASSIGNED-${employee.id.slice(0, 4)}`,
+    user: employee.deskNumber ? employee.fullName : null,
+    status: employee.deskNumber ? "Occupied" : "Available",
+  }));
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -85,7 +85,7 @@ export default function SeatsPage() {
                    </div>
                    <div className="space-y-0.5">
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{seat.id}</p>
-                      <p className="text-sm font-bold tracking-tight h-5 truncate max-w-[120px]">{seat.user || seat.status}</p>
+                      <p className="text-sm font-bold tracking-tight h-5 truncate max-w-[120px]">{seat.user || "No assignee"}</p>
                    </div>
                    
                    <div className="absolute top-2 right-2 flex gap-1">

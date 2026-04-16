@@ -5,13 +5,22 @@ import { z } from 'zod';
 const EmailSchema = z.object({
   emailAddress: z.string().email("Invalid email address").trim(),
   displayName: z.string().min(1, "Display Name is required").trim(),
-  employeeId: z.string().uuid("Employee ID must be a valid UUID"),
+  employeeId: z.string().uuid("Employee ID must be a valid UUID").optional(),
+  employeeCode: z.string().trim().min(1).optional(),
   accountType: z.enum(['personal', 'shared', 'alias', 'distribution', 'service']).default('personal'),
   platform: z.enum(['google_workspace', 'microsoft_365', 'zoho', 'other']),
   status: z.enum(['active', 'suspended', 'deactivated', 'deleted']).default('active'),
   passwordHash: z.string().optional().nullable(),
   forwardingEnabled: z.boolean().default(false),
   createdBy: z.string().uuid().nullable().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.employeeId && !data.employeeCode) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Either employeeId or employeeCode is required",
+      path: ["employeeCode"],
+    });
+  }
 });
 
 export async function GET() {
@@ -55,11 +64,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This email address already exists.' }, { status: 409 });
     }
 
+    let resolvedEmployeeId = data.employeeId;
+
+    if (!resolvedEmployeeId && data.employeeCode) {
+      const employee = await prisma.employee.findUnique({
+        where: { employeeCode: data.employeeCode },
+        select: { id: true },
+      });
+
+      if (!employee) {
+        return NextResponse.json(
+          { error: `No employee found for employeeCode: ${data.employeeCode}` },
+          { status: 400 },
+        );
+      }
+
+      resolvedEmployeeId = employee.id;
+    }
+
+    if (!resolvedEmployeeId) {
+      return NextResponse.json(
+        { error: "Could not resolve employee for this email identity." },
+        { status: 400 },
+      );
+    }
+
     const email = await prisma.emailAccount.create({
       data: {
         emailAddress: data.emailAddress,
         displayName: data.displayName,
-        employeeId: data.employeeId,
+        employeeId: resolvedEmployeeId,
         accountType: data.accountType,
         platform: data.platform,
         status: data.status,

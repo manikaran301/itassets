@@ -177,6 +177,7 @@ model Employee {
   personalPhone       String?       @db.VarChar(20)
   department          String?       @db.VarChar(80)
   designation         String?       @db.VarChar(80)
+  companyName         String?       @db.VarChar(100)
   reportingManagerId  String?       @db.Uuid
   locationJoining     String?       @db.VarChar(100)
   deskNumber          String?       @db.VarChar(20)
@@ -237,14 +238,18 @@ model Asset {
   model               String?          @db.VarChar(80)
   cpu                 String?          @db.VarChar(100)
   ramGb               String?          @db.VarChar(10)
+  ramType             String?          @db.VarChar(20)
   ssdGb               Int?
+  ssdType             String?          @db.VarChar(20)
   hddGb               Int?
+  hddType             String?          @db.VarChar(20)
   serialNumber        String?          @unique @db.VarChar(60)
   macAddress          String?          @unique @db.VarChar(17)
   ipAddress           String?          @db.VarChar(15)
   os                  String?          @db.VarChar(30)
   osVersion           String?          @db.VarChar(40)
   antivirusStatus     AntivirusStatus  @default(no)
+  antivirusName       String?          @db.VarChar(60)
   warrantyExpiry      DateTime?        @db.Date
   purchaseDate        DateTime?        @db.Date
   cost                Decimal?         @db.Decimal(10, 2)
