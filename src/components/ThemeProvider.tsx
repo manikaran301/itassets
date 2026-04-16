@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from "react";
 
 type Theme = "light" | "dark";
@@ -19,6 +20,19 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const THEME_STORAGE_KEY = "mams-theme";
 
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  const storedTheme = window.localStorage.getItem(
+    THEME_STORAGE_KEY,
+  ) as Theme | null;
+  return (
+    storedTheme ??
+    (window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light")
+  );
+}
+
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
   root.dataset.theme = theme;
@@ -27,19 +41,16 @@ function applyTheme(theme: Theme) {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
+  const initialized = useRef(false);
 
+  // Initialize theme on mount without setState in effect
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(
-      THEME_STORAGE_KEY,
-    ) as Theme | null;
-    const initialTheme =
-      storedTheme ??
-      (window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light");
-
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
+    if (!initialized.current) {
+      initialized.current = true;
+      const initialTheme = getInitialTheme();
+      setTheme(initialTheme);
+      applyTheme(initialTheme);
+    }
   }, []);
 
   useEffect(() => {

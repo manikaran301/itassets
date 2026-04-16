@@ -50,7 +50,16 @@ export async function updateUser(id: string, formData: FormData) {
     throw new Error("Missing required fields");
   }
 
-  const updateData: any = {
+  const updateData: {
+    fullName: string;
+    username: string;
+    email: string;
+    role: SystemRole;
+    companyName: string | null;
+    isActive: boolean;
+    updatedAt: Date;
+    passwordHash?: string;
+  } = {
     fullName,
     username,
     email,

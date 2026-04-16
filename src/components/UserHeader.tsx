@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const headerContent = [
@@ -99,10 +98,18 @@ const headerContent = [
   },
 ];
 
+interface SessionUser {
+  name?: string | null;
+  email?: string | null;
+  role?: string;
+}
+
 export function UserHeader() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const userName = session?.user?.name || "User";
+  const user = session?.user as SessionUser | undefined;
+  const userName = user?.name || "User";
+  const userRole = user?.role || "Member";
   const userInitial = userName[0].toUpperCase();
   const pageHeader = useMemo(
     () =>
@@ -125,9 +132,9 @@ export function UserHeader() {
       </div>
       <div className="ml-auto flex items-center gap-4">
         <div className="relative group">
-          <input 
-            type="text" 
-            placeholder="Search assets..." 
+          <input
+            type="text"
+            placeholder="Search assets..."
             className="bg-muted px-4 py-1.5 rounded-full text-sm border border-transparent focus:border-primary/30 outline-none transition-all w-64 group-hover:w-80"
           />
         </div>
@@ -135,7 +142,9 @@ export function UserHeader() {
         <div className="flex items-center gap-3">
           <div className="hidden md:block text-right">
             <p className="text-xs font-bold leading-none">{userName}</p>
-            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter">{(session?.user as any)?.role || 'Member'}</p>
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter">
+              {userRole}
+            </p>
           </div>
           <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xs ring-2 ring-primary ring-offset-2 ring-offset-card shadow-lg">
             {userInitial}

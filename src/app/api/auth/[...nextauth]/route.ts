@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcrypt";
 
@@ -15,10 +14,7 @@ const handler = NextAuth({
       async authorize(credentials) {
         const identifier = credentials?.identifier?.trim();
 
-        console.log("Login attempt with:", identifier);
-        
         if (!identifier || !credentials?.password) {
-          console.warn("Login rejected: missing identifier or password");
           return null;
         }
 
@@ -31,11 +27,8 @@ const handler = NextAuth({
               ]
             }
           });
-          
-          console.log("DB lookup returned:", user ? user.email : "Not found");
 
           if (!user || !user.isActive) {
-            console.warn("Login rejected: user not found or inactive");
             return null;
           }
 
@@ -43,11 +36,8 @@ const handler = NextAuth({
             credentials.password,
             user.passwordHash
           );
-          
-          console.log("Password match:", isPasswordCorrect);
 
           if (!isPasswordCorrect) {
-            console.warn("Login rejected: invalid password");
             return null;
           }
 
@@ -63,9 +53,8 @@ const handler = NextAuth({
             name: user.fullName,
             role: user.role,
           };
-        } catch (error) {
-          console.error("Credentials authorize failed:", error);
-          throw error;
+        } catch {
+          return null;
         }
       }
     })

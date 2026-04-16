@@ -1,18 +1,35 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ShieldCheck, User, Mail, Briefcase, Lock, Key, Activity, ArrowLeft, Loader2 } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from "react";
+import {
+  ShieldCheck,
+  User,
+  Mail,
+  Briefcase,
+  Key,
+  Activity,
+  ArrowLeft,
+  Loader2,
+} from "lucide-react";
+import Link from "next/link";
+
+interface SystemUserData {
+  id?: string;
+  fullName?: string;
+  username?: string;
+  email?: string;
+  role?: string;
+  companyName?: string | null;
+  isActive?: boolean;
+}
 
 interface UserFormProps {
-  initialData?: any;
+  initialData?: SystemUserData;
   action: (formData: FormData) => Promise<void>;
 }
 
 export function UserForm({ initialData, action }: UserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,7 +47,10 @@ export function UserForm({ initialData, action }: UserFormProps) {
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-12">
       <div className="flex items-center justify-between rounded-2xl border border-border bg-card/50 backdrop-blur-xl px-6 py-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <Link href="/admin/users" className="p-2 -ml-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+          <Link
+            href="/admin/users"
+            className="p-2 -ml-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+          >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -44,19 +64,22 @@ export function UserForm({ initialData, action }: UserFormProps) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="premium-card rounded-[32px] border border-border bg-card overflow-hidden shadow-xl shadow-black/5">
+      <form
+        onSubmit={handleSubmit}
+        className="premium-card rounded-[32px] border border-border bg-card overflow-hidden shadow-xl shadow-black/5"
+      >
         <div className="p-8 space-y-8">
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Left Column */}
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <User className="w-3.5 h-3.5" /> Full Name <span className="text-red-500">*</span>
+                  <User className="w-3.5 h-3.5" /> Full Name{" "}
+                  <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  name="fullName" 
+                <input
+                  type="text"
+                  name="fullName"
                   required
                   defaultValue={initialData?.fullName}
                   className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
@@ -66,11 +89,12 @@ export function UserForm({ initialData, action }: UserFormProps) {
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <User className="w-3.5 h-3.5" /> Username <span className="text-red-500">*</span>
+                  <User className="w-3.5 h-3.5" /> Username{" "}
+                  <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  name="username" 
+                <input
+                  type="text"
+                  name="username"
                   required
                   defaultValue={initialData?.username}
                   className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
@@ -80,11 +104,12 @@ export function UserForm({ initialData, action }: UserFormProps) {
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5" /> Email Address <span className="text-red-500">*</span>
+                  <Mail className="w-3.5 h-3.5" /> Email Address{" "}
+                  <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="email" 
-                  name="email" 
+                <input
+                  type="email"
+                  name="email"
                   required
                   defaultValue={initialData?.email}
                   className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
@@ -97,13 +122,14 @@ export function UserForm({ initialData, action }: UserFormProps) {
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5" /> System Role <span className="text-red-500">*</span>
+                  <ShieldCheck className="w-3.5 h-3.5" /> System Role{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <select 
-                    name="role" 
+                  <select
+                    name="role"
                     required
-                    defaultValue={initialData?.role || 'readonly'}
+                    defaultValue={initialData?.role || "readonly"}
                     className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none cursor-pointer"
                   >
                     <option value="admin">Administrator (Full Access)</option>
@@ -118,10 +144,10 @@ export function UserForm({ initialData, action }: UserFormProps) {
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                   <Briefcase className="w-3.5 h-3.5" /> Company / Division
                 </label>
-                <input 
-                  type="text" 
-                  name="companyName" 
-                  defaultValue={initialData?.companyName || ''}
+                <input
+                  type="text"
+                  name="companyName"
+                  defaultValue={initialData?.companyName || ""}
                   className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   placeholder="e.g. HQ"
                 />
@@ -129,14 +155,20 @@ export function UserForm({ initialData, action }: UserFormProps) {
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <Key className="w-3.5 h-3.5" /> {initialData ? "Reset Password" : "Password"} {initialData ? "" : <span className="text-red-500">*</span>}
+                  <Key className="w-3.5 h-3.5" />{" "}
+                  {initialData ? "Reset Password" : "Password"}{" "}
+                  {initialData ? "" : <span className="text-red-500">*</span>}
                 </label>
-                <input 
-                  type="password" 
-                  name="password" 
+                <input
+                  type="password"
+                  name="password"
                   required={!initialData}
                   className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
-                  placeholder={initialData ? "Leave blank to keep current password" : "Enter secure password"}
+                  placeholder={
+                    initialData
+                      ? "Leave blank to keep current password"
+                      : "Enter secure password"
+                  }
                 />
               </div>
             </div>
@@ -149,13 +181,15 @@ export function UserForm({ initialData, action }: UserFormProps) {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold">Account Status</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-blackmt-0.5">Allow user to authenticate</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-blackmt-0.5">
+                  Allow user to authenticate
+                </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  name="isActive" 
-                  className="sr-only peer" 
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  className="sr-only peer"
                   defaultChecked={initialData ? initialData.isActive : true}
                 />
                 <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
@@ -165,8 +199,8 @@ export function UserForm({ initialData, action }: UserFormProps) {
         </div>
 
         <div className="p-6 bg-muted/20 border-t border-border flex justify-end">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isSubmitting}
             className="px-8 py-3 bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest rounded-xl hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:active:scale-100"
           >

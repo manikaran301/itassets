@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -25,25 +26,42 @@ const EmailSchema = z.object({
 
 export async function GET() {
   try {
+    // Session check (defense in depth - middleware also checks)
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const emails = await prisma.emailAccount.findMany({
       include: {
-        employee: true,
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+            employeeCode: true,
+          },
+        },
       },
       orderBy: {
         emailAddress: 'asc',
       },
     });
     return NextResponse.json(emails);
-  } catch (error) {
-    console.error('Fetch emails error:', error);
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch emails' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
+    // Session check (defense in depth - middleware also checks)
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const rawData = await request.json();
-    
+
     // Parse the data
     const validatedResult = EmailSchema.safeParse(rawData);
     if (!validatedResult.success) {
@@ -119,13 +137,12 @@ export async function POST(request: Request) {
         entityId: email.id,
         action: 'created',
         changedBy: data.createdBy || null,
-        newValue: email as any,
+        newValue: JSON.parse(JSON.stringify(email)),
       }
     });
 
     return NextResponse.json(email, { status: 201 });
-  } catch (error: any) {
-    console.error('Create email error:', error);
+  } catch {
     return NextResponse.json({ error: 'Failed to create email account' }, { status: 500 });
   }
 }

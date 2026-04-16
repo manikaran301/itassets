@@ -19,7 +19,7 @@ export async function DELETE(
         entityType: 'asset',
         entityId: id,
         action: 'deleted',
-        oldValue: asset as any,
+        oldValue: JSON.parse(JSON.stringify(asset)),
       }
     });
 
@@ -66,8 +66,8 @@ export async function PATCH(
           entityType: 'asset',
           entityId: id,
           action: 'updated',
-          oldValue: oldAsset as any,
-          newValue: updatedAsset as any,
+          oldValue: JSON.parse(JSON.stringify(oldAsset)),
+          newValue: JSON.parse(JSON.stringify(updatedAsset)),
           changedBy: changedBy || null,
         }
       });
@@ -120,13 +120,13 @@ export async function GET(
     });
 
     // Manually serialize BigInt entries in audit logs for JSON response
-    const serializedLogs = logs.map((log: any) => ({
+    const serializedLogs = logs.map((log) => ({
       ...log,
       id: log.id.toString(), // Convert BigInt to string
     }));
 
     return NextResponse.json({ ...asset, logs: serializedLogs });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch asset' }, { status: 500 });
   }
 }

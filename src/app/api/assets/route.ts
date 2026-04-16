@@ -1,18 +1,32 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
+    // Session check (defense in depth - middleware also checks)
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const assets = await prisma.asset.findMany({
       include: {
-        currentEmployee: true,
+        currentEmployee: {
+          select: {
+            id: true,
+            fullName: true,
+            employeeCode: true,
+            deskNumber: true,
+          },
+        },
       },
       orderBy: {
         assetTag: 'asc',
       },
     });
     return NextResponse.json(assets);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch assets' }, { status: 500 });
   }
 }
@@ -30,9 +44,9 @@ const AssetSchema = z.object({
   cpu: z.string().trim().nullable().optional(),
   ramGb: z.string().trim().nullable().optional(),
   ramType: z.string().trim().nullable().optional(),
-  ssdGb: z.number().int().positive().nullable().optional(),
+  ssdGb: z.number().int().nonnegative().nullable().optional(),
   ssdType: z.string().trim().nullable().optional(),
-  hddGb: z.number().int().positive().nullable().optional(),
+  hddGb: z.number().int().nonnegative().nullable().optional(),
   hddType: z.string().trim().nullable().optional(),
   os: z.string().trim().nullable().optional(),
   osVersion: z.string().trim().nullable().optional(),
@@ -48,8 +62,14 @@ const AssetSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Session check (defense in depth - middleware also checks)
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const rawData = await request.json();
-    
+
     // Validate and Sanitize
     const validatedResult = AssetSchema.safeParse(rawData);
     if (!validatedResult.success) {
@@ -97,15 +117,14 @@ export async function POST(request: Request) {
         entityId: asset.id,
         action: 'created',
         changedBy: data.changedBy || null,
-        newValue: asset as any,
+        newValue: JSON.parse(JSON.stringify(asset)),
       }
     });
 
     return NextResponse.json(asset, { status: 201 });
-  } catch (error: any) {
-    console.error(error);
+  } catch (error) {
     // Handle Prisma unique constraint error
-    if (error.code === 'P2002') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return NextResponse.json({ error: 'An asset with this Tag, Serial Number, or MAC Address already exists.' }, { status: 409 });
     }
     return NextResponse.json({ error: 'Failed to create asset' }, { status: 500 });

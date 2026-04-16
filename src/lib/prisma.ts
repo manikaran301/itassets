@@ -7,9 +7,8 @@ const prismaClientSingleton = () => {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     connectionTimeoutMillis: 5000,
-    idleTimeoutMillis: 10000,
-    max: 1,
-    allowExitOnIdle: true,
+    idleTimeoutMillis: 30000,
+    max: 10, // Allow concurrent connections for production load
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });

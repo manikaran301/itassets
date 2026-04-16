@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { 
-  ShieldCheck, 
-  User, 
-  Lock, 
-  ArrowRight, 
+import {
+  ShieldCheck,
+  User,
+  Lock,
+  ArrowRight,
   AlertCircle,
   Loader2,
-  Monitor
+  Monitor,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,7 @@ export default function LoginPage() {
         router.push("/");
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setIsLoading(false);
@@ -57,7 +57,7 @@ export default function LoginPage() {
         <div className="relative group">
           {/* Decorative Border Blur */}
           <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-secondary rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-          
+
           <div className="relative bg-card/80 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="flex flex-col items-center mb-10 text-center">
@@ -67,21 +67,27 @@ export default function LoginPage() {
               <h1 className="text-3xl font-black tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text">
                 M_AMS Portal
               </h1>
-              <p className="text-muted-foreground text-sm mt-2 font-medium">Enterprise Asset Management System</p>
+              <p className="text-muted-foreground text-sm mt-2 font-medium">
+                Enterprise Asset Management System
+              </p>
             </div>
 
             {/* Error Message */}
             {error && (
               <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-500 animate-in fade-in slide-in-from-top-2">
                 <AlertCircle className="w-5 h-5 shrink-0" />
-                <p className="text-xs font-bold uppercase tracking-wide">{error}</p>
+                <p className="text-xs font-bold uppercase tracking-wide">
+                  {error}
+                </p>
               </div>
             )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Identity</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                  Identity
+                </label>
                 <div className="relative group">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input
@@ -97,8 +103,15 @@ export default function LoginPage() {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center ml-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Secret Key</label>
-                  <a href="#" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">Reset?</a>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    Secret Key
+                  </label>
+                  <a
+                    href="#"
+                    className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+                  >
+                    Reset?
+                  </a>
                 </div>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -118,7 +131,7 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className={cn(
                   "w-full bg-primary text-primary-foreground font-bold uppercase tracking-widest text-xs py-4 rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4",
-                  isLoading && "opacity-80 cursor-not-allowed animate-pulse"
+                  isLoading && "opacity-80 cursor-not-allowed animate-pulse",
                 )}
               >
                 {isLoading ? (
@@ -138,10 +151,13 @@ export default function LoginPage() {
             <div className="mt-10 pt-6 border-t border-border/50 flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-full border border-border/50">
                 <ShieldCheck className="w-3 h-3 text-secondary" />
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Secure 256-bit Login</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Secure 256-bit Login
+                </span>
               </div>
               <p className="text-[9px] text-muted-foreground/60 text-center leading-relaxed">
-                Unauthorized access is strictly prohibited. <br /> All login attempts are logged for security auditing.
+                Unauthorized access is strictly prohibited. <br /> All login
+                attempts are logged for security auditing.
               </p>
             </div>
           </div>

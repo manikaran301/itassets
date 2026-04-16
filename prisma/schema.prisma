@@ -153,7 +153,7 @@ model SystemUser {
   isActive             Boolean       @default(true)
   lastLogin            DateTime?     @db.Timestamp
   createdAt            DateTime      @default(now()) @db.Timestamp
-  updatedAt            DateTime      @default(now()) @db.Timestamp
+  updatedAt            DateTime      @updatedAt @db.Timestamp
 
   employeesCreated      Employee[]    @relation("CreatedBy")
   fulfilledRequirements EmployeeAssetRequirement[] @relation("FulfilledBy")
@@ -186,7 +186,7 @@ model Employee {
   status              EmployeeStatus @default(active)
   createdBy           String?       @db.Uuid
   createdAt           DateTime      @default(now()) @db.Timestamp
-  updatedAt           DateTime      @default(now()) @db.Timestamp
+  updatedAt           DateTime      @updatedAt @db.Timestamp
 
   manager             Employee?     @relation("ReportingManager", fields: [reportingManagerId], references: [id])
   subordinates        Employee[]    @relation("ReportingManager")
@@ -218,7 +218,7 @@ model EmployeeAssetRequirement {
   fulfilledBy   String?           @db.Uuid
   fulfilledAt   DateTime?         @db.Timestamp
   createdAt     DateTime          @default(now()) @db.Timestamp
-  updatedAt     DateTime          @default(now()) @db.Timestamp
+  updatedAt     DateTime          @updatedAt @db.Timestamp
 
   employee      Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   fulfiller     SystemUser?       @relation("FulfilledBy", fields: [fulfilledBy], references: [id])
@@ -257,7 +257,7 @@ model Asset {
   currentEmployeeId   String?          @db.Uuid
   notes               String?          @db.Text
   createdAt           DateTime          @default(now()) @db.Timestamp
-  updatedAt           DateTime          @default(now()) @db.Timestamp
+  updatedAt           DateTime          @updatedAt @db.Timestamp
 
   currentEmployee     Employee?        @relation(fields: [currentEmployeeId], references: [id])
   assignments         AssignmentHistory[]
@@ -285,7 +285,7 @@ model Accessory {
   condition           ConditionType    @default(good)
   notes               String?          @db.Text
   createdAt           DateTime          @default(now()) @db.Timestamp
-  updatedAt           DateTime          @default(now()) @db.Timestamp
+  updatedAt           DateTime          @updatedAt @db.Timestamp
 
   currentEmployee     Employee?        @relation(fields: [currentEmployeeId], references: [id])
   assignments         AssignmentHistory[]
@@ -343,7 +343,7 @@ model ProvisioningRequest {
   fulfilledAt         DateTime?            @db.Timestamp
   notes               String?              @db.Text
   createdAt           DateTime             @default(now()) @db.Timestamp
-  updatedAt           DateTime             @default(now()) @db.Timestamp
+  updatedAt           DateTime             @updatedAt @db.Timestamp
 
   employee            Employee             @relation(fields: [employeeId], references: [id])
   requester           SystemUser           @relation("RequestedBy", fields: [requestedBy], references: [id])
@@ -373,7 +373,7 @@ model EmailAccount {
   createdBy         String?          @db.Uuid
   deactivatedBy     String?          @db.Uuid
   createdAt         DateTime         @default(now()) @db.Timestamp
-  updatedAt         DateTime         @default(now()) @db.Timestamp
+  updatedAt         DateTime         @updatedAt @db.Timestamp
 
   employee          Employee         @relation("CurrentEmployee", fields: [employeeId], references: [id])
   previousUser      Employee?        @relation("PreviousUser", fields: [previousUserId], references: [id])

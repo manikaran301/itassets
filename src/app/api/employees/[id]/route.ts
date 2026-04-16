@@ -16,7 +16,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
 
     return NextResponse.json(employee);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch employee' }, { status: 500 });
   }
 }
@@ -82,7 +82,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       where: { id }
     });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to delete employee' }, { status: 500 });
   }
 }
