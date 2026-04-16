@@ -2,6 +2,9 @@ import { Users, ShieldCheck, Mail, Laptop, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
+
 // Calculate the date 120 days ago for filtering recent joiners
 const DAYS_THRESHOLD = 120;
 const getJoinersCutoffDate = () => {

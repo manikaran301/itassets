@@ -10,6 +10,9 @@ import { formatDistanceToNow } from "date-fns";
 import prisma from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
+
 const roleConfig = {
   admin: {
     icon: ShieldCheck,
@@ -60,35 +63,43 @@ export default async function UsersPage() {
             Governance Center
           </p>
           <div className="flex items-baseline gap-2">
-            <h1 className="text-2xl font-black tracking-tighter">{users.length}</h1>
-            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase">Total User Accounts</span>
+            <h1 className="text-2xl font-black tracking-tighter">
+              {users.length}
+            </h1>
+            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase">
+              Total User Accounts
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
             <p className="text-xs font-bold text-primary">Status</p>
             <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
-              {users.filter((user) => user.isActive).length} active, {users.filter((user) => !user.isActive).length} inactive
+              {users.filter((user) => user.isActive).length} active,{" "}
+              {users.filter((user) => !user.isActive).length} inactive
             </p>
           </div>
-          <a href="/admin/users/new" className="px-5 py-2 bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest rounded-full hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95 flex items-center gap-2">
+          <a
+            href="/admin/users/new"
+            className="px-5 py-2 bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest rounded-full hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95 flex items-center gap-2"
+          >
             <Users className="w-4 h-4" />
             <span>Add Member</span>
           </a>
         </div>
       </div>
 
-        {roleSummary.slice(0, 2).map(([role, count]) => (
-          <div
-            key={role}
-            className="premium-card rounded-[28px] border border-border bg-card p-5 hidden"
-          >
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
-              {role} accounts
-            </p>
-            <p className="mt-3 text-4xl font-black tracking-tight">{count}</p>
-          </div>
-        ))}
+      {roleSummary.slice(0, 2).map(([role, count]) => (
+        <div
+          key={role}
+          className="premium-card rounded-[28px] border border-border bg-card p-5 hidden"
+        >
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+            {role} accounts
+          </p>
+          <p className="mt-3 text-4xl font-black tracking-tight">{count}</p>
+        </div>
+      ))}
 
       <div className="premium-card overflow-hidden rounded-[32px] border border-border bg-card">
         <div className="border-b border-border bg-muted/20 px-6 py-4">
@@ -130,7 +141,10 @@ export default async function UsersPage() {
                 const RoleIcon = config.icon;
 
                 return (
-                  <tr key={user.id} className="hover:bg-muted/10 transition-colors">
+                  <tr
+                    key={user.id}
+                    className="hover:bg-muted/10 transition-colors"
+                  >
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-muted/30 text-primary">
@@ -213,7 +227,10 @@ export default async function UsersPage() {
                     </td>
 
                     <td className="px-6 py-5 text-right">
-                      <a href={`/admin/users/${user.id}/edit`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
+                      <a
+                        href={`/admin/users/${user.id}/edit`}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                      >
                         <Edit2 className="w-4 h-4" />
                       </a>
                     </td>

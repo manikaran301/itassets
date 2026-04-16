@@ -31,6 +31,16 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 
+// Format MAC address to use colons (D0:46:0C:8B:9B:C0)
+const formatMacAddress = (mac: string): string => {
+  // Remove all non-hex characters
+  const cleaned = mac.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+  // Insert colons every 2 characters
+  const formatted = cleaned.match(/.{1,2}/g)?.join(":") || cleaned;
+  // Limit to 17 characters (XX:XX:XX:XX:XX:XX)
+  return formatted.slice(0, 17);
+};
+
 const DEVICE_TYPES = [
   { value: "laptop", label: "Laptop", icon: Monitor },
   { value: "desktop", label: "Desktop", icon: Monitor },
@@ -557,10 +567,15 @@ export default function NewAssetPage() {
                   <Wifi className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent/30 group-focus-within/field:text-accent transition-colors" />
                   <input
                     type="text"
-                    placeholder="00:1A:2B:3C:4D:5E"
+                    placeholder="D0:46:0C:8B:9B:C0"
                     value={formData.macAddress}
-                    onChange={(e) => updateField("macAddress", e.target.value)}
-                    className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider"
+                    onChange={(e) =>
+                      updateField(
+                        "macAddress",
+                        formatMacAddress(e.target.value),
+                      )
+                    }
+                    className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider uppercase"
                   />
                 </div>
               </div>

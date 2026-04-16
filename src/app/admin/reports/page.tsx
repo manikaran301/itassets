@@ -11,6 +11,9 @@ import {
 import prisma from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
+
 const deviceIcons = {
   laptop: Laptop,
   desktop: Monitor,

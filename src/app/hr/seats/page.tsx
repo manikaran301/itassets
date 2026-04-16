@@ -2,6 +2,9 @@ import { User, Monitor, Plus, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
+
 export default async function SeatsPage() {
   const floors = ["Floor 1", "Floor 2", "Floor 3", "Terrace"];
   const employees = await prisma.employee.findMany({

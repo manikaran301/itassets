@@ -29,6 +29,16 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 
+// Format MAC address to use colons (D0:46:0C:8B:9B:C0)
+const formatMacAddress = (mac: string): string => {
+  // Remove all non-hex characters
+  const cleaned = mac.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+  // Insert colons every 2 characters
+  const formatted = cleaned.match(/.{1,2}/g)?.join(":") || cleaned;
+  // Limit to 17 characters (XX:XX:XX:XX:XX:XX)
+  return formatted.slice(0, 17);
+};
+
 const DEVICE_TYPES = [
   { value: "laptop", label: "Laptop", icon: Monitor },
   { value: "desktop", label: "Desktop", icon: Monitor },
@@ -635,9 +645,14 @@ export default function EditAssetPage({ params }: EditAssetProps) {
                   </label>
                   <input
                     value={formData.macAddress}
-                    onChange={(e) => updateField("macAddress", e.target.value)}
-                    className="w-full bg-muted/10 px-4 py-2.5 rounded-xl text-xs font-mono font-bold border border-transparent focus:border-primary/20 outline-none transition-all"
-                    placeholder="00:00:00:00:00"
+                    onChange={(e) =>
+                      updateField(
+                        "macAddress",
+                        formatMacAddress(e.target.value),
+                      )
+                    }
+                    className="w-full bg-muted/10 px-4 py-2.5 rounded-xl text-xs font-mono font-bold border border-transparent focus:border-primary/20 outline-none transition-all uppercase"
+                    placeholder="D0:46:0C:8B:9B:C0"
                   />
                 </div>
               </div>

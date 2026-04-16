@@ -12,10 +12,13 @@ import {
   ShieldCheck,
   BarChart3,
 } from "lucide-react";
-import { StatsCard } from '@/components/StatsCard';
-import { cn } from '@/lib/utils';
+import { StatsCard } from "@/components/StatsCard";
+import { cn } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const [
@@ -74,15 +77,25 @@ export default async function DashboardPage() {
       <section className="animate-fade-in">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Dashboard Overview</h2>
-            <p className="text-muted-foreground mt-1">Real-time metrics for HR, IT, and Asset Management.</p>
+            <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Dashboard Overview
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              Real-time metrics for HR, IT, and Asset Management.
+            </p>
           </div>
           <div className="flex gap-3">
-            <Link href="/admin/audit" className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border transition-all">
+            <Link
+              href="/admin/audit"
+              className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border transition-all"
+            >
               <History className="w-4 h-4" />
               <span>Audit Log</span>
             </Link>
-            <Link href="/it/provisioning" className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:opacity-90 rounded-xl shadow-lg shadow-primary/20 transition-all font-semibold">
+            <Link
+              href="/it/provisioning"
+              className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:opacity-90 rounded-xl shadow-lg shadow-primary/20 transition-all font-semibold"
+            >
               <Truck className="w-5 h-5" />
               <span>Provisioning</span>
             </Link>
@@ -90,7 +103,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard 
+          <StatsCard
             title="Total Employees"
             value={employeeCount}
             count={`${activeEmployeeCount} active`}
@@ -100,7 +113,7 @@ export default async function DashboardPage() {
             trendValue="Live"
             className="border-l-4 border-l-primary"
           />
-          <StatsCard 
+          <StatsCard
             title="Active Assets"
             value={assetCount}
             count={`${inRepairAssetCount} in repair`}
@@ -110,7 +123,7 @@ export default async function DashboardPage() {
             trendValue="Live"
             className="border-l-4 border-l-secondary"
           />
-          <StatsCard 
+          <StatsCard
             title="Provisioning"
             value={provisioningCount}
             count={`${pendingProvisioningCount} pending`}
@@ -120,7 +133,7 @@ export default async function DashboardPage() {
             trendValue="Live"
             className="border-l-4 border-l-accent"
           />
-          <StatsCard 
+          <StatsCard
             title="Email Accounts"
             value={emailCount}
             count={`${activeEmailCount} active`}
@@ -140,46 +153,79 @@ export default async function DashboardPage() {
               <TrendingUp className="w-5 h-5 text-primary" />
               Recent Asset Movements
             </h3>
-            <Link href="/it/assignments" className="text-xs font-semibold text-primary hover:underline uppercase tracking-widest">View All</Link>
+            <Link
+              href="/it/assignments"
+              className="text-xs font-semibold text-primary hover:underline uppercase tracking-widest"
+            >
+              View All
+            </Link>
           </div>
-          
+
           <div className="premium-card rounded-2xl overflow-hidden glass border-border/50">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Log Code</th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Employee</th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Asset Tag</th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Action</th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Date</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Log Code
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Employee
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Asset Tag
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Action
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Date
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {recentAssignments.map((row) => (
-                  <tr key={row.id} className="hover:bg-muted/30 transition-colors group cursor-default">
+                  <tr
+                    key={row.id}
+                    className="hover:bg-muted/30 transition-colors group cursor-default"
+                  >
                     <td className="px-6 py-4">
-                      <span className="text-xs font-mono font-semibold bg-muted px-2 py-1 rounded border border-border group-hover:bg-primary/10 transition-colors">{row.logCode}</span>
+                      <span className="text-xs font-mono font-semibold bg-muted px-2 py-1 rounded border border-border group-hover:bg-primary/10 transition-colors">
+                        {row.logCode}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold ring-1 ring-border shadow-sm">
-                          {row.employee.fullName.split(" ").map((n) => n[0]).join("")}
+                          {row.employee.fullName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
                         </div>
-                        <span className="text-sm font-medium">{row.employee.fullName}</span>
+                        <span className="text-sm font-medium">
+                          {row.employee.fullName}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-muted-foreground">{row.asset?.assetTag ?? row.accessory?.assetTag ?? "-"}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-muted-foreground">
+                      {row.asset?.assetTag ?? row.accessory?.assetTag ?? "-"}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={cn(
-                        "text-[10px] uppercase font-bold px-2 py-1 rounded-full",
-                        row.actionType === "new_assignment" ? "bg-primary/10 text-primary" :
-                        row.actionType === "reassignment" ? "bg-secondary/10 text-secondary" :
-                        "bg-accent/10 text-accent"
-                      )}>
+                      <span
+                        className={cn(
+                          "text-[10px] uppercase font-bold px-2 py-1 rounded-full",
+                          row.actionType === "new_assignment"
+                            ? "bg-primary/10 text-primary"
+                            : row.actionType === "reassignment"
+                              ? "bg-secondary/10 text-secondary"
+                              : "bg-accent/10 text-accent",
+                        )}
+                      >
                         {row.actionType.replaceAll("_", " ")}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(row.assignedDate).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {new Date(row.assignedDate).toLocaleDateString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -198,18 +244,29 @@ export default async function DashboardPage() {
 
           <div className="space-y-4">
             {alertCards.map((alert, i) => (
-              <div key={i} className="p-4 rounded-2xl bg-card border border-border premium-card flex gap-4 group">
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                  alert.type === 'warning' ? "bg-accent/10 text-accent" : 
-                  alert.type === 'danger' ? "bg-red-500/10 text-red-500" : 
-                  "bg-primary/10 text-primary"
-                )}>
+              <div
+                key={i}
+                className="p-4 rounded-2xl bg-card border border-border premium-card flex gap-4 group"
+              >
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                    alert.type === "warning"
+                      ? "bg-accent/10 text-accent"
+                      : alert.type === "danger"
+                        ? "bg-red-500/10 text-red-500"
+                        : "bg-primary/10 text-primary",
+                  )}
+                >
                   <alert.icon className="w-5 h-5 group-hover:scale-125 transition-transform" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold uppercase tracking-wide">{alert.title}</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{alert.desc}</p>
+                  <h4 className="text-sm font-bold uppercase tracking-wide">
+                    {alert.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {alert.desc}
+                  </p>
                 </div>
               </div>
             ))}
@@ -218,7 +275,10 @@ export default async function DashboardPage() {
           <div className="p-6 rounded-2xl bg-gradient-to-br from-primary to-blue-600 text-primary-foreground shadow-2xl relative overflow-hidden group border border-white/10">
             <div className="relative z-10">
               <h4 className="text-lg font-bold">IT Infrastructure Report</h4>
-              <p className="text-xs text-primary-foreground/70 mt-2">Generate a comprehensive audit of all enterprise assets and email identities.</p>
+              <p className="text-xs text-primary-foreground/70 mt-2">
+                Generate a comprehensive audit of all enterprise assets and
+                email identities.
+              </p>
               <button className="mt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all">
                 Download PDF
                 <ArrowUpRight className="w-3 h-3" />
