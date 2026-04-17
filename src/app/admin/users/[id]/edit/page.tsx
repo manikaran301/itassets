@@ -3,6 +3,9 @@ import { updateUser } from "../../actions";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
+
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const user = await prisma.systemUser.findUnique({
