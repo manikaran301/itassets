@@ -66,12 +66,6 @@ export function StatsCard({
         {description}
       </p>
 
-      <div className="mt-4 h-1.5 w-full bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500"
-          style={{ width: "75%" }}
-        />
-      </div>
     </div>
   );
 }

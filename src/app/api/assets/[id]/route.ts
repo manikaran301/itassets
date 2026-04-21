@@ -1,6 +1,25 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+async function generateLogCode(): Promise<string> {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const prefix = `ASG-${dateStr}`;
+
+  const lastLog = await prisma.assignmentHistory.findFirst({
+    where: { logCode: { startsWith: prefix } },
+    orderBy: { logCode: 'desc' },
+  });
+
+  let seq = 1;
+  if (lastLog) {
+    const lastSeq = parseInt(lastLog.logCode.split('-').pop() || '0');
+    seq = lastSeq + 1;
+  }
+
+  return `${prefix}-${seq.toString().padStart(4, '0')}`;
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -75,6 +94,103 @@ export async function PATCH(
       console.error('Audit log error:', auditError);
     }
 
+    // Auto-log assignment if employee changed
+    if (oldAsset.currentEmployeeId !== updateData.currentEmployeeId) {
+      try {
+        const newEmployeeId = updateData.currentEmployeeId as string | null;
+
+        if (newEmployeeId) {
+          // New assignment - create log
+          const logCode = await generateLogCode();
+          await prisma.assignmentHistory.create({
+            data: {
+              logCode,
+              assetId: id,
+              accessoryId: null,
+              assetCategory: 'asset',
+              employeeId: newEmployeeId,
+              actionType: oldAsset.currentEmployeeId ? 'reassignment' : 'new_assignment',
+              assignedDate: new Date(),
+              notes: oldAsset.currentEmployeeId ? `Reassigned to new employee` : null,
+            },
+          });
+        } else if (oldAsset.currentEmployeeId) {
+          // Asset returned/unassigned - mark last assignment as returned
+          const lastAssignment = await prisma.assignmentHistory.findFirst({
+            where: { assetId: id },
+            orderBy: { assignedDate: 'desc' },
+          });
+
+          if (lastAssignment && !lastAssignment.returnedDate) {
+            await prisma.assignmentHistory.update({
+              where: { id: lastAssignment.id },
+              data: { returnedDate: new Date() },
+            });
+          }
+        }
+      } catch (assignError) {
+        console.error('Assignment history error:', assignError);
+      }
+    }
+
+    // Auto-log repair send/return if status changed
+    if (updateData.status && oldAsset.status !== updateData.status) {
+      try {
+        const oldStatus = oldAsset.status;
+        const newStatus = updateData.status as string;
+
+        if (newStatus === 'in_repair') {
+          // Asset sent to repair - use currentEmployee or skip if none assigned
+          const employeeId = oldAsset.currentEmployeeId ?? updatedAsset.currentEmployeeId;
+          if (employeeId) {
+            const logCode = await generateLogCode();
+            await prisma.assignmentHistory.create({
+              data: {
+                logCode,
+                assetId: id,
+                accessoryId: null,
+                assetCategory: 'asset',
+                employeeId,
+                actionType: 'repair_send',
+                assignedDate: new Date(),
+                notes: `Asset sent to repair (was: ${oldStatus})`,
+              },
+            });
+          }
+        } else if (oldStatus === 'in_repair') {
+          // Asset returned from repair - close out the repair_send log
+          const repairLog = await prisma.assignmentHistory.findFirst({
+            where: { assetId: id, actionType: 'repair_send', returnedDate: null },
+            orderBy: { assignedDate: 'desc' },
+          });
+
+          if (repairLog) {
+            await prisma.assignmentHistory.update({
+              where: { id: repairLog.id },
+              data: { returnedDate: new Date() },
+            });
+
+            // Create a repair_return log
+            const logCode = await generateLogCode();
+            await prisma.assignmentHistory.create({
+              data: {
+                logCode,
+                assetId: id,
+                accessoryId: null,
+                assetCategory: 'asset',
+                employeeId: repairLog.employeeId,
+                actionType: 'repair_return',
+                assignedDate: new Date(),
+                notes: `Asset returned from repair (now: ${newStatus})`,
+              },
+            });
+          }
+        }
+      } catch (repairError) {
+        console.error('Repair history log error:', repairError);
+      }
+    }
+
     return NextResponse.json(updatedAsset);
   } catch (error) {
     console.error('Update error:', error);
@@ -125,7 +241,13 @@ export async function GET(
       id: log.id.toString(), // Convert BigInt to string
     }));
 
-    return NextResponse.json({ ...asset, logs: serializedLogs });
+    // Handle Decimal serialization for cost
+    const serializedAsset = {
+      ...asset,
+      cost: asset.cost ? Number(asset.cost) : null,
+    };
+
+    return NextResponse.json({ ...serializedAsset, logs: serializedLogs });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch asset' }, { status: 500 });
   }

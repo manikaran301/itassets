@@ -158,8 +158,8 @@ export default function EditEmployeePage() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.fullName || !formData.employeeCode || !formData.startDate) {
-      setError("Required: Name, Employee Code, and Start Date.");
+    if (!formData.fullName || !formData.employeeCode) {
+      setError("Required: Name and Employee Code.");
       return;
     }
 

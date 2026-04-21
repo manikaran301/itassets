@@ -21,9 +21,9 @@ export type Employee = PrismaEmployee & {
   creator?: Pick<PrismaSystemUser, 'id' | 'fullName'> | null;
 };
 
-export type EmployeeListItem = Pick<PrismaEmployee, 
-  'id' | 'employeeCode' | 'fullName' | 'department' | 'designation' | 
-  'status' | 'startDate' | 'deskNumber'
+export type EmployeeListItem = Pick<PrismaEmployee,
+  'id' | 'employeeCode' | 'fullName' | 'department' | 'designation' |
+  'status' | 'startDate' | 'deskNumber' | 'companyName' | 'locationJoining'
 > & {
   manager?: Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode'> | null;
 };
@@ -38,6 +38,7 @@ export type AssetCurrentEmployee = Pick<PrismaEmployee,
 
 export type Asset = PrismaAsset & {
   currentEmployee?: AssetCurrentEmployee | null;
+  creator?: Pick<PrismaSystemUser, 'id' | 'fullName'> | null;
 };
 
 export type AssetListItem = Pick<PrismaAsset,
@@ -45,6 +46,7 @@ export type AssetListItem = Pick<PrismaAsset,
   'cpu' | 'ramGb' | 'ssdGb' | 'hddGb' | 'ipAddress' | 'status'
 > & {
   currentEmployee?: AssetCurrentEmployee | null;
+  creator?: Pick<PrismaSystemUser, 'id' | 'fullName'> | null;
 };
 
 // =============================================================================
@@ -66,9 +68,10 @@ export type EmailAccount = PrismaEmailAccount & {
 };
 
 export type EmailAccountListItem = Pick<PrismaEmailAccount,
-  'id' | 'emailAddress' | 'displayName' | 'accountType' | 'status' | 'platform'
+  'id' | 'emailAddress' | 'displayName' | 'accountType' | 'status' | 'platform' | 'forwardingEnabled'
 > & {
   employee?: EmailAccountEmployee | null;
+  forwardingCount?: number;
 };
 
 // =============================================================================

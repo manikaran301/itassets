@@ -19,8 +19,11 @@ import {
   Layers,
   ScreenShare,
   Boxes,
+  Boxes as BoxIcon,
   IndianRupee,
   Zap,
+  Globe,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, use } from "react";
@@ -45,6 +48,12 @@ const DEVICE_TYPES = [
   { value: "zero_client", label: "Zero Client", icon: ScreenShare },
   { value: "nuc", label: "NUC", icon: Boxes },
   { value: "server", label: "Server", icon: Server },
+  { value: "printer", label: "Printer", icon: Package },
+  { value: "switch", label: "Switch", icon: Globe },
+  { value: "access_point", label: "Access Point", icon: Wifi },
+  { value: "tv", label: "TV", icon: ScreenShare },
+  { value: "nvr", label: "NVR", icon: Shield },
+  { value: "dvr", label: "DVR", icon: Shield },
   { value: "other", label: "Other", icon: HardDrive },
 ];
 
@@ -111,6 +120,15 @@ const RAM_TYPES = [
   { value: "LPDDR5", label: "LPDDR5" },
 ];
 
+const PRINTER_CONNECTION_TYPES = [
+  { value: "Network (LAN)", label: "Network (LAN)" },
+  { value: "USB", label: "USB" },
+  { value: "Wireless (Wi-Fi)", label: "Wireless (Wi-Fi)" },
+  { value: "USB + LAN", label: "USB + LAN" },
+  { value: "Bluetooth", label: "Bluetooth" },
+  { value: "Other", label: "Other" },
+];
+
 const BRAND_OPTIONS = [
   { value: "Apple", label: "Apple" },
   { value: "HP", label: "HP" },
@@ -167,6 +185,15 @@ export default function EditAssetPage({ params }: EditAssetProps) {
     serialNumber: "",
     macAddress: "",
     ipAddress: "",
+    graphicCard: "",
+    monitorSize: "",
+    lanPorts: "",
+    screenSize: "",
+    channel: "",
+    rackNumber: "",
+    allottedArea: "",
+    installedCameras: "",
+    connectionType: "",
     os: "",
     osVersion: "",
     antivirusName: "",
@@ -177,6 +204,55 @@ export default function EditAssetPage({ params }: EditAssetProps) {
     status: "available",
     notes: "",
   });
+
+  // Field visibility per device type
+  const fieldConfig: Record<string, string[]> = {
+    desktop: [
+      "cpu", "ramGb", "ramType", "ssdGb", "ssdType", "hddGb", "hddType",
+      "graphicCard", "monitorSize", "macAddress", "ipAddress",
+      "os", "osVersion", "antivirusName", "antivirusStatus",
+    ],
+    laptop: [
+      "cpu", "ramGb", "ramType", "ssdGb", "ssdType", "hddGb", "hddType",
+      "graphicCard", "macAddress", "ipAddress",
+      "os", "osVersion", "antivirusName", "antivirusStatus",
+    ],
+    nuc: [
+      "cpu", "ramGb", "ramType", "ssdGb", "ssdType", "hddGb", "hddType",
+      "macAddress", "ipAddress", "os", "osVersion", "antivirusName", "antivirusStatus",
+    ],
+    zero_client: [
+      "ramGb", "hddGb", "macAddress", "ipAddress", "os", "osVersion", "antivirusName", "antivirusStatus",
+    ],
+    server: [
+      "cpu", "ramGb", "ramType", "ssdGb", "ssdType", "hddGb", "hddType",
+      "macAddress", "ipAddress", "os", "osVersion", "antivirusName", "antivirusStatus",
+    ],
+    printer: ["macAddress", "ipAddress", "connectionType"],
+    switch: ["lanPorts", "macAddress", "ipAddress", "rackNumber"],
+    access_point: ["macAddress", "ipAddress", "allottedArea"],
+    tv: ["screenSize", "macAddress", "ipAddress", "allottedArea"],
+    nvr: ["channel", "macAddress", "ipAddress", "installedCameras"],
+    dvr: ["channel", "macAddress", "ipAddress", "installedCameras"],
+    other: ["cpu", "ramGb", "macAddress", "ipAddress"],
+  };
+
+  const isFieldVisible = (field: string) => {
+    const config = fieldConfig[formData.type] || fieldConfig.other;
+    return config.includes(field);
+  };
+
+  const showHardwareSpecs = [
+    "desktop", "laptop", "nuc", "zero_client", "server"
+  ].includes(formData.type);
+
+  const showNetworkSoftware = [
+    "desktop", "laptop", "nuc", "zero_client", "server"
+  ].includes(formData.type);
+
+  const showDeviceSpecific = [
+    "printer", "switch", "access_point", "tv", "nvr", "dvr"
+  ].includes(formData.type);
 
   useEffect(() => {
     const fetchAsset = async () => {
@@ -200,6 +276,15 @@ export default function EditAssetPage({ params }: EditAssetProps) {
           serialNumber: data.serialNumber || "",
           macAddress: data.macAddress || "",
           ipAddress: data.ipAddress || "",
+          graphicCard: data.graphicCard || "",
+          monitorSize: data.monitorSize || "",
+          lanPorts: data.lanPorts?.toString() || "",
+          screenSize: data.screenSize || "",
+          channel: data.channel || "",
+          rackNumber: data.rackNumber || "",
+          allottedArea: data.allottedArea || "",
+          installedCameras: data.installedCameras?.toString() || "",
+          connectionType: data.connectionType || "",
           os: data.os || "",
           osVersion: data.osVersion || "",
           antivirusName: data.antivirusName || "",
@@ -253,6 +338,15 @@ export default function EditAssetPage({ params }: EditAssetProps) {
         serialNumber: formData.serialNumber.trim() || null,
         macAddress: formData.macAddress.trim() || null,
         ipAddress: formData.ipAddress.trim() || null,
+        graphicCard: formData.graphicCard || null,
+        monitorSize: formData.monitorSize || null,
+        lanPorts: formData.lanPorts ? parseInt(formData.lanPorts) : null,
+        screenSize: formData.screenSize || null,
+        channel: formData.channel || null,
+        rackNumber: formData.rackNumber || null,
+        allottedArea: formData.allottedArea || null,
+        installedCameras: formData.installedCameras ? parseInt(formData.installedCameras) : null,
+        connectionType: formData.connectionType || null,
         os: formData.os.trim() || null,
         osVersion: formData.osVersion.trim() || null,
         antivirusName: formData.antivirusName || null,
@@ -449,215 +543,286 @@ export default function EditAssetPage({ params }: EditAssetProps) {
                   />
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Section 2: Technical Specifications */}
-          <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-              <Cpu className="w-4 h-4" />
-              Hardware Specification
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* CPU / Processor */}
-              <div className="space-y-2 lg:col-span-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  Processor (CPU)
-                </label>
-                <input
-                  value={formData.cpu}
-                  onChange={(e) => updateField("cpu", e.target.value)}
-                  className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
-                  placeholder="i5 12th Gen"
-                />
-              </div>
-
-              {/* RAM (GB) */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  RAM (GB)
+                <label className="text-[10px] font-black text-muted-foreground/85 uppercase tracking-widest px-1">
+                  Serial Number
                 </label>
-                <div className="relative">
+                <div className="relative group/field">
+                  <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
                   <input
-                    value={formData.ramGb}
-                    onChange={(e) => updateField("ramGb", e.target.value)}
-                    className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
-                    placeholder="16"
+                    value={formData.serialNumber}
+                    onChange={(e) => updateField("serialNumber", e.target.value)}
+                    className="w-full bg-muted/25 pl-12 pr-4 py-3 rounded-2xl text-xs text-foreground font-mono font-bold border border-border/70 focus:border-primary/40 focus:ring-4 focus:ring-primary/10 outline-none transition-all shadow-sm uppercase tracking-wider"
+                    placeholder="SN-XXXX-XXXX"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground/30">
-                    GB
-                  </span>
                 </div>
-              </div>
-
-              {/* RAM Type */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  RAM Type
-                </label>
-                <SearchableSelect
-                  options={RAM_TYPES}
-                  value={formData.ramType}
-                  onChange={(val) => updateField("ramType", val)}
-                  placeholder="Type..."
-                  allowCustom
-                />
-              </div>
-
-              {/* SSD (GB) */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  SSD (GB)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.ssdGb}
-                    onChange={(e) => updateField("ssdGb", e.target.value)}
-                    className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
-                    placeholder="512"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground/30">
-                    SSD
-                  </span>
-                </div>
-              </div>
-
-              {/* SSD Type */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  SSD Type
-                </label>
-                <SearchableSelect
-                  options={SSD_TYPES}
-                  value={formData.ssdType}
-                  onChange={(val) => updateField("ssdType", val)}
-                  placeholder="Type..."
-                  allowCustom
-                />
-              </div>
-
-              {/* HDD (GB) */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  HDD (GB)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.hddGb}
-                    onChange={(e) => updateField("hddGb", e.target.value)}
-                    className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
-                    placeholder="0"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground/30">
-                    HDD
-                  </span>
-                </div>
-              </div>
-
-              {/* HDD Type */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  HDD Type
-                </label>
-                <SearchableSelect
-                  options={HDD_TYPES}
-                  value={formData.hddType}
-                  onChange={(val) => updateField("hddType", val)}
-                  placeholder="Type..."
-                  allowCustom
-                />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Antivirus & Software Column */}
+          {/* Section 2: Technical Specifications (Compute Devices) */}
+          {showHardwareSpecs && (
             <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Software & Security
+                <Cpu className="w-4 h-4" />
+                Hardware Specification
               </h3>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* CPU / Processor */}
+                <div className="space-y-2 lg:col-span-2">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                    Processor (CPU)
+                  </label>
+                  <input
+                    value={formData.cpu}
+                    onChange={(e) => updateField("cpu", e.target.value)}
+                    className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
+                    placeholder="i5 12th Gen"
+                  />
+                </div>
+
+                {/* RAM (GB) */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                    RAM (GB)
+                  </label>
+                  <div className="relative">
+                    <input
+                      value={formData.ramGb}
+                      onChange={(e) => updateField("ramGb", e.target.value)}
+                      className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
+                      placeholder="16"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground/30">
+                      GB
+                    </span>
+                  </div>
+                </div>
+
+                {/* RAM Type */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                    RAM Type
+                  </label>
+                  <SearchableSelect
+                    options={RAM_TYPES}
+                    value={formData.ramType}
+                    onChange={(val) => updateField("ramType", val)}
+                    placeholder="Type..."
+                    allowCustom
+                  />
+                </div>
+
+                {/* SSD (GB) */}
+                <div className="space-y-2">
+                  <label className="text-[10px) font-black text-muted-foreground uppercase tracking-widest px-1">
+                    SSD (GB)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.ssdGb}
+                      onChange={(e) => updateField("ssdGb", e.target.value)}
+                      className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
+                      placeholder="512"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground/30">
+                      SSD
+                    </span>
+                  </div>
+                </div>
+
+                {/* SSD Type */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                    SSD Type
+                  </label>
+                  <SearchableSelect
+                    options={SSD_TYPES}
+                    value={formData.ssdType}
+                    onChange={(val) => updateField("ssdType", val)}
+                    placeholder="Type..."
+                    allowCustom
+                  />
+                </div>
+
+                {/* HDD (GB) */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                    HDD (GB)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.hddGb}
+                      onChange={(e) => updateField("hddGb", e.target.value)}
+                      className="w-full bg-muted/10 px-4 py-3 rounded-2xl text-xs font-bold border border-border/30 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-sm"
+                      placeholder="0"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground/30">
+                      HDD
+                    </span>
+                  </div>
+                </div>
+
+                {/* HDD Type */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                    HDD Type
+                  </label>
+                  <SearchableSelect
+                    options={HDD_TYPES}
+                    value={formData.hddType}
+                    onChange={(val) => updateField("hddType", val)}
+                    placeholder="Type..."
+                    allowCustom
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Section 2b: Device-Specific Specifications (Network/Security Devices) */}
+          {showDeviceSpecific && (
+            <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <BoxIcon className="w-4 h-4" />
+                Device Specifications
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 relative z-10">
+                {isFieldVisible("lanPorts") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">LAN Ports</label>
+                    <input type="number" placeholder="24" value={formData.lanPorts || ''} onChange={(e) => updateField("lanPorts", e.target.value)} className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black" />
+                  </div>
+                )}
+                {isFieldVisible("screenSize") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Screen Size</label>
+                    <input type="text" placeholder='55"' value={formData.screenSize || ''} onChange={(e) => updateField("screenSize", e.target.value)} className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold" />
+                  </div>
+                )}
+                {isFieldVisible("channel") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Channels</label>
+                    <input type="text" placeholder="16 Channel" value={formData.channel || ''} onChange={(e) => updateField("channel", e.target.value)} className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold" />
+                  </div>
+                )}
+                {isFieldVisible("rackNumber") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Rack Number</label>
+                    <input type="text" placeholder="R-01" value={formData.rackNumber || ''} onChange={(e) => updateField("rackNumber", e.target.value)} className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold uppercase" />
+                  </div>
+                )}
+                {isFieldVisible("allottedArea") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Allotted Area</label>
+                    <input type="text" placeholder="Server Room" value={formData.allottedArea || ''} onChange={(e) => updateField("allottedArea", e.target.value)} className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold" />
+                  </div>
+                )}
+                {isFieldVisible("connectionType") && (
+                  <SearchableSelect
+                    label="Connection Type"
+                    options={PRINTER_CONNECTION_TYPES}
+                    value={formData.connectionType}
+                    onChange={(val) => updateField("connectionType", val)}
+                    placeholder="Select connection..."
+                    allowCustom
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {showNetworkSoftware && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Antivirus & Software Column */}
+              <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Software & Security
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                        Antivirus Name
+                      </label>
+                      <SearchableSelect
+                        options={ANTIVIRUS_NAMES}
+                        value={formData.antivirusName}
+                        onChange={(val) => updateField("antivirusName", val)}
+                        placeholder="Antivirus Software..."
+                        allowCustom
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                        Antivirus Status
+                      </label>
+                      <SearchableSelect
+                        options={ANTIVIRUS_OPTIONS}
+                        value={formData.antivirusStatus}
+                        onChange={(val) => updateField("antivirusStatus", val)}
+                        placeholder="Status..."
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-2 col-span-2">
+                      <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                        OS Name & Version
+                      </label>
+                      <input
+                        value={formData.os}
+                        onChange={(e) => updateField("os", e.target.value)}
+                        className="w-full bg-muted/10 px-4 py-3 rounded-xl text-xs font-bold border border-transparent focus:border-primary/20 outline-none transition-all"
+                        placeholder="Windows 11 / macOS 14"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Network Column */}
+              <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <Wifi className="w-4 h-4" />
+                  Connectivity Meta
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                      Antivirus Name
+                      IP Address
                     </label>
-                    <SearchableSelect
-                      options={ANTIVIRUS_NAMES}
-                      value={formData.antivirusName}
-                      onChange={(val) => updateField("antivirusName", val)}
-                      placeholder="Antivirus Software..."
-                      allowCustom
+                    <input
+                      value={formData.ipAddress}
+                      onChange={(e) => updateField("ipAddress", e.target.value)}
+                      className="w-full bg-muted/10 px-4 py-2.5 rounded-xl text-xs font-mono font-bold border border-transparent focus:border-primary/20 outline-none transition-all"
+                      placeholder="192.168.1.1"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                      Antivirus Status
-                    </label>
-                    <SearchableSelect
-                      options={ANTIVIRUS_OPTIONS}
-                      value={formData.antivirusStatus}
-                      onChange={(val) => updateField("antivirusStatus", val)}
-                      placeholder="Status..."
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2 col-span-2">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                      OS Name & Version
+                      MAC Address
                     </label>
                     <input
-                      value={formData.os}
-                      onChange={(e) => updateField("os", e.target.value)}
-                      className="w-full bg-muted/10 px-4 py-3 rounded-xl text-xs font-bold border border-transparent focus:border-primary/20 outline-none transition-all"
-                      placeholder="Windows 11 / macOS 14"
+                      value={formData.macAddress}
+                      onChange={(e) =>
+                        updateField(
+                          "macAddress",
+                          formatMacAddress(e.target.value),
+                        )
+                      }
+                      className="w-full bg-muted/10 px-4 py-2.5 rounded-xl text-xs font-mono font-bold border border-transparent focus:border-primary/20 outline-none transition-all uppercase"
+                      placeholder="D0:46:0C:8B:9B:C0"
                     />
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Network Column */}
-            <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <Wifi className="w-4 h-4" />
-                Connectivity Meta
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                    IP Address
-                  </label>
-                  <input
-                    value={formData.ipAddress}
-                    onChange={(e) => updateField("ipAddress", e.target.value)}
-                    className="w-full bg-muted/10 px-4 py-2.5 rounded-xl text-xs font-mono font-bold border border-transparent focus:border-primary/20 outline-none transition-all"
-                    placeholder="192.168.1.1"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                    MAC Address
-                  </label>
-                  <input
-                    value={formData.macAddress}
-                    onChange={(e) =>
-                      updateField(
-                        "macAddress",
-                        formatMacAddress(e.target.value),
-                      )
-                    }
-                    className="w-full bg-muted/10 px-4 py-2.5 rounded-xl text-xs font-mono font-bold border border-transparent focus:border-primary/20 outline-none transition-all uppercase"
-                    placeholder="D0:46:0C:8B:9B:C0"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Section: Operational Info (Status & Notes) */}
           <div className="premium-card rounded-[32px] p-6 bg-card/40 border border-white/5 space-y-6">
@@ -718,18 +883,6 @@ export default function EditAssetPage({ params }: EditAssetProps) {
             </h3>
 
             <div className="space-y-5 relative z-10">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
-                  Serial Number
-                </label>
-                <input
-                  value={formData.serialNumber}
-                  onChange={(e) => updateField("serialNumber", e.target.value)}
-                  className="w-full bg-muted/20 px-4 py-3 rounded-2xl text-xs font-mono font-bold border border-border/40 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all shadow-inner"
-                  placeholder="Enter unique serial..."
-                />
-              </div>
-
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
                   Total Unit Cost (₹)

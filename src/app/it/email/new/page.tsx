@@ -54,7 +54,7 @@ export default function NewEmailAccountPage() {
     accountType: "personal",
     platform: "google_workspace",
     status: "active",
-    passwordHash: "",
+    password: "",
   });
 
   const [forwardingAddresses, setForwardingAddresses] = useState<string[]>([]);
@@ -332,16 +332,16 @@ export default function NewEmailAccountPage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                    Password Hash
+                    Password / Token
                   </label>
                   <div className="relative group/field">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
                     <input
                       type="password"
                       placeholder="Security token..."
-                      value={formData.passwordHash}
+                      value={formData.password}
                       onChange={(e) =>
-                        updateField("passwordHash", e.target.value)
+                        updateField("password", e.target.value)
                       }
                       className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3 text-xs outline-none transition-all font-mono shadow-sm"
                     />

@@ -20,6 +20,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 const sidebarLinks = [
   {
@@ -68,6 +69,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user as SessionUser | undefined;
+  const { notifications } = useNotifications();
 
   const userInitial = user?.name ? user.name[0] : "U";
   const userName = user?.name || "User";
@@ -96,6 +98,21 @@ export function Sidebar() {
               <div className="space-y-1">
                 {group.links.map((link) => {
                   const isActive = pathname === link.href;
+
+                  // Get notification count for this link
+                  let notificationCount = 0;
+                  if (
+                    link.name === "Provisioning" &&
+                    notifications?.provisioning.total
+                  ) {
+                    notificationCount = notifications.provisioning.total;
+                  } else if (
+                    link.name === "Joiners" &&
+                    notifications?.joiners.incomplete
+                  ) {
+                    notificationCount = notifications.joiners.incomplete;
+                  }
+
                   return (
                     <Link
                       key={link.name}
@@ -115,9 +132,17 @@ export function Sidebar() {
                             : "group-hover:scale-110 transition-transform",
                         )}
                       />
-                      <span>{link.name}</span>
-                      {isActive && (
-                        <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
+                      <span className="flex-1">{link.name}</span>
+
+                      {/* Notification Badge */}
+                      {notificationCount > 0 && (
+                        <span className="flex items-center justify-center w-5 h-5 text-[10px] font-black rounded-full bg-red-500 text-white ring-2 ring-red-500/30 animate-pulse">
+                          {notificationCount > 99 ? "99+" : notificationCount}
+                        </span>
+                      )}
+
+                      {isActive && !notificationCount && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
                       )}
                     </Link>
                   );

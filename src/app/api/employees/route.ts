@@ -15,13 +15,13 @@ const EmployeeSchema = z.object({
   reportingManagerId: z.string().uuid().nullable().optional().or(z.literal('')),
   locationJoining: z.string().trim().nullable().optional(),
   deskNumber: z.string().trim().nullable().optional(),
-  startDate: z.string().min(1, "Start date is required"),
+  startDate: z.string().nullable().optional(),
   exitDate: z.string().nullable().optional(),
   status: z.enum(['active', 'exit_pending', 'inactive']).default('active'),
   createdBy: z.string().uuid().nullable().optional().or(z.literal('')),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Session check (defense in depth - middleware also checks)
     const session = await getServerSession();
@@ -29,26 +29,45 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const employees = await prisma.employee.findMany({
-      include: {
-        manager: {
-          select: {
-            id: true,
-            fullName: true,
-            employeeCode: true,
+    const { searchParams } = new URL(request.url);
+    const skip = parseInt(searchParams.get('skip') || '0');
+    const take = parseInt(searchParams.get('take') || '0'); // 0 = all (backward compat)
+
+    const [employees, total] = await Promise.all([
+      prisma.employee.findMany({
+        include: {
+          manager: {
+            select: {
+              id: true,
+              fullName: true,
+              employeeCode: true,
+            },
+          },
+          creator: {
+            select: {
+              id: true,
+              fullName: true,
+            },
           },
         },
-        creator: {
-          select: {
-            id: true,
-            fullName: true,
-          },
+        orderBy: {
+          createdAt: 'desc',
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        ...(take > 0 ? { skip, take } : {}),
+      }),
+      prisma.employee.count(),
+    ]);
+
+    // If paginated, return with metadata
+    if (take > 0) {
+      return NextResponse.json({
+        data: employees,
+        total,
+        hasMore: skip + take < total,
+      });
+    }
+
+    // Backward compatible: return flat array if no pagination params
     return NextResponse.json(employees);
   } catch {
     return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 });
@@ -92,7 +111,7 @@ export async function POST(request: Request) {
         reportingManagerId: managerId,
         locationJoining: data.locationJoining || null,
         deskNumber: data.deskNumber || null,
-        startDate: new Date(data.startDate),
+        startDate: data.startDate ? new Date(data.startDate) : null,
         exitDate: data.exitDate ? new Date(data.exitDate) : null,
         status: data.status,
         createdBy: creatorId,

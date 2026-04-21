@@ -74,34 +74,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-12 max-w-7xl mx-auto">
-      <section className="animate-fade-in">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Dashboard Overview
-            </h2>
-            <p className="text-muted-foreground mt-1">
-              Real-time metrics for HR, IT, and Asset Management.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Link
-              href="/admin/audit"
-              className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground hover:text-foreground rounded-xl border border-border transition-all"
-            >
-              <History className="w-4 h-4" />
-              <span>Audit Log</span>
-            </Link>
-            <Link
-              href="/it/provisioning"
-              className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:opacity-90 rounded-xl shadow-lg shadow-primary/20 transition-all font-semibold"
-            >
-              <Truck className="w-5 h-5" />
-              <span>Provisioning</span>
-            </Link>
-          </div>
-        </div>
-
+      <section className="animate-fade-in pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="Total Employees"
@@ -270,21 +243,6 @@ export default async function DashboardPage() {
                 </div>
               </div>
             ))}
-          </div>
-
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary to-blue-600 text-primary-foreground shadow-2xl relative overflow-hidden group border border-white/10">
-            <div className="relative z-10">
-              <h4 className="text-lg font-bold">IT Infrastructure Report</h4>
-              <p className="text-xs text-primary-foreground/70 mt-2">
-                Generate a comprehensive audit of all enterprise assets and
-                email identities.
-              </p>
-              <button className="mt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all">
-                Download PDF
-                <ArrowUpRight className="w-3 h-3" />
-              </button>
-            </div>
-            <BarChart3 className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10 group-hover:rotate-12 transition-transform duration-700" />
           </div>
         </aside>
       </div>

@@ -11,7 +11,7 @@ const EmailSchema = z.object({
   accountType: z.enum(['personal', 'shared', 'alias', 'distribution', 'service']).default('personal'),
   platform: z.enum(['google_workspace', 'microsoft_365', 'zoho', 'other']),
   status: z.enum(['active', 'suspended', 'deactivated', 'deleted']).default('active'),
-  passwordHash: z.string().optional().nullable(),
+  password: z.string().optional().nullable(),
   forwardingEnabled: z.boolean().default(false),
   createdBy: z.string().uuid().nullable().optional(),
 }).superRefine((data, ctx) => {
@@ -41,12 +41,24 @@ export async function GET() {
             employeeCode: true,
           },
         },
+        forwarding: {
+          select: {
+            id: true,
+          },
+        },
       },
       orderBy: {
         emailAddress: 'asc',
       },
     });
-    return NextResponse.json(emails);
+
+    // Add forwarding count to each email
+    const emailsWithCount = emails.map((email: any) => ({
+      ...email,
+      forwardingCount: email.forwarding?.length || 0,
+    }));
+
+    return NextResponse.json(emailsWithCount);
   } catch {
     return NextResponse.json({ error: 'Failed to fetch emails' }, { status: 500 });
   }
@@ -115,7 +127,7 @@ export async function POST(request: Request) {
         accountType: data.accountType,
         platform: data.platform,
         status: data.status,
-        passwordHash: data.passwordHash || null,
+        password: data.password || null,
         forwardingEnabled: rawData.forwardingAddresses && rawData.forwardingAddresses.length > 0,
         createdBy: data.createdBy || null,
         // Create forwarding records

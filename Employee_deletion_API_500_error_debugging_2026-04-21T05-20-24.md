@@ -1,0 +1,26 @@
+[ ] NAME:Current Task List DESCRIPTION:Root task for conversation __NEW_AGENT__
+-[ ] NAME:Rewrite Provisioning page as client component DESCRIPTION:Convert /it/provisioning to client component. Add working status buttons (Start → Complete). When fulfilled, auto-update EmployeeAssetRequirement status.
+-[ ] NAME:Test the full flow DESCRIPTION:Verify: Joiners raises request → appears in Provisioning → IT fulfills → Joiners reflects updated status.
+-[ ] NAME:Test notification flow DESCRIPTION:Create joiner, raise request, verify badge updates on provisioning page
+-[ ] NAME:Build Assignment History API DESCRIPTION:Create /api/assignment-history endpoints to log all asset movements
+-[ ] NAME:Implement auto-logging in Assets page DESCRIPTION:Auto-create AssignmentHistory records when assigning assets to employees
+-[ ] NAME:Implement repair logging DESCRIPTION:Create logs when assets sent to/returned from repair
+-[ ] NAME:Implement employee exit recovery DESCRIPTION:Create logs when assets recovered from exiting employees
+-[ ] NAME:Test complete assignment flow DESCRIPTION:Verify all assignment logs appear on Assignment Ledger page
+-[ ] NAME:Create email detail/edit page DESCRIPTION:/it/email/[id] page to view and edit email details (address, display name, password, status, forwarding)
+-[ ] NAME:Wire up edit button DESCRIPTION:Make Edit2 button navigate to /it/email/[id] page
+-[ ] NAME:Wire up forwarding button DESCRIPTION:Make RefreshCw button open forwarding addresses modal/dialog
+-[ ] NAME:Wire up suspend button DESCRIPTION:Make ShieldAlert button toggle email status (active/suspended)
+-[ ] NAME:Test email editing flow DESCRIPTION:Click edit → change email details → save and verify changes
+-[ ] NAME:Add stats cards to assignment ledger DESCRIPTION:Show Total, Active, Returned, In Repair counts
+-[ ] NAME:Add search and filters DESCRIPTION:Search by asset/employee, filter by status and action type
+-[ ] NAME:Add return date column DESCRIPTION:Show when asset was returned (if applicable)
+-[ ] NAME:Add status badge in table DESCRIPTION:Show Active/Returned/In Repair status with icons
+-[ ] NAME:Improve table layout DESCRIPTION:Better spacing, colors, and responsive design
+-[ ] NAME:Add quick export DESCRIPTION:Export assignment history to CSV
+-[ ] NAME:Run prisma db push DESCRIPTION:Apply schema changes safely
+-[ ] NAME:Update form - add new device type buttons DESCRIPTION:Add Printer, Switch, Access Point, TV, NVR, DVR to device type selector
+-[ ] NAME:Update form - conditional Hardware Specs section DESCRIPTION:Show/hide CPU, RAM, HDD, SSD, Graphic Card, Monitor Size, LAN Ports, Screen Size, Channel, Rack Number based on device type
+-[ ] NAME:Update form - conditional Network & Software section DESCRIPTION:Show/hide OS, Antivirus for compute devices only. Show connection type for Printer, allotted area for AP/TV, installed cameras for NVR/DVR
+-[ ] NAME:Update API to handle new fields DESCRIPTION:Update POST /api/assets to accept and store new fields
+-[ ] NAME:Test the form DESCRIPTION:Verify each device type shows correct fields

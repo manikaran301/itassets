@@ -47,6 +47,12 @@ const DEVICE_TYPES = [
   { value: "zero_client", label: "Zero Client", icon: ScreenShare },
   { value: "nuc", label: "NUC", icon: Boxes },
   { value: "server", label: "Server", icon: Server },
+  { value: "printer", label: "Printer", icon: Package },
+  { value: "switch", label: "Switch", icon: Globe },
+  { value: "access_point", label: "Access Point", icon: Wifi },
+  { value: "tv", label: "TV", icon: ScreenShare },
+  { value: "nvr", label: "NVR", icon: Shield },
+  { value: "dvr", label: "DVR", icon: Shield },
   { value: "other", label: "Other", icon: HardDrive },
 ];
 
@@ -141,6 +147,15 @@ const RAM_TYPES = [
   { value: "LPDDR5", label: "LPDDR5" },
 ];
 
+const PRINTER_CONNECTION_TYPES = [
+  { value: "Network (LAN)", label: "Network (LAN)" },
+  { value: "USB", label: "USB" },
+  { value: "Wireless (Wi-Fi)", label: "Wireless (Wi-Fi)" },
+  { value: "USB + LAN", label: "USB + LAN" },
+  { value: "Bluetooth", label: "Bluetooth" },
+  { value: "Other", label: "Other" },
+];
+
 export default function NewAssetPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -163,6 +178,15 @@ export default function NewAssetPage() {
     serialNumber: "",
     macAddress: "",
     ipAddress: "",
+    graphicCard: "",
+    monitorSize: "",
+    lanPorts: "",
+    screenSize: "",
+    channel: "",
+    rackNumber: "",
+    allottedArea: "",
+    installedCameras: "",
+    connectionType: "",
     os: "",
     osVersion: "",
     antivirusName: "",
@@ -173,6 +197,147 @@ export default function NewAssetPage() {
     status: "available",
     notes: "",
   });
+
+  // Field visibility per device type
+  const fieldConfig: Record<string, string[]> = {
+    desktop: [
+      "cpu",
+      "ramGb",
+      "ramType",
+      "ssdGb",
+      "ssdType",
+      "hddGb",
+      "hddType",
+      "graphicCard",
+      "monitorSize",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "os",
+      "osVersion",
+      "antivirusName",
+      "antivirusStatus",
+    ],
+    laptop: [
+      "cpu",
+      "ramGb",
+      "ramType",
+      "ssdGb",
+      "ssdType",
+      "hddGb",
+      "hddType",
+      "graphicCard",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "os",
+      "osVersion",
+      "antivirusName",
+      "antivirusStatus",
+    ],
+    nuc: [
+      "cpu",
+      "ramGb",
+      "ramType",
+      "ssdGb",
+      "ssdType",
+      "hddGb",
+      "hddType",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "os",
+      "osVersion",
+      "antivirusName",
+      "antivirusStatus",
+    ],
+    zero_client: [
+      "ramGb",
+      "hddGb",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "os",
+      "osVersion",
+      "antivirusName",
+      "antivirusStatus",
+    ],
+    server: [
+      "cpu",
+      "ramGb",
+      "ramType",
+      "ssdGb",
+      "ssdType",
+      "hddGb",
+      "hddType",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "os",
+      "osVersion",
+      "antivirusName",
+      "antivirusStatus",
+    ],
+    printer: ["serialNumber", "macAddress", "ipAddress", "connectionType"],
+    switch: [
+      "lanPorts",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "rackNumber",
+    ],
+    access_point: ["serialNumber", "macAddress", "ipAddress", "allottedArea"],
+    tv: [
+      "screenSize",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "allottedArea",
+    ],
+    nvr: [
+      "channel",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "installedCameras",
+    ],
+    dvr: [
+      "channel",
+      "serialNumber",
+      "macAddress",
+      "ipAddress",
+      "installedCameras",
+    ],
+    other: ["cpu", "ramGb", "serialNumber", "macAddress", "ipAddress"],
+  };
+
+  const isFieldVisible = (field: string) => {
+    const config = fieldConfig[formData.type] || fieldConfig.other;
+    return config.includes(field);
+  };
+
+  const showHardwareSpecs = [
+    "desktop",
+    "laptop",
+    "nuc",
+    "zero_client",
+    "server",
+  ].includes(formData.type);
+  const showNetworkSoftware = [
+    "desktop",
+    "laptop",
+    "nuc",
+    "zero_client",
+    "server",
+  ].includes(formData.type);
+  const showDeviceSpecific = [
+    "printer",
+    "switch",
+    "access_point",
+    "tv",
+    "nvr",
+    "dvr",
+  ].includes(formData.type);
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -444,127 +609,160 @@ export default function NewAssetPage() {
             </div>
           </div>
 
-          {/* Section 2: Hardware Specifications */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
+          {/* Section 2: Hardware Specifications (Only for compute devices) */}
+          {showHardwareSpecs && (
+            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
 
-            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-secondary mb-6 relative z-10">
-              <div className="w-1.5 h-1.5 bg-secondary rounded-full shadow-[0_0_8px_var(--secondary)]" />
-              <span>2. Hardware Specifications</span>
-            </div>
+              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-secondary mb-6 relative z-10">
+                <div className="w-1.5 h-1.5 bg-secondary rounded-full shadow-[0_0_8px_var(--secondary)]" />
+                <span>2. Hardware Specifications</span>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 relative z-10">
-              {/* CPU */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                  CPU / Processor
-                </label>
-                <div className="relative">
-                  <Cpu className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary/30 group-focus-within/field:text-secondary transition-colors" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 relative z-10">
+                {/* CPU */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    CPU / Processor
+                  </label>
+                  <div className="relative">
+                    <Cpu className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary/30 group-focus-within/field:text-secondary transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="M3 Max 14-core"
+                      value={formData.cpu}
+                      onChange={(e) => updateField("cpu", e.target.value)}
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* RAM (GB) */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    RAM (GB)
+                  </label>
                   <input
                     type="text"
-                    placeholder="M3 Max 14-core"
-                    value={formData.cpu}
-                    onChange={(e) => updateField("cpu", e.target.value)}
-                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-bold"
-                  />
-                </div>
-              </div>
-
-              {/* RAM (GB) */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                  RAM (GB)
-                </label>
-                <input
-                  type="text"
-                  placeholder="16"
-                  value={formData.ramGb}
-                  onChange={(e) => updateField("ramGb", e.target.value)}
-                  className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black"
-                />
-              </div>
-
-              {/* RAM Type */}
-              <SearchableSelect
-                label="RAM Type"
-                options={RAM_TYPES}
-                value={formData.ramType}
-                onChange={(val) => updateField("ramType", val)}
-                placeholder="Select RAM Type..."
-                allowCustom
-              />
-
-              {/* Storage Devices (All on 1 Line) */}
-              <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-                {/* SSD Storage */}
-                <div className="group/field space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                    SSD (GB)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="512"
-                    value={formData.ssdGb}
-                    onChange={(e) => updateField("ssdGb", e.target.value)}
+                    placeholder="16"
+                    value={formData.ramGb}
+                    onChange={(e) => updateField("ramGb", e.target.value)}
                     className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black"
                   />
                 </div>
 
-                {/* SSD Type */}
+                {/* RAM Type */}
                 <SearchableSelect
-                  label="SSD Type"
-                  options={SSD_TYPES}
-                  value={formData.ssdType}
-                  onChange={(val) => updateField("ssdType", val)}
-                  placeholder="Select SSD Type..."
+                  label="RAM Type"
+                  options={RAM_TYPES}
+                  value={formData.ramType}
+                  onChange={(val) => updateField("ramType", val)}
+                  placeholder="Select RAM Type..."
                   allowCustom
                 />
 
-                {/* HDD Storage */}
-                <div className="group/field space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                    HDD (GB)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="1000"
-                    value={formData.hddGb}
-                    onChange={(e) => updateField("hddGb", e.target.value)}
-                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black"
+                {/* Storage Devices (All on 1 Line) */}
+                <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+                  {/* SSD Storage */}
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      SSD (GB)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="512"
+                      value={formData.ssdGb}
+                      onChange={(e) => updateField("ssdGb", e.target.value)}
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black"
+                    />
+                  </div>
+
+                  {/* SSD Type */}
+                  <SearchableSelect
+                    label="SSD Type"
+                    options={SSD_TYPES}
+                    value={formData.ssdType}
+                    onChange={(val) => updateField("ssdType", val)}
+                    placeholder="Select SSD Type..."
+                    allowCustom
+                  />
+
+                  {/* HDD Storage */}
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      HDD (GB)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="1000"
+                      value={formData.hddGb}
+                      onChange={(e) => updateField("hddGb", e.target.value)}
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-black"
+                    />
+                  </div>
+
+                  {/* HDD Type */}
+                  <SearchableSelect
+                    label="HDD Type"
+                    options={HDD_TYPES}
+                    value={formData.hddType}
+                    onChange={(val) => updateField("hddType", val)}
+                    placeholder="Select HDD Type..."
+                    allowCustom
                   />
                 </div>
-
-                {/* HDD Type */}
-                <SearchableSelect
-                  label="HDD Type"
-                  options={HDD_TYPES}
-                  value={formData.hddType}
-                  onChange={(val) => updateField("hddType", val)}
-                  placeholder="Select HDD Type..."
-                  allowCustom
-                />
               </div>
+
+              {/* Graphic Card - Desktop & Laptop */}
+              {isFieldVisible("graphicCard") && (
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    Graphic Card
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., NVIDIA GeForce RTX 3060"
+                    value={formData.graphicCard}
+                    onChange={(e) => updateField("graphicCard", e.target.value)}
+                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                  />
+                </div>
+              )}
+
+              {/* Monitor Size - Desktop only */}
+              {isFieldVisible("monitorSize") && (
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    Monitor Size
+                  </label>
+                  <input
+                    type="text"
+                    placeholder='e.g., 24"'
+                    value={formData.monitorSize}
+                    onChange={(e) => updateField("monitorSize", e.target.value)}
+                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                  />
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* Section 3: Network & Software */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-30">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+          {/* Section 2b: Device-Specific Specifications (for non-compute devices) */}
+          {showDeviceSpecific && (
+            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
 
-            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-6 relative z-10">
-              <div className="w-1.5 h-1.5 bg-accent rounded-full shadow-[0_0_8px_var(--accent)]" />
-              <span>3. Network & Software</span>
-            </div>
+              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-secondary mb-6 relative z-10">
+                <div className="w-1.5 h-1.5 bg-secondary rounded-full shadow-[0_0_8px_var(--secondary)]" />
+                <span>2. Device Specifications</span>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4 relative z-10">
-              {/* MAC Address */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                  MAC Address
-                </label>
-                <div className="relative">
-                  <Wifi className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent/30 group-focus-within/field:text-accent transition-colors" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 relative z-10">
+                {/* MAC Address */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    MAC Address
+                  </label>
                   <input
                     type="text"
                     placeholder="D0:46:0C:8B:9B:C0"
@@ -575,80 +773,245 @@ export default function NewAssetPage() {
                         formatMacAddress(e.target.value),
                       )
                     }
-                    className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider uppercase"
+                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider uppercase"
                   />
                 </div>
-              </div>
 
-              {/* IP Address */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                  IP Address
-                </label>
-                <div className="relative">
-                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent/30 group-focus-within/field:text-accent transition-colors" />
+                {isFieldVisible("connectionType") && (
+                  <SearchableSelect
+                    label="Connection Type"
+                    options={PRINTER_CONNECTION_TYPES}
+                    value={formData.connectionType}
+                    onChange={(val) => updateField("connectionType", val)}
+                    placeholder="Select connection..."
+                    allowCustom
+                  />
+                )}
+
+                {/* IP Address */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    IP Address
+                  </label>
                   <input
                     type="text"
                     placeholder="192.168.1.100"
                     value={formData.ipAddress}
                     onChange={(e) => updateField("ipAddress", e.target.value)}
-                    className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider"
+                    className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider"
+                  />
+                </div>
+
+                {/* LAN Ports - Switch only */}
+                {isFieldVisible("lanPorts") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      LAN Ports
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g., 24"
+                      value={formData.lanPorts}
+                      onChange={(e) => updateField("lanPorts", e.target.value)}
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Screen Size - TV only */}
+                {isFieldVisible("screenSize") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      Screen Size
+                    </label>
+                    <input
+                      type="text"
+                      placeholder='e.g., 55"'
+                      value={formData.screenSize}
+                      onChange={(e) =>
+                        updateField("screenSize", e.target.value)
+                      }
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Channel - NVR/DVR only */}
+                {isFieldVisible("channel") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      Channel
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., 16CH"
+                      value={formData.channel}
+                      onChange={(e) => updateField("channel", e.target.value)}
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Rack Number - Switch only */}
+                {isFieldVisible("rackNumber") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      Rack Number
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., RACK-01"
+                      value={formData.rackNumber}
+                      onChange={(e) =>
+                        updateField("rackNumber", e.target.value)
+                      }
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Allotted Area - Access Point/TV only */}
+                {isFieldVisible("allottedArea") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      Allotted Area
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Floor 2 - Conference Room"
+                      value={formData.allottedArea}
+                      onChange={(e) =>
+                        updateField("allottedArea", e.target.value)
+                      }
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Installed Cameras - NVR/DVR only */}
+                {isFieldVisible("installedCameras") && (
+                  <div className="group/field space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                      No. of Installed Cameras
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g., 8"
+                      value={formData.installedCameras}
+                      onChange={(e) =>
+                        updateField("installedCameras", e.target.value)
+                      }
+                      className="w-full bg-secondary/5 border border-secondary/20 focus:border-secondary/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Network & Software (Only for compute devices) */}
+          {showNetworkSoftware && (
+            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-30">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+
+              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-6 relative z-10">
+                <div className="w-1.5 h-1.5 bg-accent rounded-full shadow-[0_0_8px_var(--accent)]" />
+                <span>3. Network & Software</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4 relative z-10">
+                {/* MAC Address */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    MAC Address
+                  </label>
+                  <div className="relative">
+                    <Wifi className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent/30 group-focus-within/field:text-accent transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="D0:46:0C:8B:9B:C0"
+                      value={formData.macAddress}
+                      onChange={(e) =>
+                        updateField(
+                          "macAddress",
+                          formatMacAddress(e.target.value),
+                        )
+                      }
+                      className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider uppercase"
+                    />
+                  </div>
+                </div>
+
+                {/* IP Address */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    IP Address
+                  </label>
+                  <div className="relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent/30 group-focus-within/field:text-accent transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="192.168.1.100"
+                      value={formData.ipAddress}
+                      onChange={(e) => updateField("ipAddress", e.target.value)}
+                      className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] pl-12 pr-4 py-4 text-xs outline-none transition-all font-mono font-bold tracking-wider"
+                    />
+                  </div>
+                </div>
+
+                {/* Antivirus Name */}
+                <SearchableSelect
+                  label="Antivirus Software"
+                  options={ANTIVIRUS_NAMES}
+                  value={formData.antivirusName}
+                  onChange={(val) => updateField("antivirusName", val)}
+                  placeholder="Software Name..."
+                  icon={<ShieldCheck className="w-4 h-4" />}
+                  allowCustom
+                />
+
+                {/* Antivirus Status */}
+                <SearchableSelect
+                  label="Shield Status"
+                  options={ANTIVIRUS_OPTIONS}
+                  value={formData.antivirusStatus}
+                  onChange={(val) => updateField("antivirusStatus", val)}
+                  placeholder="Status..."
+                />
+
+                {/* OS */}
+                <SearchableSelect
+                  label="Operating System"
+                  options={[
+                    { value: "Windows", label: "Windows (Desktop/Server)" },
+                    { value: "macOS", label: "macOS (Apple)" },
+                    { value: "Linux", label: "Linux (Ubuntu/CentOS/RedHat)" },
+                    { value: "ChromeOS", label: "ChromeOS (Google)" },
+                    { value: "Android", label: "Android (Mobile/Tab)" },
+                    { value: "iOS", label: "iOS (iPhone/iPad)" },
+                  ]}
+                  value={formData.os}
+                  onChange={(val) => updateField("os", val)}
+                  placeholder="Select OS..."
+                  allowCustom
+                />
+
+                {/* OS Version */}
+                <div className="group/field space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    OS Version
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Sonoma 14.5"
+                    value={formData.osVersion}
+                    onChange={(e) => updateField("osVersion", e.target.value)}
+                    className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
                   />
                 </div>
               </div>
-
-              {/* Antivirus Name */}
-              <SearchableSelect
-                label="Antivirus Software"
-                options={ANTIVIRUS_NAMES}
-                value={formData.antivirusName}
-                onChange={(val) => updateField("antivirusName", val)}
-                placeholder="Software Name..."
-                icon={<ShieldCheck className="w-4 h-4" />}
-                allowCustom
-              />
-
-              {/* Antivirus Status */}
-              <SearchableSelect
-                label="Shield Status"
-                options={ANTIVIRUS_OPTIONS}
-                value={formData.antivirusStatus}
-                onChange={(val) => updateField("antivirusStatus", val)}
-                placeholder="Status..."
-              />
-
-              {/* OS */}
-              <SearchableSelect
-                label="Operating System"
-                options={[
-                  { value: "Windows", label: "Windows (Desktop/Server)" },
-                  { value: "macOS", label: "macOS (Apple)" },
-                  { value: "Linux", label: "Linux (Ubuntu/CentOS/RedHat)" },
-                  { value: "ChromeOS", label: "ChromeOS (Google)" },
-                  { value: "Android", label: "Android (Mobile/Tab)" },
-                  { value: "iOS", label: "iOS (iPhone/iPad)" },
-                ]}
-                value={formData.os}
-                onChange={(val) => updateField("os", val)}
-                placeholder="Select OS..."
-                allowCustom
-              />
-
-              {/* OS Version */}
-              <div className="group/field space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                  OS Version
-                </label>
-                <input
-                  type="text"
-                  placeholder="Sonoma 14.5"
-                  value={formData.osVersion}
-                  onChange={(e) => updateField("osVersion", e.target.value)}
-                  className="w-full bg-accent/5 border border-accent/20 focus:border-accent/40 rounded-[22px] px-6 py-4 text-xs outline-none transition-all font-bold"
-                />
-              </div>
             </div>
-          </div>
+          )}
 
           {/* Section 4: Purchase & Status */}
           <div className="premium-card p-6 rounded-[32px] border border-white/5 relative overflow-hidden group z-20">

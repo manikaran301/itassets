@@ -104,8 +104,8 @@ export default function NewEmployeePage() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.fullName || !formData.employeeCode || !formData.startDate) {
-      setError("Required: Name, Employee Code, and Start Date.");
+    if (!formData.fullName || !formData.employeeCode) {
+      setError("Required: Name and Employee Code.");
       return;
     }
 
@@ -113,11 +113,13 @@ export default function NewEmployeePage() {
     setError("");
 
     try {
+      const userId = (session?.user as any)?.id || null;
       const payload = {
         ...formData,
-        createdBy: (session?.user as any)?.id || null,
+        createdBy: userId,
       };
 
+      // Step 1: Create the employee
       const response = await fetch("/api/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,6 +130,33 @@ export default function NewEmployeePage() {
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to enroll employee.");
+      }
+
+      const employeeId = result.id;
+
+      // Step 2: Auto-create provisioning requests for selected items
+      const provisionTypes = Object.entries(provisions)
+        .filter(([, enabled]) => enabled)
+        .map(([key]) => key);
+
+      for (const type of provisionTypes) {
+        const provPayload: Record<string, unknown> = {
+          employeeId,
+          requestedBy: userId,
+          priority: "normal",
+        };
+
+        if (type === "email") {
+          provPayload.specialRequirements = "Email account provisioning";
+        } else {
+          provPayload.deviceTypeNeeded = type;
+        }
+
+        await fetch("/api/provisioning", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(provPayload),
+        });
       }
 
       setSubmitSuccess(true);
@@ -149,11 +178,16 @@ export default function NewEmployeePage() {
         </div>
         <div className="text-center space-y-2">
           <h3 className="text-2xl font-black uppercase tracking-tight">
-            Identity Enrolled
+            Employee Enrolled
           </h3>
           <p className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-60">
             {formData.fullName} is now in the central registry.
           </p>
+          {Object.values(provisions).some(Boolean) && (
+            <p className="text-[10px] text-primary uppercase tracking-widest font-bold mt-2">
+              Provisioning requests sent to IT
+            </p>
+          )}
         </div>
         <p className="text-[10px] text-muted-foreground/30 uppercase tracking-[0.4em] font-black animate-pulse">
           Syncing Global Directory
@@ -222,7 +256,7 @@ export default function NewEmployeePage() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <h2 className="text-xl font-black tracking-tight uppercase bg-gradient-to-r from-primary via-primary/80 to-secondary bg-clip-text text-transparent leading-none">
-              Enroll Associate
+              Enroll Employee
             </h2>
           </div>
           <p className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest italic pl-16">

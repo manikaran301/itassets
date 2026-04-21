@@ -20,14 +20,27 @@ export async function GET() {
             deskNumber: true,
           },
         },
+        creator: {
+          select: {
+            fullName: true,
+          },
+        },
       },
       orderBy: {
         assetTag: 'asc',
       },
     });
-    return NextResponse.json(assets);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch assets' }, { status: 500 });
+
+    // Handle Decimal serialization for cost
+    const serializedAssets = assets.map(asset => ({
+      ...asset,
+      cost: asset.cost ? Number(asset.cost) : null,
+    }));
+
+    return NextResponse.json(serializedAssets);
+  } catch (error: any) {
+    console.error("API Error [GET /api/assets]:", error);
+    return NextResponse.json({ error: 'Failed to fetch assets', details: error.message }, { status: 500 });
   }
 }
 
@@ -35,7 +48,7 @@ import { z } from 'zod';
 
 const AssetSchema = z.object({
   assetTag: z.string().min(1, "Asset Tag is required").trim(),
-  type: z.enum(['laptop', 'desktop', 'zero_client', 'n_computing', 'nuc', 'server', 'other']),
+  type: z.enum(['laptop', 'desktop', 'zero_client', 'n_computing', 'nuc', 'server', 'printer', 'switch', 'access_point', 'tv', 'nvr', 'dvr', 'other']),
   make: z.string().trim().nullable().optional(),
   model: z.string().trim().nullable().optional(),
   serialNumber: z.string().trim().nullable().optional(),
@@ -48,6 +61,15 @@ const AssetSchema = z.object({
   ssdType: z.string().trim().nullable().optional(),
   hddGb: z.number().int().nonnegative().nullable().optional(),
   hddType: z.string().trim().nullable().optional(),
+  graphicCard: z.string().trim().nullable().optional(),
+  monitorSize: z.string().trim().nullable().optional(),
+  lanPorts: z.number().int().nonnegative().nullable().optional(),
+  screenSize: z.string().trim().nullable().optional(),
+  channel: z.string().trim().nullable().optional(),
+  rackNumber: z.string().trim().nullable().optional(),
+  allottedArea: z.string().trim().nullable().optional(),
+  installedCameras: z.number().int().nonnegative().nullable().optional(),
+  connectionType: z.string().trim().nullable().optional(),
   os: z.string().trim().nullable().optional(),
   osVersion: z.string().trim().nullable().optional(),
   antivirusStatus: z.enum(['yes', 'no', 'expired']).default('no'),
@@ -98,6 +120,15 @@ export async function POST(request: Request) {
         ssdType: data.ssdType || null,
         hddGb: data.hddGb || null,
         hddType: data.hddType || null,
+        graphicCard: data.graphicCard || null,
+        monitorSize: data.monitorSize || null,
+        lanPorts: data.lanPorts || null,
+        screenSize: data.screenSize || null,
+        channel: data.channel || null,
+        rackNumber: data.rackNumber || null,
+        allottedArea: data.allottedArea || null,
+        installedCameras: data.installedCameras || null,
+        connectionType: data.connectionType || null,
         os: data.os || null,
         osVersion: data.osVersion || null,
         antivirusStatus: data.antivirusStatus,
@@ -107,6 +138,7 @@ export async function POST(request: Request) {
         cost: data.cost || null,
         status: data.status,
         notes: data.notes || null,
+        createdBy: data.changedBy || null,
       },
     });
 

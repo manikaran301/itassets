@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Workspace Manager | Refined Plan View</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="%23818cf8" stroke-width="4"><rect x="28" y="5" width="44" height="32" rx="8"/><path d="M42 37h16v6H42z" fill="%23818cf8"/><rect x="22" y="43" width="56" height="42" rx="10"/><rect x="10" y="52" width="10" height="26" rx="5"/><rect x="80" y="52" width="10" height="26" rx="5"/><circle cx="35" cy="90" r="4" fill="%23818cf8"/><circle cx="65" cy="90" r="4" fill="%23818cf8"/></svg>'>
+  <style>
+    :root {
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.4);
+      --bg: #020617;
+      --panel: rgba(15, 23, 42, 0.9);
+      --text: #f8fafc;
+      --success: #10b981;
+      --table-color: #1e293b;
+      --seat-idle: #334155;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+    body { 
+      font-family: 'Outfit', sans-serif; 
+      background: radial-gradient(circle at top left, #0f172a, #020617);
+      background-image: 
+        radial-gradient(circle at top left, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.95)),
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="2"><rect x="28" y="5" width="44" height="32" rx="8"/><path d="M42 37h16v6H42z" fill="rgba(255,255,255,0.01)"/><rect x="22" y="43" width="56" height="42" rx="10"/><rect x="10" y="52" width="10" height="26" rx="5"/><rect x="80" y="52" width="10" height="26" rx="5"/><circle cx="35" cy="90" r="4" fill="rgba(255,255,255,0.01)"/><circle cx="65" cy="90" r="4" fill="rgba(255,255,255,0.01)"/></svg>');
+      background-size: auto, 120px 120px;
+      color: var(--text); 
+      height: 100vh; 
+      overflow: hidden; 
+      display: flex; 
+      flex-direction: column; 
+    }
+
+    header {
+      padding: 1rem 2rem;
+      background: rgba(2, 6, 23, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: linear-gradient(to right, #818cf8, #c084fc);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo svg {
+      width: 32px;
+      height: 32px;
+      stroke: #818cf8;
+      stroke-width: 4px;
+      fill: none;
+    }
+
+    #viewport { flex: 1; position: relative; overflow: hidden; cursor: crosshair; }
+    #map-container { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transform-origin: center; }
+
+    svg { width: 90%; height: auto; max-width: 1200px; }
+    .table-main { fill: var(--table-color); stroke: rgba(255, 255, 255, 0.1); stroke-width: 1.5; }
+    
+    .seat-node { cursor: pointer; transition: transform 0.3s; pointer-events: all; transform-box: fill-box; transform-origin: center; }
+    .seat-node:hover { transform: scale(1.1); }
+    .seat-base { 
+      color: var(--seat-idle); 
+      transition: all 0.3s; 
+    }
+    .seat-node:hover .seat-base { color: #94a3b8; }
+    .seat-node.active .seat-base { 
+      color: var(--accent); 
+      filter: drop-shadow(0 0 12px var(--accent-glow)); 
+    }
+    .seat-id { fill: white; font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 700; pointer-events: none; }
+
+    #tooltip {
+      position: fixed;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.8rem 1.2rem;
+      border-radius: 10px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 1000;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    #tooltip.visible { opacity: 1; }
+    .tt-id { font-weight: 900; font-size: 0.9rem; color: #818cf8; margin-bottom: 2px; }
+    .tt-user { font-size: 0.75rem; color: #f8fafc; font-weight: 600; }
+
+    #details-panel {
+      position: fixed;
+      left: -400px;
+      top: 0;
+      width: 350px;
+      height: 100vh;
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 200;
+      transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 2.5rem 1.5rem;
+    }
+    #details-panel.open { left: 0; }
+
+    .info-group { margin-bottom: 1.5rem; background: rgba(255, 255, 255, 0.03); padding: 1rem; border-radius: 12px; position: relative; overflow: hidden; }
+    .info-group::after {
+      content: '';
+      position: absolute;
+      right: -10px;
+      bottom: -10px;
+      width: 60px;
+      height: 60px;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="4"><rect x="28" y="5" width="44" height="32" rx="8"/><path d="M42 37h16v6H42z" fill="rgba(255,255,255,0.05)"/><rect x="22" y="43" width="56" height="42" rx="10"/><rect x="10" y="52" width="10" height="26" rx="5"/><rect x="80" y="52" width="10" height="26" rx="5"/><circle cx="35" cy="90" r="4" fill="rgba(255,255,255,0.05)"/><circle cx="65" cy="90" r="4" fill="rgba(255,255,255,0.05)"/></svg>') no-repeat;
+      background-size: contain;
+      opacity: 0.5;
+    }
+    .label { font-size: 0.65rem; color: #64748b; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 0.4rem; }
+    .value { font-size: 1rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <div id="tooltip">
+    <div class="tt-id" id="tt-id">S0</div>
+    <div class="tt-user" id="tt-user">User Name</div>
+  </div>
+
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 100 100">
+        <use href="#chair-icon" />
+      </svg>
+      WORKSPACE.VIEWER
+    </div>
+    <div style="font-size: 0.8rem; color: #64748b;">9 ACTIVE STATIONS | FLOOR 04</div>
+  </header>
+
+  <div id="viewport">
+    <div id="map-container">
+      <svg id="RefinedPlan" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <symbol id="chair-icon" viewBox="0 0 100 100">
+            <!-- Backrest -->
+            <rect x="28" y="5" width="44" height="32" rx="8" stroke-width="4" stroke="currentColor" fill="none" />
+            <!-- Connector -->
+            <path d="M 42 37 H 58 V 43 H 42 Z" fill="currentColor" />
+            <!-- Seat -->
+            <rect x="22" y="43" width="56" height="42" rx="10" stroke-width="4" stroke="currentColor" fill="none" />
+            <!-- Armrests -->
+            <rect x="10" y="52" width="10" height="26" rx="5" stroke-width="4" stroke="currentColor" fill="none" />
+            <rect x="80" y="52" width="10" height="26" rx="5" stroke-width="4" stroke="currentColor" fill="none" />
+            <!-- Small casters -->
+            <circle cx="35" cy="90" r="4" fill="currentColor" />
+            <circle cx="65" cy="90" r="4" fill="currentColor" />
+            <!-- Invisible hit area (top-most layer, near-zero alpha) -->
+            <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.001)" />
+          </symbol>
+        </defs>
+
+        <!-- NEW TABLE DESIGN -->
+        <path class="table-main" d="
+          M 100 150 
+          L 150 150 
+          A 60 60 0 0 0 270 150 
+          L 900 150 
+          L 900 300 
+          L 100 300 
+          Z
+        " />
+
+        <!-- S0: Top Seat -->
+        <g class="seat-node" onclick="showSeat(0)" onmouseenter="showTooltip(event, 0)" onmouseleave="hideTooltip()" transform="translate(210, 150)">
+          <use href="#chair-icon" x="-35" y="-35" width="70" height="70" class="seat-base" />
+          <text class="seat-id" x="0" y="15" text-anchor="middle">S0</text>
+        </g>
+
+        <!-- Top Row -->
+        <g class="seat-node" onclick="showSeat(1)" onmouseenter="showTooltip(event, 1)" onmouseleave="hideTooltip()" transform="translate(380, 110)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle">S1</text>
+        </g>
+        <g class="seat-node" onclick="showSeat(2)" onmouseenter="showTooltip(event, 2)" onmouseleave="hideTooltip()" transform="translate(520, 110)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle">S2</text>
+        </g>
+        <g class="seat-node" onclick="showSeat(3)" onmouseenter="showTooltip(event, 3)" onmouseleave="hideTooltip()" transform="translate(660, 110)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle">S3</text>
+        </g>
+        <g class="seat-node" onclick="showSeat(4)" onmouseenter="showTooltip(event, 4)" onmouseleave="hideTooltip()" transform="translate(800, 110)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle">S4</text>
+        </g>
+
+        <!-- Bottom Row -->
+        <g class="seat-node" onclick="showSeat(5)" onmouseenter="showTooltip(event, 5)" onmouseleave="hideTooltip()" transform="translate(380, 340) rotate(180)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle" transform="rotate(180)">S5</text>
+        </g>
+        <g class="seat-node" onclick="showSeat(6)" onmouseenter="showTooltip(event, 6)" onmouseleave="hideTooltip()" transform="translate(520, 340) rotate(180)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle" transform="rotate(180)">S6</text>
+        </g>
+        <g class="seat-node" onclick="showSeat(7)" onmouseenter="showTooltip(event, 7)" onmouseleave="hideTooltip()" transform="translate(660, 340) rotate(180)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle" transform="rotate(180)">S7</text>
+        </g>
+        <g class="seat-node" onclick="showSeat(8)" onmouseenter="showTooltip(event, 8)" onmouseleave="hideTooltip()" transform="translate(800, 340) rotate(180)">
+           <use href="#chair-icon" x="-30" y="-30" width="60" height="60" class="seat-base" />
+           <text class="seat-id" x="0" y="-35" text-anchor="middle" transform="rotate(180)">S8</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div id="details-panel">
+    <div style="font-size: 2rem; cursor: pointer; color: #64748b;" onclick="closePanel()">&times;</div>
+    <div style="margin: 2rem 0; display: flex; align-items: center; gap: 1rem;">
+      <svg viewBox="0 0 100 100" style="width: 60px; height: 60px; color: var(--accent);">
+        <use href="#chair-icon" />
+      </svg>
+      <div>
+        <h1 id="p-id" style="font-size: 2.5rem; font-weight: 900;">S0</h1>
+        <p style="color: var(--success); font-weight: 700; font-size: 0.8rem;">ENDPOINT: ACTIVE</p>
+      </div>
+    </div>
+    
+    <div class="info-group"><div class="label">User</div><div class="value" id="p-name">--</div></div>
+    <div class="info-group"><div class="label">IP Addr</div><div class="value" id="p-ip">--</div></div>
+    <div class="info-group"><div class="label">Emp Code</div><div class="value" id="p-code">--</div></div>
+  </div>
+
+  <script>
+    const data = [
+      { id: "S0", name: "Employee 0", ip: "10.0.0.100", code: "E0" },
+      { id: "S1", name: "Employee 1", ip: "10.0.0.101", code: "E1" },
+      { id: "S2", name: "Employee 2", ip: "10.0.0.102", code: "E2" },
+      { id: "S3", name: "Employee 3", ip: "10.0.0.103", code: "E3" },
+      { id: "S4", name: "Employee 4", ip: "10.0.0.104", code: "E4" },
+      { id: "S5", name: "Employee 5", ip: "10.0.0.105", code: "E5" },
+      { id: "S6", name: "Employee 6", ip: "10.0.0.106", code: "E6" },
+      { id: "S7", name: "Employee 7", ip: "10.0.0.107", code: "E7" },
+      { id: "S8", name: "Employee 8", ip: "10.0.0.108", code: "E8" }
+    ];
+
+    let scale = 1, x = 0, y = 0, isDrag = false, sx, sy;
+    const cont = document.getElementById('map-container'), view = document.getElementById('viewport');
+    const tt = document.getElementById('tooltip'), ttId = document.getElementById('tt-id'), ttUser = document.getElementById('tt-user');
+
+    view.onmousedown = (e) => { if(e.target.closest('.seat-node')) return; isDrag = true; sx = e.clientX - x; sy = e.clientY - y; };
+    window.onmousemove = (e) => { 
+      if(isDrag) { x = e.clientX - sx; y = e.clientY - sy; apply(); }
+      if(tt.classList.contains('visible')) { tt.style.left = (e.clientX + 15) + 'px'; tt.style.top = (e.clientY + 15) + 'px'; }
+    };
+    window.onmouseup = () => isDrag = false;
+
+    function apply() { cont.style.transform = `scale(${scale}) translate(${x}px, ${y}px)`; }
+
+    function showTooltip(e, idx) {
+      const s = data[idx];
+      ttId.innerText = s.id;
+      ttUser.innerText = s.name;
+      tt.classList.add('visible');
+    }
+
+    function hideTooltip() { tt.classList.remove('visible'); }
+
+    function showSeat(idx) {
+      const s = data[idx];
+      document.querySelectorAll('.seat-node').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.seat-node')[idx].classList.add('active');
+      document.getElementById('p-id').innerText = s.id;
+      document.getElementById('p-name').innerText = s.name;
+      document.getElementById('p-ip').innerText = s.ip;
+      document.getElementById('p-code').innerText = s.code;
+      document.getElementById('details-panel').classList.add('open');
+    }
+
+    function closePanel() {
+      document.getElementById('details-panel').classList.remove('open');
+      document.querySelectorAll('.seat-node').forEach(n => n.classList.remove('active'));
+    }
+  </script>
+</body>
+</html>

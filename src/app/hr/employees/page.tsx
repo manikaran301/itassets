@@ -3,56 +3,115 @@
 import {
   Users,
   Search,
-  Filter,
   Plus,
   Download,
   Edit2,
   Trash2,
-  Laptop,
   Loader2,
   ChevronRight,
   Building2,
   Calendar,
-  Mail,
+  MapPin,
+  Briefcase,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { EmployeeListItem } from "@/lib/types";
 import Link from "next/link";
 import { format } from "date-fns";
 
 export default function EmployeesPage() {
+  const PAGE_SIZE = 50;
+  const router = useRouter();
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState(0);
   const [departmentCount, setDepartmentCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [selectedCompany, setSelectedCompany] = useState("all");
+  const [selectedLocation, setSelectedLocation] = useState("all");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loaderRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async (skip = 0, append = false) => {
     try {
-      const response = await fetch("/api/employees");
-      const data = await response.json();
-      setEmployees(data);
+      if (skip === 0) setLoading(true);
+      else setLoadingMore(true);
 
-      // Calculate distinct departments
-      const deptList = [
-        ...new Set(
-          data.map((e: EmployeeListItem) => e.department).filter(Boolean),
-        ),
-      ] as string[];
-      setDepartments(deptList);
-      setDepartmentCount(deptList.length);
+      const response = await fetch(
+        `/api/employees?skip=${skip}&take=${PAGE_SIZE}`,
+      );
+      const result = await response.json();
+
+      const data: EmployeeListItem[] = result.data;
+      setTotal(result.total);
+      setHasMore(result.hasMore);
+
+      if (append) {
+        setEmployees((prev) => [...prev, ...data]);
+      } else {
+        setEmployees(data);
+      }
+
+      // Build filter lists from all loaded data
+      if (!append) {
+        // Fetch all unique filter values in one lightweight call
+        const allRes = await fetch("/api/employees");
+        const allData: EmployeeListItem[] = await allRes.json();
+
+        const deptList = [
+          ...new Set(allData.map((e) => e.department).filter(Boolean)),
+        ] as string[];
+        setDepartments(deptList.sort());
+        setDepartmentCount(deptList.length);
+
+        const companyList = [
+          ...new Set(allData.map((e) => e.companyName).filter(Boolean)),
+        ] as string[];
+        setCompanies(companyList.sort());
+
+        const locationList = [
+          ...new Set(allData.map((e) => e.locationJoining).filter(Boolean)),
+        ] as string[];
+        setLocations(locationList.sort());
+      }
     } catch (error) {
       console.error("Failed to fetch employees:", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchEmployees(0);
+  }, [fetchEmployees]);
+
+  // Infinite scroll via IntersectionObserver
+  useEffect(() => {
+    const loader = loaderRef.current;
+    const scrollContainer = scrollRef.current;
+    if (!loader || !scrollContainer) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          fetchEmployees(employees.length, true);
+        }
+      },
+      { root: scrollContainer, threshold: 0.1 },
+    );
+
+    observer.observe(loader);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, employees.length, fetchEmployees]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete ${name}?`)) return;
@@ -62,259 +121,202 @@ export default function EmployeesPage() {
         method: "DELETE",
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         setEmployees((prev) => prev.filter((e) => e.id !== id));
+      } else if (response.status === 409) {
+        // Conflict - cannot delete due to dependencies
+        const message = data.details
+          ? `Cannot delete employee:\n\n${data.details.join("\n")}`
+          : data.error || "Cannot delete this employee.";
+        alert(message);
       } else {
-        alert("Failed to delete employee.");
+        const message = data.details
+          ? `${data.error}\n\n${data.details}`
+          : data.error || "Failed to delete employee.";
+        alert(message);
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Something went wrong.");
+      alert("Something went wrong. Please try again.");
     }
   };
 
   // Filter employees based on search and department
   const filteredEmployees = employees.filter((emp) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
       searchQuery === "" ||
-      emp.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.employeeCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.department?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.designation?.toLowerCase().includes(searchQuery.toLowerCase());
+      emp.fullName?.toLowerCase().includes(q) ||
+      emp.employeeCode?.toLowerCase().includes(q) ||
+      emp.department?.toLowerCase().includes(q) ||
+      emp.designation?.toLowerCase().includes(q) ||
+      emp.companyName?.toLowerCase().includes(q) ||
+      emp.locationJoining?.toLowerCase().includes(q);
 
     const matchesDepartment =
       selectedDepartment === "all" || emp.department === selectedDepartment;
+    const matchesCompany =
+      selectedCompany === "all" || emp.companyName === selectedCompany;
+    const matchesLocation =
+      selectedLocation === "all" || emp.locationJoining === selectedLocation;
 
-    return matchesSearch && matchesDepartment;
+    return (
+      matchesSearch && matchesDepartment && matchesCompany && matchesLocation
+    );
   });
 
+  const stats = [
+    { label: "Active Workforce", value: total || employees.length, icon: Users, color: "text-primary bg-primary/10 border-primary/20" },
+    { label: "Business Units", value: departments.length, icon: Building2, color: "text-secondary bg-secondary/10 border-secondary/20" },
+    { label: "Total Locations", value: locations.length, icon: MapPin, color: "text-accent bg-accent/10 border-accent/20" },
+    { label: "Stability", value: "98.2%", icon: Briefcase, color: "text-foreground bg-muted/50 border-border" },
+  ];
+
   return (
-    <div className="space-y-6 animate-fade-in relative pb-20">
-      <div className="flex justify-end">
-        <div className="flex items-center gap-3">
-          <button className="p-3 bg-card/40 border border-white/5 rounded-2xl hover:bg-card/60 transition-all text-muted-foreground hover:text-foreground">
-            <Download className="w-4 h-4" />
-          </button>
-          <Link
-            href="/hr/employees/new"
-            className="group flex items-center gap-3 px-8 py-3 bg-primary text-primary-foreground rounded-[22px] text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-            <span>Enroll Associate</span>
-          </Link>
-        </div>
+    <div className="space-y-4 animate-fade-in pb-20 pt-4 h-full flex flex-col">
+      {/* Compact Action Row */}
+      <div className="flex justify-end items-center gap-2 px-1">
+        <button onClick={() => fetchEmployees(0)} className="p-2.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-muted-foreground transition-all">
+          <Loader2 className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+        </button>
+        <Link href="/hr/employees/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+          <Plus className="w-4 h-4" /> Enroll Employee
+        </Link>
       </div>
 
-      {/* Stats Mini Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-primary/5 rounded-[24px] p-6 border border-primary/10 space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">
-            Active Capacity
-          </p>
-          <div className="flex items-end justify-between">
-            <h4 className="text-3xl font-black tracking-tighter">
-              {employees.length}
-            </h4>
-            <div className="text-[9px] font-black uppercase bg-primary/20 px-3 py-1 rounded-full text-primary">
-              Live Associates
+      {/* Mini Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-card border border-border/60 p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+            <div className="space-y-0.5">
+              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">{stat.label}</p>
+              <h4 className="text-xl font-black">{loading ? "..." : stat.value}</h4>
+            </div>
+            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border border-transparent transition-all", stat.color)}>
+              <stat.icon className="w-5 h-5" />
             </div>
           </div>
-        </div>
-        <div className="bg-muted/10 rounded-[24px] p-6 border border-white/5 space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-            Business Units
-          </p>
-          <div className="flex items-end justify-between">
-            <h4 className="text-3xl font-black text-foreground/80 tracking-tighter">
-              {departmentCount.toString().padStart(2, "0")}
-            </h4>
-            <div className="text-[9px] font-black uppercase text-muted-foreground/40">
-              Departments
-            </div>
-          </div>
-        </div>
-        <div className="bg-muted/10 rounded-[24px] p-6 border border-white/5 space-y-1 opacity-60">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-            Infrastructure Load
-          </p>
-          <div className="flex items-end justify-between">
-            <h4 className="text-3xl font-black text-muted-foreground/60 tracking-tighter">
-              00
-            </h4>
-            <div className="text-[9px] font-black uppercase text-muted-foreground/30 italic">
-              Provisioning Rate
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Control Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-        <div className="lg:col-span-8 relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+      {/* Unified Multi-Filter Ribbon */}
+      <div className="bg-card/50 border border-border p-1.5 rounded-2xl flex flex-col lg:flex-row gap-2 items-center shrink-0">
+        <div className="relative flex-1 group w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="Search by ID, Name or Department..."
+            placeholder="SEARCH BY NAME, DEPT, COMPANY, CODE..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-card/40 border border-white/5 focus:border-primary/20 rounded-2xl pl-12 pr-4 py-3 text-xs outline-none transition-all font-bold placeholder:font-normal placeholder:opacity-30"
+            className="w-full bg-transparent pl-11 pr-4 py-2.5 rounded-xl text-[10px] font-bold border border-transparent focus:bg-background outline-none transition-all placeholder:text-[8px] placeholder:font-black placeholder:tracking-widest opacity-80"
           />
         </div>
-        <div className="lg:col-span-4 flex gap-2">
-          <div className="flex-1 relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary" />
-            <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="w-full appearance-none bg-card/40 border border-white/5 rounded-2xl pl-12 pr-8 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-card/60 transition-all outline-none cursor-pointer"
-            >
-              <option value="all">All Departments</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-20 rotate-90 pointer-events-none" />
-          </div>
+        
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+          <select value={selectedDepartment} onChange={(e) => setSelectedDepartment(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
+            <option value="all">DEPARTMENTS</option>
+            {departments.map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+          </select>
+          <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
+            <option value="all">COMPANIES</option>
+            {companies.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+          </select>
+          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
+            <option value="all">LOCATIONS</option>
+            {locations.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* Main Directory Table */}
-      <div className="bg-card/40 border border-white/5 rounded-[32px] overflow-hidden premium-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.03] bg-muted/20">
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                  Identity & Status
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                  Unit & Logic
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-center">
-                  Infrastructure
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                  Onboarding Date
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-right pr-8">
-                  Actions
-                </th>
+      {/* High-Density Registry Container */}
+      <div className="flex-1 bg-card border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col min-h-0">
+        <div ref={scrollRef} className="overflow-auto flex-1">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-muted/50 backdrop-blur-md border-b border-border/50">
+                <th className="pl-6 pr-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Associate Registry</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Designation & Dept</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Business Units</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Location</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Joining Date</th>
+                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-right pr-10">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.03]">
+            <tbody className="divide-y divide-border/10">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center">
+                  <td colSpan={6} className="py-20 text-center">
                     <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">
-                      Synchronizing Workforce...
-                    </p>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Synchronizing Workforce...</p>
                   </td>
                 </tr>
-              ) : employees.length === 0 ? (
+              ) : filteredEmployees.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="py-20 text-center text-muted-foreground"
-                  >
-                    <Users className="w-12 h-12 mx-auto mb-4 opacity-10" />
-                    <p className="text-sm font-bold opacity-30 uppercase tracking-widest">
-                      Registry Empty
-                    </p>
+                  <td colSpan={6} className="py-20 text-center text-muted-foreground opacity-30 uppercase tracking-[0.2em] text-[9px] font-black">
+                    Registry Vacant
                   </td>
                 </tr>
               ) : (
-                filteredEmployees.map((emp) => (
-                  <tr
-                    key={emp.id}
-                    className="group hover:bg-white/[0.015] transition-colors relative"
-                  >
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10 group-hover:bg-primary/10 transition-all">
-                          <span className="text-xs font-black text-primary uppercase">
-                            {emp.fullName
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")}
-                          </span>
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">
-                            {emp.fullName}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full animate-pulse",
-                                emp.status === "active"
-                                  ? "bg-green-500"
-                                  : "bg-amber-500",
-                              )}
-                            />
-                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-40">
-                              {emp.employeeCode}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-tight text-foreground/80">
-                          <Building2 className="w-3.5 h-3.5 text-primary opacity-40" />
-                          {emp.department || "General"}
-                        </div>
-                        <p className="text-[10px] text-muted-foreground/40 font-black uppercase tracking-widest">
-                          {emp.designation}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center justify-center gap-2">
-                        <div
-                          className="w-8 h-8 bg-muted/20 rounded-xl flex items-center justify-center text-muted-foreground/20 hover:text-primary/40 transition-colors"
-                          title="Laptop"
-                        >
-                          <Laptop className="w-4 h-4" />
-                        </div>
-                        <div
-                          className="w-8 h-8 bg-muted/20 rounded-xl flex items-center justify-center text-muted-foreground/20 hover:text-primary/40 transition-colors"
-                          title="Identity Email"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
+                filteredEmployees.map((emp, idx) => (
+                  <tr key={`${emp.id}-${idx}`} className="group hover:bg-muted/20 cursor-default transition-all border-l-2 border-l-transparent hover:border-l-primary" onClick={() => router.push(`/hr/employees/${emp.id}/edit`)}>
+                    <td className="pl-6 pr-4 py-3">
                       <div className="flex items-center gap-3">
-                        <Calendar className="w-4 h-4 text-muted-foreground/20" />
+                        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary border border-primary/10">
+                          <span className="text-[9px] font-black">{emp.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+                        </div>
                         <div>
-                          <p className="text-[11px] font-black text-foreground/80 uppercase tracking-tight">
-                            {format(new Date(emp.startDate), "MMM dd, yyyy")}
-                          </p>
-                          <p className="text-[9px] text-muted-foreground/40 font-black uppercase tracking-widest">
-                            Onboarding Complete
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-black tracking-tight">{emp.fullName}</p>
+                            <span className={cn("w-1 h-1 rounded-full", emp.status === "active" ? "bg-green-500" : "bg-red-500")} />
+                          </div>
+                          <p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">{emp.employeeCode}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right pr-8">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                        <Link
-                          href={`/hr/employees/${emp.id}/edit`}
-                          className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-xl transition-all border border-transparent hover:border-primary/10 block"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(emp.id, emp.fullName)}
-                          className="p-2 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-500/10"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+
+                    <td className="px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-tight">{emp.designation || "STAFF SOURCE"}</p>
+                      <p className="text-[9px] text-muted-foreground/50 font-bold italic">{emp.department || "N/A"}</p>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground/70 uppercase tracking-tighter">
+                        <Building2 className="w-3 h-3 opacity-30" />
+                        {emp.companyName || "—"}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground/70 uppercase tracking-tighter">
+                        <MapPin className="w-3 h-3 opacity-30" />
+                        {emp.locationJoining || "—"}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3 text-center">
+                      <p className="text-[9px] font-black tracking-widest text-foreground/80 uppercase">
+                        {emp.startDate ? format(new Date(emp.startDate), "MMM dd, yyyy") : "n/a"}
+                      </p>
+                      <p className="text-[8px] text-muted-foreground/50 font-bold italic">
+                        {emp.startDate ? (() => {
+                          const start = new Date(emp.startDate);
+                          const diff = new Date().getTime() - start.getTime();
+                          const years = diff / (1000 * 60 * 60 * 24 * 365.25);
+                          if (years < 1) {
+                            const months = Math.floor(years * 12);
+                            return months === 0 ? "New Joiner" : `${months} Months`;
+                          }
+                          return `${years.toFixed(1)} Years`;
+                        })() : "—"}
+                      </p>
+                    </td>
+
+                    <td className="px-6 py-3 text-right pr-10">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button onClick={(e) => { e.stopPropagation(); router.push(`/hr/employees/${emp.id}/edit`); }} className="p-1.5 text-muted-foreground hover:text-primary transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(emp.id, emp.fullName); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
                   </tr>
@@ -322,6 +324,14 @@ export default function EmployeesPage() {
               )}
             </tbody>
           </table>
+          
+          <div ref={loaderRef} className="py-6 flex items-center justify-center">
+            {loadingMore ? (
+              <Loader2 className="w-5 h-5 text-primary animate-spin opacity-40" />
+            ) : !hasMore && employees.length > 0 && (
+              <p className="text-[8px] font-black uppercase tracking-widest opacity-20">End of Registry</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

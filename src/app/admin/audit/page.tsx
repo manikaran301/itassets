@@ -33,28 +33,8 @@ export default async function AuditLogPage({
   const totalPages = Math.ceil(totalLogs / pageSize);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between rounded-2xl border border-border bg-card/50 backdrop-blur-xl px-6 py-4 shadow-sm">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-            Immutable log
-          </p>
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-2xl font-black tracking-tighter">
-              {totalLogs}
-            </h1>
-            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase">
-              Total entries
-            </span>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-bold text-primary">Live stream</p>
-          <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
-            Latest 50 updates
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in pt-4">
+
 
       <div className="premium-card overflow-hidden rounded-[24px] border border-border bg-card shadow-xl shadow-black/5">
         <AuditLogTable logs={logs} currentPage={page} totalPages={totalPages} />
