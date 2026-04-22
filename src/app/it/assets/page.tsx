@@ -140,8 +140,8 @@ export default function AssetsPage() {
   };
 
   const stats = [
-    { label: "Fleet Size", value: assets.length, icon: Boxes, color: "text-foreground bg-muted border-border" },
-    { label: "Deployed", value: assets.filter((a) => a.status === "assigned").length, icon: ShieldCheck, color: "text-primary bg-primary/10 border-primary/20" },
+    { label: "Total Assets", value: assets.length, icon: Boxes, color: "text-foreground bg-muted border-border" },
+    { label: "Assigned Assets", value: assets.filter((a) => a.status === "assigned").length, icon: ShieldCheck, color: "text-primary bg-primary/10 border-primary/20" },
     { label: "Available", value: assets.filter((a) => a.status === "available").length, icon: CheckCircle2, color: "text-secondary bg-secondary/10 border-secondary/20" },
     { label: "Maintenance", value: assets.filter((a) => a.status === "in_repair").length, icon: Wrench, color: "text-accent bg-accent/10 border-accent/20" },
   ];

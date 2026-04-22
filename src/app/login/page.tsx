@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,8 +11,11 @@ import {
   AlertCircle,
   Loader2,
   Monitor,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,11 +23,30 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const { theme } = useTheme();
+
+  // Load remembered identifier on mount
+  useEffect(() => {
+    const savedIdentifier = localStorage.getItem("remembered_mams_user");
+    if (savedIdentifier) {
+      setIdentifier(savedIdentifier);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    // Handle "Remember Me"
+    if (rememberMe) {
+      localStorage.setItem("remembered_mams_user", identifier);
+    } else {
+      localStorage.removeItem("remembered_mams_user");
+    }
 
     try {
       const result = await signIn("credentials", {
@@ -61,14 +83,15 @@ export default function LoginPage() {
           <div className="relative bg-card/80 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="flex flex-col items-center mb-10 text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 ring-1 ring-primary/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                <Monitor className="w-8 h-8 text-primary" />
+              <div className="w-32 h-20 mb-4 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center">
+                <img
+                  src={theme === "dark" ? "/MPLWhite.png" : "/mrllogo.png"}
+                  alt="MRL Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text">
-                M_AMS Portal
-              </h1>
-              <p className="text-muted-foreground text-sm mt-2 font-medium">
-                Enterprise Asset Management System
+              <p className="text-[12px] font-black uppercase tracking-[0.3em] text-muted-foreground/80">
+                Asset Management System
               </p>
             </div>
 
@@ -106,24 +129,50 @@ export default function LoginPage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                     Secret Key
                   </label>
-                  <a
-                    href="#"
-                    className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
-                  >
-                    Reset?
-                  </a>
                 </div>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-muted/30 border border-border/50 hover:border-primary/30 focus:border-primary/50 focus:bg-muted/50 rounded-2xl py-3.5 pl-12 pr-4 outline-none transition-all text-sm font-medium"
+                    className="w-full bg-muted/30 border border-border/50 hover:border-primary/30 focus:border-primary/50 focus:bg-muted/50 rounded-2xl py-3.5 pl-12 pr-12 outline-none transition-all text-sm font-medium"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors p-1"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
+              </div>
+
+              {/* Remember Me */}
+              <div className="flex items-center px-1">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="relative flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-4 h-4 border-2 border-muted-foreground/30 rounded peer-checked:bg-primary peer-checked:border-primary transition-all duration-200"></div>
+                    <div className="absolute inset-0 flex items-center justify-center text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                      <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">
+                    Remember Identity
+                  </span>
+                </label>
               </div>
 
               <button

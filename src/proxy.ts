@@ -18,6 +18,14 @@ export default withAuth(
     const path = req.nextUrl.pathname;
     const userRole = token?.role as string;
 
+    // Handle unauthorized API requests with JSON instead of redirect
+    if (!token && path.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Unauthorized - Please log in" },
+        { status: 401 }
+      );
+    }
+
     // Check role-based access for all protected routes
     for (const [route, allowedRoles] of Object.entries(roleRoutes)) {
       if (path.startsWith(route)) {
@@ -43,12 +51,12 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
 
-        // Allow public paths without token
-        if (path === "/login" || path.startsWith("/api/auth")) {
+        // Allow public paths and API routes (to handle unauthorized JSON responses) without token
+        if (path === "/login" || path.startsWith("/api/auth") || path.startsWith("/api/")) {
           return true;
         }
 
-        // Require token for all other paths
+        // Require token for all other paths (pages)
         return !!token;
       },
     },
@@ -61,8 +69,8 @@ export const config = {
      * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * - favicon.ico, mrllogo.png, MPLWhite.png (public assets)
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|mrllogo.png|MPLWhite.png).*)",
   ],
 };
