@@ -74,6 +74,7 @@ export async function GET() {
         locationJoining: joiner.locationJoining,
         deskNumber: joiner.deskNumber,
         startDate: joiner.startDate,
+        photoPath: joiner.photoPath,
         createdAt: joiner.createdAt,
         pipeline: {
           identity: { status: 'ready', label: 'Ready' },

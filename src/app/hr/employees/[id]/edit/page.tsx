@@ -14,6 +14,9 @@ import {
   Hash,
   Scan,
   QrCode,
+  Building2,
+  Mail,
+  Laptop,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -72,6 +75,10 @@ export default function EditEmployeePage() {
     status: "active",
   });
 
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   const [provisions, setProvisions] = useState({
     laptop: true,
     desktop: false,
@@ -80,8 +87,18 @@ export default function EditEmployeePage() {
     email: true,
   });
 
+  useEffect(() => {
+    // Cleanup preview URL ONLY if it was created locally
+    return () => {
+      if (photoPreview && photoPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
+
   // Fetch all managers for dropdown
   useEffect(() => {
+// ... fetchManagers logic ...
     const fetchManagers = async () => {
       try {
         const response = await fetch("/api/employees");
@@ -96,7 +113,7 @@ export default function EditEmployeePage() {
         });
 
         const formatted = data
-          .filter((emp: any) => emp.id !== employeeId) // Prevent setting self as manager
+          .filter((emp: any) => emp.id !== employeeId)
           .map((emp: any) => ({
             value: emp.id,
             label: `${emp.fullName} (${emp.employeeCode})`,
@@ -139,6 +156,10 @@ export default function EditEmployeePage() {
             : "",
           status: data.status || "active",
         });
+
+        if (data.photoPath) {
+          setPhotoPreview(data.photoPath);
+        }
       } catch (err) {
         setError("Error loading employee record.");
       } finally {
@@ -147,6 +168,39 @@ export default function EditEmployeePage() {
     };
     fetchDetails();
   }, [employeeId]);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
+    let file: File | null = null;
+    
+    if ("files" in e.target && e.target.files) {
+      file = e.target.files[0];
+    } else if ("dataTransfer" in e) {
+      e.preventDefault();
+      file = e.dataTransfer.files[0];
+    }
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file (JPG, PNG).");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Photo size must be less than 2MB.");
+      return;
+    }
+
+    setPhoto(file);
+    if (photoPreview && photoPreview.startsWith("blob:")) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(URL.createObjectURL(file));
+    setError("");
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    if (photoPreview && photoPreview.startsWith("blob:")) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+  };
 
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -167,8 +221,22 @@ export default function EditEmployeePage() {
     setError("");
 
     try {
+      let photoPath = photoPreview && !photoPreview.startsWith("blob:") ? photoPreview : "";
+      
+      if (photo) {
+        const uploadData = new FormData();
+        uploadData.append("file", photo);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadData,
+        });
+        const uploadResult = await uploadRes.json();
+        if (uploadRes.ok) photoPath = uploadResult.path;
+      }
+
       const payload = {
         ...formData,
+        photoPath,
         updatedBy: (session?.user as any)?.id || null,
       };
 
@@ -324,108 +392,154 @@ export default function EditEmployeePage() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         {/* Form Column */}
         <div className="xl:col-span-8 space-y-4">
-          {/* Identity & Discovery - HIGHEST Z-INDEX */}
+          {/* Identity & Discovery */}
           <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative group z-40">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-              <User className="w-32 h-32 text-primary" />
-            </div>
-
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6 relative z-10">
               <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
-              Corporate Identity
+              Corporate Identity & Profile
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">
-                  Full Legal Name
-                </label>
-                <div className="relative group/field">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    placeholder="Johnathon Doe"
-                    value={formData.fullName}
-                    onChange={(e) => updateField("fullName", e.target.value)}
-                    className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs text-foreground outline-none transition-all font-bold placeholder:font-semibold placeholder:text-muted-foreground/70"
-                  />
+            <div className="flex flex-col md:flex-row gap-8 relative z-10">
+               {/* Photo Upload Zone */}
+               <div className="flex flex-col items-center gap-4">
+                <div 
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handlePhotoChange}
+                  className={cn(
+                    "w-48 h-60 rounded-[40px] border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center gap-4 relative overflow-hidden group/upload",
+                    isDragging ? "border-primary bg-primary/5 scale-105" : "border-white/10 bg-muted/20 hover:border-primary/30",
+                    photoPreview && "border-solid border-primary/20"
+                  )}
+                >
+                  {photoPreview ? (
+                    <>
+                      <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/upload:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
+                         <button 
+                          onClick={removePhoto}
+                          className="p-2 bg-red-500 text-white rounded-full hover:scale-110 transition-transform"
+                        >
+                          <Shield className="w-4 h-4 rotate-45" />
+                        </button>
+                        <span className="text-[10px] font-black uppercase text-white tracking-widest">Update Photo</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                        <Scan className="w-6 h-6 animate-pulse" />
+                      </div>
+                      <div className="text-center px-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Change Photo</p>
+                        <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Passport Size</p>
+                      </div>
+                      <input 
+                        type="file" 
+                        onChange={handlePhotoChange} 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">
-                  Employee ID Card
-                </label>
-                <div className="relative group/field">
-                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    placeholder="EMP-XXX"
-                    value={formData.employeeCode}
-                    onChange={(e) =>
-                      updateField("employeeCode", e.target.value)
-                    }
-                    className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs text-foreground outline-none transition-all font-black tracking-widest font-mono"
-                  />
-                </div>
-              </div>
-            </div>
+              {/* Identity Fields */}
+              <div className="flex-1 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">
+                      Full Legal Name
+                    </label>
+                    <div className="relative group/field">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
+                      <input
+                        type="text"
+                        placeholder="Johnathon Doe"
+                        value={formData.fullName}
+                        onChange={(e) => updateField("fullName", e.target.value)}
+                        className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs text-foreground outline-none transition-all font-bold placeholder:font-semibold placeholder:text-muted-foreground/70"
+                      />
+                    </div>
+                  </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 relative z-20">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                  Company / Subsidiary
-                </label>
-                <SearchableSelect
-                  options={COMPANIES}
-                  value={formData.companyName}
-                  onChange={(val) => updateField("companyName", val)}
-                  placeholder="Select Company..."
-                  allowCustom
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                  Department
-                </label>
-                <SearchableSelect
-                  options={DEPARTMENTS}
-                  value={formData.department}
-                  onChange={(val) => updateField("department", val)}
-                  placeholder="Select Dept..."
-                  allowCustom
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                  Designation
-                </label>
-                <SearchableSelect
-                  options={DESIGNATIONS}
-                  value={formData.designation}
-                  onChange={(val) => updateField("designation", val)}
-                  placeholder="Select Title..."
-                  allowCustom
-                />
-              </div>
-              <div className="space-y-2 relative">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                  Reporting Manager
-                </label>
-                <SearchableSelect
-                  options={managers}
-                  value={formData.reportingManagerId}
-                  onChange={(val) => updateField("reportingManagerId", val)}
-                  placeholder="Type to search..."
-                  icon={<Shield className="w-4 h-4" />}
-                  limit={5}
-                />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">
+                      Employee ID Card
+                    </label>
+                    <div className="relative group/field">
+                      <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
+                      <input
+                        type="text"
+                        placeholder="EMP-XXX"
+                        value={formData.employeeCode}
+                        onChange={(e) =>
+                          updateField("employeeCode", e.target.value)
+                        }
+                        className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs text-foreground outline-none transition-all font-black tracking-widest font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
+                      Company / Subsidiary
+                    </label>
+                    <SearchableSelect
+                      options={COMPANIES}
+                      value={formData.companyName}
+                      onChange={(val) => updateField("companyName", val)}
+                      placeholder="Select Company..."
+                      allowCustom
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
+                      Department
+                    </label>
+                    <SearchableSelect
+                      options={DEPARTMENTS}
+                      value={formData.department}
+                      onChange={(val) => updateField("department", val)}
+                      placeholder="Select Dept..."
+                      allowCustom
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
+                      Designation
+                    </label>
+                    <SearchableSelect
+                      options={DESIGNATIONS}
+                      value={formData.designation}
+                      onChange={(val) => updateField("designation", val)}
+                      placeholder="Select Title..."
+                      allowCustom
+                    />
+                  </div>
+                  <div className="space-y-2 relative">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
+                      Reporting Manager
+                    </label>
+                    <SearchableSelect
+                      options={managers}
+                      value={formData.reportingManagerId}
+                      onChange={(val) => updateField("reportingManagerId", val)}
+                      placeholder="Type to search..."
+                      icon={<Shield className="w-4 h-4" />}
+                      limit={5}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Contact & Location - NEXT HIGHEST */}
+            {/* Contact & Location */}
             <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative z-30">
               <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-4 relative z-10">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
@@ -489,48 +603,14 @@ export default function EditEmployeePage() {
               </div>
             </div>
 
-            {/* Station & Digital Identity - LOWEST */}
+            {/* Station & Digital Identity */}
             <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative z-20">
               <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-4 relative z-10">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
                 Station & Digital Identity
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10 hidden md:grid">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                    Assigned Seat / Desk
-                  </label>
-                  <div className="relative group/field">
-                    <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
-                    <input
-                      type="text"
-                      placeholder="e.g. F1-WS-024"
-                      value={formData.deskNumber}
-                      onChange={(e) =>
-                        updateField("deskNumber", e.target.value)
-                      }
-                      className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs outline-none transition-all font-mono font-black tracking-widest"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                    Account Status
-                  </label>
-                  <SearchableSelect
-                    options={[
-                      { value: "active", label: "Active" },
-                      { value: "inactive", label: "Inactive" },
-                    ]}
-                    value={formData.status}
-                    onChange={(val) => updateField("status", val)}
-                    placeholder="Status"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-4 relative z-10 md:hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
                     Assigned Seat / Desk
@@ -565,9 +645,6 @@ export default function EditEmployeePage() {
                 </div>
               </div>
             </div>
-
-            {/* Asset Provisioning Placeholder */}
-            <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative col-span-1 md:col-span-2 z-10 hidden"></div>
           </div>
         </div>
 
@@ -580,19 +657,21 @@ export default function EditEmployeePage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
 
             <div className="px-10 pt-10 text-center relative z-10">
-              <p className="text-[9px] font-black tracking-[0.4em] uppercase text-primary mb-1 opacity-60">
-                M_AMS IDENTITY
-              </p>
-              <div className="w-2 h-0.5 bg-primary/40 mx-auto rounded-full" />
             </div>
 
             <div className="p-10 pb-6 relative z-10 text-center space-y-6">
               <div className="relative inline-block group/photo">
-                <div className="w-40 h-40 rounded-[48px] bg-gradient-to-br from-primary/30 to-primary/5 flex items-center justify-center text-6xl font-black text-primary border border-primary/20 shadow-2xl relative z-10 group-hover/photo:scale-105 transition-transform duration-500 overflow-hidden">
-                  <span className="relative z-10 transition-transform duration-700">
-                    {formData.fullName ? formData.fullName[0] : "?"}
-                  </span>
+                <div className="w-40 h-52 rounded-[40px] bg-gradient-to-br from-primary/30 to-primary/5 flex items-center justify-center text-6xl font-black text-primary border border-primary/20 shadow-2xl relative z-10 group-hover/photo:scale-105 transition-transform duration-500 overflow-hidden">
+                   {photoPreview ? (
+                    <img src={photoPreview} alt="Passport" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="relative z-10 transition-transform duration-700">
+                      {formData.fullName ? formData.fullName[0] : "?"}
+                    </span>
+                  )}
                   <div className="absolute inset-0 bg-primary/20 animate-pulse pointer-events-none" />
+                   {/* Scanning Effect Overlay */}
+                   <div className="absolute top-0 inset-x-0 h-0.5 bg-primary/60 shadow-[0_0_15px_var(--primary)] animate-scan z-20" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-10">
                     <Scan className="w-full h-full scale-[1.5] rotate-45" />
                   </div>
@@ -602,7 +681,7 @@ export default function EditEmployeePage() {
 
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-                  Active Member
+                  {formData.designation || "Active Member"}
                 </p>
                 <h4 className="text-2xl font-black tracking-tight text-foreground dark:text-white leading-none truncate px-4">
                   {formData.fullName || " Liam Draft..."}
@@ -635,6 +714,15 @@ export default function EditEmployeePage() {
                   </span>
                   <span className="text-foreground dark:text-white font-black">
                     {formData.employeeCode || "TBD"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 dark:text-muted-foreground/40">
+                  <span className="flex items-center gap-2 text-primary">
+                    <Building2 className="w-3.5 h-3.5" />
+                    Company
+                  </span>
+                  <span className="text-foreground dark:text-white font-black truncate max-w-[120px] text-right">
+                    {formData.companyName || "TBD"}
                   </span>
                 </div>
               </div>

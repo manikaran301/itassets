@@ -386,13 +386,9 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                   </p>
                   <p
                     className="text-xs font-bold text-primary truncate max-w-[100px]"
-                    title={
-                      asset.logs?.find((l: any) => l.action === "created")?.user
-                        ?.fullName || "System"
-                    }
+                    title={asset.creator?.fullName || "System"}
                   >
-                    {asset.logs?.find((l: any) => l.action === "created")?.user
-                      ?.fullName || "System"}
+                    {asset.creator?.fullName || "System"}
                   </p>
                 </div>
               </div>

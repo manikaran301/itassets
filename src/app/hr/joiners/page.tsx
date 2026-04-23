@@ -30,6 +30,7 @@ interface Joiner {
   locationJoining: string | null;
   deskNumber: string | null;
   startDate: string | null;
+  photoPath: string | null;
   createdAt: string;
   pipeline: {
     identity: PipelineStep;
@@ -261,8 +262,16 @@ export default function JoinersPage() {
                       {/* Employee */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-xs border border-primary/10">
-                            {joiner.fullName[0]}
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-xs border border-primary/10 overflow-hidden shrink-0">
+                            {joiner.photoPath ? (
+                              <img 
+                                src={joiner.photoPath} 
+                                alt={joiner.fullName} 
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              joiner.fullName[0]
+                            )}
                           </div>
                           <div>
                             <p className="text-sm font-bold group-hover:text-primary transition-colors">

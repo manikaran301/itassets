@@ -208,6 +208,13 @@ export async function GET(
       where: { id },
       include: {
         currentEmployee: true,
+        creator: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+          },
+        },
         assignments: {
           include: {
             employee: true,

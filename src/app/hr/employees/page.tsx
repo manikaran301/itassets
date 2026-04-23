@@ -169,9 +169,9 @@ export default function EmployeesPage() {
 
   const stats = [
     { label: "Active Workforce", value: total || employees.length, icon: Users, color: "text-primary bg-primary/10 border-primary/20" },
-    { label: "Business Units", value: departments.length, icon: Building2, color: "text-secondary bg-secondary/10 border-secondary/20" },
+    { label: "Legal Entities", value: companies.length, icon: Building2, color: "text-secondary bg-secondary/10 border-secondary/20" },
+    { label: "Departments", value: departments.length, icon: Briefcase, color: "text-foreground bg-muted/50 border-border" },
     { label: "Total Locations", value: locations.length, icon: MapPin, color: "text-accent bg-accent/10 border-accent/20" },
-    { label: "Stability", value: "98.2%", icon: Briefcase, color: "text-foreground bg-muted/50 border-border" },
   ];
 
   return (
@@ -263,8 +263,18 @@ export default function EmployeesPage() {
                   <tr key={`${emp.id}-${idx}`} className="group hover:bg-muted/20 cursor-default transition-all border-l-2 border-l-transparent hover:border-l-primary" onClick={() => router.push(`/hr/employees/${emp.id}/edit`)}>
                     <td className="pl-6 pr-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary border border-primary/10">
-                          <span className="text-[9px] font-black">{emp.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+                        <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 overflow-hidden shrink-0">
+                          {emp.photoPath ? (
+                            <img 
+                              src={emp.photoPath} 
+                              alt={emp.fullName} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[10px] font-black uppercase tracking-tighter">
+                              {emp.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">

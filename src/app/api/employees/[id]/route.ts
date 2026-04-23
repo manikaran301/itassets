@@ -40,6 +40,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
 }
 
+// Updated: 2026-04-22T18:24
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
@@ -61,11 +62,14 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         department: data.department || null,
         designation: data.designation || null,
         companyName: data.companyName || null,
-        reportingManagerId: managerId,
         locationJoining: data.locationJoining || null,
         deskNumber: data.deskNumber || null,
-        startDate: data.startDate ? new Date(data.startDate) : null,
+        startDate: (data.startDate && data.startDate.trim() !== "") ? new Date(data.startDate) : null,
         status: data.status || 'active',
+        photoPath: data.photoPath || null,
+        manager: managerId 
+          ? { connect: { id: managerId } } 
+          : { disconnect: true },
       },
     });
 

@@ -18,6 +18,7 @@ const EmployeeSchema = z.object({
   startDate: z.string().nullable().optional(),
   exitDate: z.string().nullable().optional(),
   status: z.enum(['active', 'exit_pending', 'inactive']).default('active'),
+  photoPath: z.string().trim().nullable().optional(),
   createdBy: z.string().uuid().nullable().optional().or(z.literal('')),
 });
 
@@ -108,13 +109,14 @@ export async function POST(request: Request) {
         department: data.department || null,
         designation: data.designation || null,
         companyName: data.companyName || null,
-        reportingManagerId: managerId,
         locationJoining: data.locationJoining || null,
         deskNumber: data.deskNumber || null,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        exitDate: data.exitDate ? new Date(data.exitDate) : null,
+        startDate: (data.startDate && data.startDate.trim() !== "") ? new Date(data.startDate) : null,
+        exitDate: (data.exitDate && data.exitDate.trim() !== "") ? new Date(data.exitDate) : null,
         status: data.status,
-        createdBy: creatorId,
+        photoPath: data.photoPath || null,
+        manager: managerId ? { connect: { id: managerId } } : undefined,
+        creator: creatorId ? { connect: { id: creatorId } } : undefined,
       },
     });
 
