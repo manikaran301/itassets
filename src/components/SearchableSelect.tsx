@@ -5,15 +5,21 @@ import { ChevronDown, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SearchableSelectProps {
-  options: { value: string; label: string }[];
+  options: { 
+    value: string; 
+    label: string; 
+    image?: string | null; 
+    initials?: string 
+  }[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   icon?: React.ReactNode;
   label?: string;
   allowCustom?: boolean;
-  limit?: number; // New prop to limit displayed items
+  limit?: number;
   compact?: boolean;
+  showAvatars?: boolean;
 }
 
 export function SearchableSelect({
@@ -26,6 +32,7 @@ export function SearchableSelect({
   allowCustom = false,
   limit,
   compact = false,
+  showAvatars = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -153,7 +160,7 @@ export function SearchableSelect({
         {/* Dropdown Menu */}
         {isOpen && (
           <div className="absolute z-[200] mt-3 w-full bg-card border border-border rounded-[28px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="max-h-[280px] overflow-y-auto py-2 scrollbar-hide">
+            <div className="max-h-[320px] overflow-y-auto py-3 scrollbar-hide">
               {filtered.length === 0 ? (
                 <div className="px-6 py-8 text-center">
                   <p className="text-[10px] text-muted-foreground/30 font-bold uppercase tracking-[0.2em]">
@@ -176,15 +183,26 @@ export function SearchableSelect({
                     type="button"
                     onClick={() => handleSelect(opt.value, opt.label)}
                     className={cn(
-                      "w-[calc(100%-16px)] mx-2 px-6 py-3 text-left text-[11px] font-bold flex items-center justify-between transition-all hover:bg-primary/5 group/opt rounded-2xl",
+                      "w-[calc(100%-16px)] mx-2 px-4 py-2.5 text-left text-[11px] font-bold flex items-center gap-3 transition-all hover:bg-primary/5 group/opt rounded-2xl mb-1 last:mb-0",
                       value === opt.value
                         ? "bg-primary/10 text-primary"
                         : "text-foreground/90 hover:text-foreground",
                     )}
                   >
+                    {showAvatars && (
+                      <div className="shrink-0 w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-muted/40 flex items-center justify-center relative group-hover/opt:border-primary/30 transition-colors">
+                        {opt.image ? (
+                          <img src={opt.image} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[9px] font-black text-muted-foreground/60 group-hover/opt:text-primary transition-colors">
+                            {opt.initials || opt.label.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <span className="flex-1 truncate">{opt.label}</span>
                     {value === opt.value && (
-                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      <Check className="w-4 h-4 text-primary shrink-0 mr-2" />
                     )}
                   </button>
                 ))

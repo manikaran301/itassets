@@ -12,7 +12,7 @@ export async function GET() {
     const assignments = await prisma.assignmentHistory.findMany({
       orderBy: { assignedDate: 'desc' },
       include: {
-        employee: { select: { id: true, fullName: true, employeeCode: true } },
+        employee: { select: { id: true, fullName: true, employeeCode: true, photoPath: true } },
         asset: { select: { id: true, assetTag: true } },
         accessory: { select: { id: true, assetTag: true } },
       },

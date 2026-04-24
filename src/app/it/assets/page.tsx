@@ -157,6 +157,7 @@ function AssetImportPreviewModal({
                 <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Make & Model</th>
                 <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Hardware Specs</th>
                 <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Serial / MAC</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Network</th>
                 <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Purchase Info</th>
                 <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Assign To</th>
               </tr>
@@ -172,7 +173,9 @@ function AssetImportPreviewModal({
                     ) : (
                       <div className="flex items-center gap-2 text-red-500">
                         <AlertCircle className="w-4 h-4" />
-                        <span className="font-black uppercase text-[8px] whitespace-nowrap">{record.error || "Error"}</span>
+                        <span className="font-black uppercase text-[7px] leading-tight break-words">
+                          {record.error || "Error"}
+                        </span>
                       </div>
                     )}
                   </td>
@@ -213,7 +216,7 @@ function AssetImportPreviewModal({
                     </div>
                   </td>
                   <td className="px-2 py-1">
-                    <div className="flex flex-col gap-1 min-w-[120px]">
+                    <div className="flex flex-col gap-1 min-w-[160px]">
                       <input
                         value={record.cpu}
                         placeholder="CPU"
@@ -225,13 +228,19 @@ function AssetImportPreviewModal({
                           value={record.ramGb}
                           placeholder="RAM"
                           onChange={(e) => updateRecord(record.id, "ramGb", e.target.value)}
-                          className="w-1/2 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black"
+                          className="w-1/3 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black text-[9px]"
                         />
                         <input
-                          value={record.ssdGb || record.hddGb}
-                          placeholder="Disk"
-                          onChange={(e) => updateRecord(record.id, record.ssdGb ? "ssdGb" : "hddGb", e.target.value)}
-                          className="w-1/2 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black"
+                          value={record.ssdGb}
+                          placeholder="SSD"
+                          onChange={(e) => updateRecord(record.id, "ssdGb", e.target.value)}
+                          className="w-1/3 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black text-[9px] text-primary"
+                        />
+                        <input
+                          value={record.hddGb}
+                          placeholder="HDD"
+                          onChange={(e) => updateRecord(record.id, "hddGb", e.target.value)}
+                          className="w-1/3 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black text-[9px] text-muted-foreground"
                         />
                       </div>
                     </div>
@@ -251,6 +260,14 @@ function AssetImportPreviewModal({
                         className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 text-[8px] font-bold"
                       />
                     </div>
+                  </td>
+                  <td className="px-2 py-1">
+                    <input
+                      value={record.ipAddress}
+                      placeholder="IP Address"
+                      onChange={(e) => updateRecord(record.id, "ipAddress", e.target.value)}
+                      className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono text-[9px] font-bold"
+                    />
                   </td>
                   <td className="px-2 py-1">
                     <div className="flex flex-col gap-1">
@@ -455,6 +472,11 @@ export default function AssetsPage() {
           record[header] = values[index] || "";
         });
 
+        // Ensure type is lowercase for the select dropdown
+        if (record.type) {
+          record.type = record.type.toLowerCase();
+        }
+
         // Basic default validation
         record.isValid = !!record.assetTag;
         if (!record.isValid) record.error = "Missing tag";
@@ -497,9 +519,31 @@ export default function AssetsPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert(`Registry Updated!\nImported: ${data.summary.imported}\nSkipped: ${data.summary.skipped}\nErrors: ${data.summary.errors}`);
-        setPreviewData(null);
-        window.location.reload(); // Refresh to show new assets
+        if (data.summary.errors > 0 || data.summary.skipped > 0) {
+          alert(`Registry partially updated.\nImported: ${data.summary.imported}\nErrors/Skipped: ${data.summary.errors + data.summary.skipped}\n\nPlease check the marked rows.`);
+          
+          // Update preview data to show what failed
+          setPreviewData(prev => {
+            if (!prev) return null;
+            // Remove successfully imported, update others with error
+            return prev
+              .filter(r => {
+                const result = data.results.find((res: any) => res.assetTag === r.assetTag);
+                return result?.status !== 'imported';
+              })
+              .map(r => {
+                const result = data.results.find((res: any) => res.assetTag === r.assetTag);
+                if (result && result.status === 'error') {
+                  return { ...r, isValid: false, error: result.reason };
+                }
+                return r;
+              });
+          });
+        } else {
+          alert(`Registry Updated! ${data.summary.imported} assets registered.`);
+          setPreviewData(null);
+          window.location.reload();
+        }
       } else {
         alert(`Import Failed: ${data.error}`);
       }
@@ -692,6 +736,7 @@ export default function AssetsPage() {
                           {asset.cpu && <span className="text-[7px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded bg-muted/60 border border-border text-foreground/70">{asset.cpu}</span>}
                           {asset.ramGb && <span className="text-[7px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded bg-primary/5 border border-primary/10 text-primary">{asset.ramGb}GB</span>}
                           {asset.ssdGb && <span className="text-[7px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded bg-secondary/5 border border-secondary/10 text-secondary">{asset.ssdGb}GB SSD</span>}
+                          {asset.hddGb && <span className="text-[7px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded bg-muted/60 border border-border text-muted-foreground">{asset.hddGb}GB HDD</span>}
                         </div>
                       </td>
 

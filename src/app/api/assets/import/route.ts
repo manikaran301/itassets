@@ -134,9 +134,18 @@ export async function POST(request: NextRequest) {
         const lanPorts = row.lanPorts ? parseInt(row.lanPorts, 10) : undefined;
         const installedCameras = row.installedCameras ? parseInt(row.installedCameras, 10) : undefined;
 
-        // Map zero_client to n_computing for database compatibility
-        let type = row.type?.toLowerCase() || 'other';
+        // Validate and map asset type
+        const allowedTypes = ['laptop', 'desktop', 'n_computing', 'nuc', 'server', 'printer', 'switch', 'access_point', 'tv', 'nvr', 'dvr', 'other'];
+        let type = row.type?.toLowerCase().trim() || 'other';
+        
+        // Handle variations
         if (type === 'zero_client') type = 'n_computing';
+        if (type === 'zero client') type = 'n_computing';
+        
+        // Default to 'other' if type is not in allowed list
+        if (!allowedTypes.includes(type)) {
+          type = 'other';
+        }
 
         // Validate required fields
         if (!row.assetTag) {
@@ -184,7 +193,11 @@ export async function POST(request: NextRequest) {
         const purchaseDate = row.purchaseDate ? new Date(row.purchaseDate) : undefined;
 
         // Determine status based on employee assignment
-        let finalStatus: 'available' | 'assigned' | 'in_repair' | 'retired' | 'lost' = (row.status as any) || 'available';
+        const allowedStatuses = ['available', 'assigned', 'in_repair', 'retired', 'lost'];
+        let finalStatus: 'available' | 'assigned' | 'in_repair' | 'retired' | 'lost' = 
+          (allowedStatuses.includes(row.status?.toLowerCase() || '') 
+            ? row.status?.toLowerCase() as any 
+            : 'available');
         if (employeeId && finalStatus === 'available') {
           finalStatus = 'assigned';
         }
@@ -217,7 +230,9 @@ export async function POST(request: NextRequest) {
             connectionType: row.connectionType?.trim() || undefined,
             os: row.os ? row.os.trim() : undefined,
             osVersion: row.osVersion ? row.osVersion.trim() : undefined,
-            antivirusStatus: row.antivirusStatus as any,
+            antivirusStatus: (['yes', 'no', 'expired'].includes(row.antivirusStatus?.toLowerCase() || '') 
+              ? row.antivirusStatus?.toLowerCase() 
+              : 'no') as any,
             antivirusName: row.antivirusName ? row.antivirusName.trim() : undefined,
             warrantyExpiry: isNaN(warrantyExpiry?.getTime() || 0) ? undefined : warrantyExpiry,
             purchaseDate: isNaN(purchaseDate?.getTime() || 0) ? undefined : purchaseDate,

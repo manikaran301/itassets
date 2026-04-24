@@ -49,8 +49,6 @@ export async function POST(request: NextRequest) {
         error = 'Email already exists in system';
       } else if (record.accountType === 'personal' && empCode && !validEmployeeSet.has(empCode)) {
         error = 'Employee code not found';
-      } else if (record.accountType === 'personal' && !empCode) {
-        error = 'Employee code required for personal account';
       }
 
       if (email) seenEmailsInSheet.add(email);

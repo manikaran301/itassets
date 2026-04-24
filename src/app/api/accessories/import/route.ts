@@ -21,14 +21,20 @@ export async function POST(request: Request) {
       'mouse': 'mouse',
       'webcam': 'webcam',
       'headset': 'headset',
+      'headphones': 'headset',
       'docking_station': 'docking_station',
       'docking station': 'docking_station',
+      'dock': 'docking_station',
+      'other': 'other',
     };
 
     const conditionMap: Record<string, string> = {
       'excellent': 'excellent',
       'good': 'good',
       'fair': 'fair',
+      'needs_service': 'needs_service',
+      'needs service': 'needs_service',
+      'damaged': 'damaged',
     };
 
     const results = await prisma.$transaction(async (tx) => {

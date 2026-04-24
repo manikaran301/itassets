@@ -22,7 +22,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -471,19 +471,40 @@ export default function EmailAccountsPage() {
     id: string;
     emailAddress: string;
   } | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(20);
   const [importing, setImporting] = useState(false);
   const [previewData, setPreviewData] = useState<ImportRecord[] | null>(null);
-  const PAGE_SIZE = 10;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEmails();
   }, []);
 
-  // Reset to page 1 whenever filters/search change
+  // Reset visible count whenever filters/search change
   useEffect(() => {
-    setCurrentPage(1);
+    setVisibleCount(20);
   }, [searchTerm, statusFilter, categoryFilter, domainFilter]);
+
+  // Infinite scroll observer using ref
+  const observer = useRef<IntersectionObserver | null>(null);
+  const scrollTriggerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (loading) return;
+      if (observer.current) observer.current.disconnect();
+
+      observer.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            setVisibleCount((prev) => prev + 20);
+          }
+        },
+        { threshold: 0.1 }
+      );
+
+      if (node) observer.current.observe(node);
+    },
+    [loading]
+  );
 
   const fetchEmails = async () => {
     try {
@@ -517,14 +538,8 @@ export default function EmailAccountsPage() {
 
   const domains = Array.from(new Set(emails.map(e => e.emailAddress.split("@")[1]).filter(Boolean))).sort();
 
-  const totalPages = Math.max(1, Math.ceil(filteredEmails.length / PAGE_SIZE));
-  const paginatedEmails = filteredEmails.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
-  const startEntry = filteredEmails.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const endEntry = Math.min(currentPage * PAGE_SIZE, filteredEmails.length);
+  const paginatedEmails = filteredEmails.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredEmails.length;
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -647,11 +662,18 @@ export default function EmailAccountsPage() {
     }
   };
 
+  const domainCounts = emails.reduce((acc, e) => {
+    const domain = e.emailAddress.split("@")[1];
+    if (domain) {
+      acc[domain] = (acc[domain] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
   const stats = [
     { label: "Total Accounts", value: emails.length, icon: Database, color: "text-foreground bg-muted/50 border-border" },
     { label: "Active", value: emails.filter(e => e.status === "active").length, icon: ShieldAlert, color: "text-primary bg-primary/10 border-primary/20" },
     { label: "Forwarding", value: emails.filter(e => e.forwardingEnabled).length, icon: Globe, color: "text-secondary bg-secondary/10 border-secondary/20" },
-    { label: "Sync Status", value: "99.9%", icon: RefreshCw, color: "text-accent bg-accent/10 border-accent/20" },
   ];
 
   return (
@@ -733,6 +755,27 @@ export default function EmailAccountsPage() {
             </div>
           </div>
         ))}
+        {/* Domain Distribution Card */}
+        <div className="bg-card border border-border/60 p-3 rounded-2xl flex flex-col group hover:border-primary/30 transition-all overflow-hidden h-[74px]">
+          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 mb-1.5 px-1 flex items-center justify-between">
+            <span>Domain Spread</span>
+            <Globe className="w-3 h-3 text-accent/50" />
+          </p>
+          <div className="flex flex-wrap gap-1.5 overflow-y-auto no-scrollbar">
+            {loading ? (
+              <span className="text-xs font-black text-muted-foreground/30">...</span>
+            ) : Object.entries(domainCounts).length > 0 ? (
+              Object.entries(domainCounts).map(([domain, count]) => (
+                <div key={domain} className="flex items-center gap-1.5 bg-accent/5 border border-accent/10 px-2 py-0.5 rounded-md">
+                  <span className="text-[9px] font-bold text-muted-foreground truncate max-w-[80px]">{domain}</span>
+                  <span className="text-[8px] font-black text-accent bg-accent/10 px-1 rounded-sm">{count}</span>
+                </div>
+              ))
+            ) : (
+              <span className="text-[9px] font-bold text-muted-foreground/40 px-1">No domains</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Unified Filter Strip */}
@@ -871,7 +914,17 @@ export default function EmailAccountsPage() {
                           </div>
                           <div>
                             <p className="text-[10px] font-black truncate max-w-[120px] uppercase leading-none mb-1">{email.employee.fullName}</p>
-                            <p className="text-[8px] opacity-40 font-black uppercase tracking-widest">{email.employee.employeeCode}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-[8px] opacity-40 font-black uppercase tracking-widest">{email.employee.employeeCode}</p>
+                              {email.employee.locationJoining && (
+                                <>
+                                  <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+                                  <span className="text-[7px] font-black uppercase tracking-widest text-primary/60 bg-primary/5 px-1 rounded-sm border border-primary/10">
+                                    {email.employee.locationJoining}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -905,6 +958,7 @@ export default function EmailAccountsPage() {
                             router.push(`/it/email/${email.id}`);
                           }} 
                           className="p-1.5 text-muted-foreground hover:text-primary transition-all"
+                          title="Edit Account"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -919,9 +973,29 @@ export default function EmailAccountsPage() {
                             setSuspending(null);
                           }}
                           disabled={suspending === email.id}
-                          className="p-1.5 text-muted-foreground hover:text-destructive transition-all disabled:opacity-50"
+                          className="p-1.5 text-muted-foreground hover:text-amber-500 transition-all disabled:opacity-50"
+                          title={email.status === "active" ? "Suspend Account" : "Activate Account"}
                         >
                           {suspending === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+                        </button>
+                        <button 
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!window.confirm(`PERMANENTLY DELETE ${email.emailAddress}?\nThis action cannot be undone.`)) return;
+                            setDeletingId(email.id);
+                            try {
+                              const res = await fetch(`/api/emails/${email.id}`, { method: 'DELETE' });
+                              if (res.ok) fetchEmails();
+                              else alert("Failed to delete account");
+                            } finally {
+                              setDeletingId(null);
+                            }
+                          }}
+                          disabled={deletingId === email.id}
+                          className="p-1.5 text-muted-foreground hover:text-red-500 transition-all disabled:opacity-50"
+                          title="Delete Account"
+                        >
+                          {deletingId === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                         </button>
                       </div>
                     </td>
@@ -930,28 +1004,27 @@ export default function EmailAccountsPage() {
               )}
             </tbody>
           </table>
+          {hasMore && !loading && (
+            <div ref={scrollTriggerRef} className="w-full py-6 flex items-center justify-center border-t border-border/50">
+              <div className="flex items-center gap-2 text-muted-foreground/40">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Loading More Identities...</span>
+              </div>
+            </div>
+          )}
         </div>
         
-        <div className="px-6 py-3 border-t border-border flex items-center justify-between bg-muted/5">
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-muted/5">
           <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">
-            Showing {startEntry}–{endEntry} of {filteredEmails.length} Identities
+            Showing {Math.min(visibleCount, filteredEmails.length)} of {filteredEmails.length} Identities
           </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 border border-border rounded-lg disabled:opacity-20 hover:bg-muted transition-all"
-            >
-              <ArrowRight className="w-3 h-3 rotate-180" />
-            </button>
-            <div className="px-3 text-[10px] font-black">{currentPage} <span className="opacity-30">/</span> {totalPages}</div>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-1.5 border border-border rounded-lg disabled:opacity-20 hover:bg-muted transition-all"
-            >
-              <ArrowRight className="w-3 h-3" />
-            </button>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-24 bg-muted/50 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary/40 rounded-full transition-all duration-500"
+                style={{ width: `${filteredEmails.length ? (Math.min(visibleCount, filteredEmails.length) / filteredEmails.length) * 100 : 0}%` }}
+              />
+            </div>
           </div>
         </div>
       </div>

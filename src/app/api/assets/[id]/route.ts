@@ -111,6 +111,7 @@ export async function PATCH(
               employeeId: newEmployeeId,
               actionType: oldAsset.currentEmployeeId ? 'reassignment' : 'new_assignment',
               assignedDate: new Date(),
+              assignedBy: changedBy || null,
               notes: oldAsset.currentEmployeeId ? `Reassigned to new employee` : null,
             },
           });
@@ -153,6 +154,7 @@ export async function PATCH(
                 employeeId,
                 actionType: 'repair_send',
                 assignedDate: new Date(),
+                assignedBy: changedBy || null,
                 notes: `Asset sent to repair (was: ${oldStatus})`,
               },
             });
@@ -181,6 +183,7 @@ export async function PATCH(
                 employeeId: repairLog.employeeId,
                 actionType: 'repair_return',
                 assignedDate: new Date(),
+                assignedBy: changedBy || null,
                 notes: `Asset returned from repair (now: ${newStatus})`,
               },
             });

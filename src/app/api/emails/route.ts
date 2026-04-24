@@ -40,6 +40,7 @@ export async function GET() {
             fullName: true,
             employeeCode: true,
             photoPath: true,
+            locationJoining: true,
           },
         },
         forwarding: {
@@ -60,10 +61,12 @@ export async function GET() {
     }));
 
     return NextResponse.json(emailsWithCount);
-  } catch {
+  } catch (error) {
+    console.error('Fetch emails error:', error);
     return NextResponse.json({ error: 'Failed to fetch emails' }, { status: 500 });
   }
 }
+
 
 export async function POST(request: Request) {
   try {

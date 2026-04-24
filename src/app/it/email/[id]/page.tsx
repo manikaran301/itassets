@@ -103,6 +103,8 @@ export default function EmailDetailPage() {
         const formattedEmps = empData.map((emp: any) => ({
           value: emp.id,
           label: `${emp.fullName} (${emp.employeeCode})`,
+          image: emp.photoPath,
+          initials: emp.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
         }));
         setEmployees(formattedEmps);
 
@@ -309,6 +311,7 @@ export default function EmailDetailPage() {
                       onChange={(val) => updateField("employeeId", val)}
                       placeholder="Select employee..."
                       icon={<UserPlus className="w-4 h-4" />}
+                      showAvatars
                     />
                   </div>
 

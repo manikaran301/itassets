@@ -25,6 +25,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface AssetDetailProps {
   params: Promise<{ id: string }>;
@@ -33,6 +34,7 @@ interface AssetDetailProps {
 export default function AssetDetailPage({ params }: AssetDetailProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { data: session } = useSession();
   const [asset, setAsset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -54,7 +56,12 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
         if (assetData.error) throw new Error(assetData.error);
 
         setAsset(assetData);
-        setEmployees(employeesData);
+        setEmployees(employeesData.map((emp: any) => ({
+          value: emp.id,
+          label: `${emp.fullName} (${emp.employeeCode})`,
+          image: emp.photoPath,
+          initials: emp.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+        })));
         if (assetData.currentEmployeeId)
           setSelectedEmployee(assetData.currentEmployeeId);
       } catch (error) {
@@ -75,6 +82,7 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
         body: JSON.stringify({
           currentEmployeeId: selectedEmployee || null,
           status: selectedEmployee ? "assigned" : "available",
+          changedBy: (session?.user as any)?.id,
         }),
       });
 
@@ -410,24 +418,28 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
 
               <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
                 {/* Current Assignee */}
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="w-16 h-16 rounded-[24px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-xl font-black text-primary border border-primary/20 ring-4 ring-primary/5">
-                    {asset.currentEmployee ? (
-                      asset.currentEmployee.fullName[0]
+                  <div className="relative group/avatar">
+                    {asset.currentEmployee?.photoPath ? (
+                      <img 
+                        src={asset.currentEmployee.photoPath} 
+                        className="w-20 h-20 rounded-[28px] object-cover border border-primary/20 shadow-xl group-hover/avatar:scale-105 transition-transform duration-500"
+                        alt=""
+                      />
                     ) : (
-                      <Activity className="w-8 h-8 opacity-20" />
+                      <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-2xl font-black text-primary border border-primary/20 shadow-xl group-hover/avatar:scale-105 transition-transform duration-500 ring-4 ring-primary/5">
+                        {asset.currentEmployee ? (
+                          asset.currentEmployee.fullName.split(' ').map((n: any) => n[0]).join('').slice(0, 2)
+                        ) : (
+                          <Activity className="w-10 h-10 opacity-20" />
+                        )}
+                      </div>
+                    )}
+                    {asset.currentEmployee?.deskNumber && (
+                      <div className="absolute -right-2 -bottom-2 px-2 py-1 bg-background border border-border rounded-lg text-[8px] font-black uppercase text-primary shadow-xl">
+                        Seat {asset.currentEmployee.deskNumber}
+                      </div>
                     )}
                   </div>
-                  <div>
-                    <p className="text-sm font-black text-foreground uppercase tracking-tight">
-                      {asset.currentEmployee?.fullName ||
-                        "Currently Unassigned"}
-                    </p>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-0.5 leading-none">
-                      {asset.currentEmployee?.employeeCode || "Inventory Pool"}
-                    </p>
-                  </div>
-                </div>
 
                 <div className="hidden md:block">
                   <ChevronRight className="w-8 h-8 text-muted-foreground/20" />
@@ -441,14 +453,12 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                     </label>
                     <div className="flex gap-2">
                       <SearchableSelect
-                        options={employees.map((emp) => ({
-                          value: emp.id,
-                          label: `${emp.fullName} (${emp.employeeCode})`,
-                        }))}
+                        options={employees}
                         value={selectedEmployee}
                         onChange={setSelectedEmployee}
                         placeholder="Select assignee..."
                         icon={<User className="w-4 h-4" />}
+                        showAvatars
                       />
                       <button
                         onClick={handleReassign}
@@ -584,154 +594,138 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
           </div>
         </div>
       ) : (
-        <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-500 max-w-4xl mx-auto">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-5xl mx-auto">
           <div className="bg-card rounded-[32px] p-8 border border-white/5 premium-card">
-            <h4 className="text-sm font-black uppercase tracking-[0.2em] text-foreground mb-8 flex items-center gap-3">
-              <History className="w-5 h-5 text-primary" />
-              Full Lifecycle Ledger
-            </h4>
+            <div className="flex items-center justify-between mb-8">
+              <h4 className="text-sm font-black uppercase tracking-[0.2em] text-foreground flex items-center gap-3">
+                <History className="w-5 h-5 text-primary" />
+                Operational Ledger
+              </h4>
+              <div className="px-4 py-1.5 bg-primary/10 rounded-full border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary">
+                { (asset.logs?.length || 0) + (asset.assignments?.length || 0) } Transactions
+              </div>
+            </div>
 
-            <div className="relative space-y-8 before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border/40 before:to-transparent">
-              {asset.logs?.map((log: any, idx: number) => (
-                <div
-                  key={log.id}
-                  className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
-                >
-                  {/* Icon */}
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full border border-border bg-card absolute left-0 md:left-1/2 md:-ml-4 z-10 group-hover:border-primary/50 transition-colors">
-                    {log.action === "created" ? (
-                      <PlusCircle className="w-4 h-4 text-green-500" />
-                    ) : log.action === "updated" ? (
-                      <Edit2 className="w-3.5 h-3.5 text-blue-500" />
-                    ) : log.action === "deleted" ? (
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    ) : (
-                      <Activity className="w-4 h-4 text-primary" />
-                    )}
-                  </div>
+            <div className="space-y-3">
+              {(() => {
+                // Merge and sort all activities
+                const allEvents = [
+                  ...(asset.logs?.map((l: any) => ({ ...l, type: 'audit', date: new Date(l.changedAt) })) || []),
+                  ...(asset.assignments?.map((a: any) => ({ ...a, type: 'assignment', date: new Date(a.createdAt) })) || [])
+                ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
-                  {/* Content Card */}
-                  <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-muted/20 border border-white/5 shadow-sm ml-12 md:ml-0 group-hover:bg-muted/30 transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                        {log.action.replace("_", " ")}
-                      </span>
-                      <time className="text-[9px] font-bold text-muted-foreground/40">
-                        {new Date(log.changedAt).toLocaleString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
+                if (allEvents.length === 0) {
+                  return (
+                    <div className="py-20 text-center space-y-4 opacity-20">
+                      <Activity className="w-12 h-12 mx-auto" />
+                      <p className="text-xs font-black uppercase tracking-[0.3em]">No historical data found</p>
                     </div>
-                    <p className="text-[11px] font-bold text-foreground mb-1">
-                      {log.action === "created" ? (
-                        <span className="text-green-500/80">
-                          Inventory Initialization
-                        </span>
+                  );
+                }
+
+                return allEvents.map((event: any) => (
+                  <div key={event.id} className="group relative flex gap-4 p-4 bg-muted/10 hover:bg-muted/20 border border-white/5 rounded-2xl transition-all items-start">
+                    {/* Event Icon/Type */}
+                    <div className="shrink-0 mt-1">
+                      {event.type === 'assignment' ? (
+                        <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+                          <UserPlus className="w-4 h-4 text-primary" />
+                        </div>
+                      ) : event.action === 'created' ? (
+                        <div className="w-8 h-8 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                          <PlusCircle className="w-4 h-4 text-green-500" />
+                        </div>
                       ) : (
-                        <div className="flex flex-wrap gap-1 items-center">
-                          {(() => {
-                            const oldVal = log.oldValue as any;
-                            const newVal = log.newValue as any;
-                            if (!oldVal || !newVal)
-                              return (
-                                <span className="text-muted-foreground/60 italic font-medium tracking-tight">
-                                  System configuration update
-                                </span>
-                              );
-
-                            const changes = Object.keys(newVal).filter(
-                              (key) =>
-                                key !== "updatedAt" &&
-                                key !== "logs" &&
-                                JSON.stringify(oldVal[key]) !==
-                                  JSON.stringify(newVal[key]),
-                            );
-
-                            if (changes.length === 0)
-                              return (
-                                <span className="text-muted-foreground/60 italic font-medium tracking-tight">
-                                  Metadata refresh
-                                </span>
-                              );
-
-                            return changes.map((c, i) => (
-                              <span key={c} className="flex items-center gap-1">
-                                <span className="text-primary/70">
-                                  {(() => {
-                                    if (c === "currentEmployeeId") {
-                                      const newEmp = newVal.currentEmployee;
-                                      return newEmp
-                                        ? `Assigned to ${newEmp.fullName}`
-                                        : "Unassigned from Employee";
-                                    }
-                                    return (
-                                      c.charAt(0).toUpperCase() +
-                                      c
-                                        .slice(1)
-                                        .replace(/([A-Z])/g, " $1")
-                                        .replace("Id", "")
-                                    );
-                                  })()}
-                                </span>
-                                {i < changes.length - 1 && (
-                                  <span className="px-1 text-muted-foreground/20 text-[8px]">
-                                    •
-                                  </span>
-                                )}
-                              </span>
-                            ));
-                          })()}
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                          <Edit2 className="w-3.5 h-3.5 text-blue-500" />
                         </div>
                       )}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-black text-primary">
-                        {log.user?.fullName?.[0] || "S"}
-                      </div>
-                      <span className="text-[10px] font-black lowercase text-muted-foreground/60 tracking-tight">
-                        by {log.user?.fullName || "System Admin"}
-                      </span>
                     </div>
-                  </div>
-                </div>
-              ))}
 
-              {/* Assignment logs intermixed if any */}
-              {asset.assignments?.map((asn: any) => (
-                <div
-                  key={asn.id}
-                  className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
-                >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full border border-border bg-card absolute left-0 md:left-1/2 md:-ml-4 z-10 group-hover:border-primary/50 transition-colors">
-                    <UserPlus className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-primary/5 border border-primary/10 shadow-sm ml-12 md:ml-0 group-hover:bg-primary/10 transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                        Assignment
-                      </span>
-                      <time className="text-[9px] font-bold text-primary/40">
-                        {new Date(asn.createdAt).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                        })}
-                      </time>
+                    {/* Content */}
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                      <div className="md:col-span-4 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                            event.type === 'assignment' ? "bg-primary text-primary-foreground border-primary" : 
+                            event.action === 'created' ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                            "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                          )}>
+                            {event.type === 'assignment' ? (event.actionType?.replace('_', ' ') || 'Assignment') : event.action}
+                          </span>
+                          <span className="text-[10px] font-mono text-muted-foreground/40 font-bold">
+                            {event.logCode || event.id.slice(0, 8)}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-bold text-foreground">
+                          {event.type === 'assignment' ? (
+                            <>Deployed to <span className="text-primary">{event.employee.fullName}</span></>
+                          ) : event.action === 'created' ? (
+                            "Inventory Initialization"
+                          ) : (
+                            "Resource Specification Update"
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Details Column */}
+                      <div className="md:col-span-5">
+                        {event.type === 'audit' && event.action === 'updated' && (
+                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            {(() => {
+                              const oldVal = event.oldValue as any;
+                              const newVal = event.newValue as any;
+                              if (!oldVal || !newVal) return null;
+                              
+                              return Object.keys(newVal)
+                                .filter(k => k !== "updatedAt" && k !== "logs" && JSON.stringify(oldVal[k]) !== JSON.stringify(newVal[k]))
+                                .map(key => (
+                                  <div key={key} className="flex items-center gap-1.5 bg-background/40 px-2 py-0.5 rounded-lg border border-white/5">
+                                    <span className="text-[8px] font-black uppercase text-muted-foreground/40">{key.replace('currentEmployeeId', 'Assignee')}:</span>
+                                    <span className="text-[9px] font-bold text-muted-foreground line-through opacity-30">{String(oldVal[key] || 'Empty').slice(0, 15)}</span>
+                                    <span className="text-primary">→</span>
+                                    <span className="text-[9px] font-black text-primary/80">{String(newVal[key] || 'Cleared').slice(0, 15)}</span>
+                                  </div>
+                                ));
+                            })()}
+                          </div>
+                        )}
+                        {event.type === 'assignment' && (
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">
+                            <span className="px-2 py-0.5 bg-white/5 rounded-md border border-white/5">Transaction Complete</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Meta Column */}
+                      <div className="md:col-span-3 flex flex-col items-end gap-1">
+                        <time className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-tighter">
+                          {new Date(event.date).toLocaleDateString("en-GB", {
+                            day: "2-digit", month: "short"
+                          })}, {new Date(event.date).toLocaleTimeString("en-GB", {
+                            hour: "2-digit", minute: "2-digit", hour12: false
+                          })}
+                        </time>
+                        <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <div className="w-5 h-5 rounded-lg overflow-hidden bg-primary/20 flex items-center justify-center border border-white/5">
+                            { (event.user || event.assigner)?.photoPath ? (
+                              <img src={(event.user || event.assigner).photoPath} className="w-full h-full object-cover" alt="" />
+                            ) : (
+                              <span className="text-[8px] font-black text-primary uppercase">
+                                {(event.user || event.assigner)?.fullName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2) || "S"}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[9px] font-black text-muted-foreground/60">
+                            {(event.user || event.assigner)?.fullName || "System"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs font-bold text-foreground">
-                      Deployed to{" "}
-                      <span className="text-primary">
-                        {asn.employee.fullName}
-                      </span>
-                    </p>
-                    <p className="text-[9px] text-muted-foreground/60 italic mt-1 font-bold uppercase tracking-widest">
-                      Reason: {asn.actionType.replace("_", " ")}
-                    </p>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
         </div>

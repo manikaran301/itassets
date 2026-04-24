@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
 
         // 5. Look up employee by employeeCode if provided
         let employeeId: string | null = null;
+        let importNote = '';
         if (row.employeeCode && row.employeeCode.trim()) {
           const employee = await prisma.employee.findFirst({
             where: { employeeCode: row.employeeCode.trim() },
@@ -136,12 +137,7 @@ export async function POST(request: NextRequest) {
           if (employee) {
             employeeId = employee.id;
           } else {
-            // If it's a personal account and employee not found, we skip with error
-            if (row.accountType?.toLowerCase() === 'personal') {
-              errors++;
-              results.push({ email: emailAddress, status: 'error', reason: `Employee code ${row.employeeCode} not found` });
-              continue;
-            }
+            importNote = `Note: Employee code ${row.employeeCode} not found. Account imported as unassigned.`;
           }
         }
 

@@ -14,17 +14,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
-    // Fetch existing identifiers
-    const [existingTags, existingSerials] = await Promise.all([
+    // Fetch existing identifiers and employees
+    const [existingTags, existingSerials, existingEmployees] = await Promise.all([
       prisma.accessory.findMany({ select: { assetTag: true } }),
       prisma.accessory.findMany({ 
         where: { NOT: { serialNumber: null } },
         select: { serialNumber: true } 
-      })
+      }),
+      prisma.employee.findMany({ select: { employeeCode: true } })
     ]);
 
     const tagSet = new Set(existingTags.map(t => t.assetTag.toLowerCase()));
     const serialSet = new Set(existingSerials.map(s => s.serialNumber?.toLowerCase()));
+    const employeeSet = new Set(existingEmployees.map(e => e.employeeCode.toLowerCase()));
 
     // Track internal duplicates within the uploaded sheet
     const seenTags = new Set();
@@ -62,6 +64,12 @@ export async function POST(request: Request) {
       // Basic Validation
       if (!item.assetTag) errors.push("Asset Tag is required");
       if (!item.type) errors.push("Accessory Type is required");
+
+      // Employee Validation (Optional)
+      const empCode = item.employeeCode?.toString().trim().toLowerCase();
+      if (empCode && !employeeSet.has(empCode)) {
+        errors.push(`Employee Code "${item.employeeCode}" not found in registry`);
+      }
 
       return {
         ...item,

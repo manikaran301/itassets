@@ -41,7 +41,7 @@ interface Accessory {
   status: string;
   condition: string;
   currentEmployeeId?: string | null;
-  currentEmployee?: { fullName: string; employeeCode: string } | null;
+  currentEmployee?: { fullName: string; employeeCode: string; photoPath?: string | null } | null;
   createdAt: string;
 }
 
@@ -448,11 +448,21 @@ export default function AccessoriesPage() {
                     <td className="px-4 py-4">
                       {acc.currentEmployee ? (
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-[10px] font-black text-primary uppercase">
-                            {acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          <div className="relative group/avatar">
+                            {acc.currentEmployee.photoPath ? (
+                              <img 
+                                src={acc.currentEmployee.photoPath} 
+                                alt={acc.currentEmployee.fullName}
+                                className="w-9 h-9 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase group-hover/avatar:scale-110 transition-transform">
+                                {acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </div>
+                            )}
                           </div>
                           <div>
-                            <p className="text-[11px] font-black truncate max-w-[150px] uppercase">{acc.currentEmployee.fullName}</p>
+                            <p className="text-[11px] font-black truncate max-w-[150px] uppercase leading-none mb-1">{acc.currentEmployee.fullName}</p>
                             <p className="text-[9px] opacity-40 font-black uppercase tracking-widest">{acc.currentEmployee.employeeCode}</p>
                           </div>
                         </div>

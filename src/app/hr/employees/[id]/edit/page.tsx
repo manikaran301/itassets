@@ -45,6 +45,10 @@ interface EmployeeData {
   startDate: string;
   exitDate: string | null;
   status: string;
+  assetRequirements: any[];
+  provisioningRequests: any[];
+  currentAssets: any[];
+  emailAccounts: any[];
 }
 
 export default function EditEmployeePage() {
@@ -85,6 +89,18 @@ export default function EditEmployeePage() {
     phone: false,
     sim: false,
     email: true,
+  });
+
+  const [infrastructure, setInfrastructure] = useState<{
+    requirements: any[];
+    requests: any[];
+    assets: any[];
+    emails: any[];
+  }>({
+    requirements: [],
+    requests: [],
+    assets: [],
+    emails: [],
   });
 
   useEffect(() => {
@@ -160,6 +176,13 @@ export default function EditEmployeePage() {
         if (data.photoPath) {
           setPhotoPreview(data.photoPath);
         }
+
+        setInfrastructure({
+          requirements: data.assetRequirements || [],
+          requests: data.provisioningRequests || [],
+          assets: data.currentAssets || [],
+          emails: data.emailAccounts || [],
+        });
       } catch (err) {
         setError("Error loading employee record.");
       } finally {
@@ -642,6 +665,122 @@ export default function EditEmployeePage() {
                     onChange={(val) => updateField("status", val)}
                     placeholder="Status"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Consolidated Infrastructure Lifecycle */}
+            <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative z-10">
+              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6 relative z-10">
+                <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
+                Infrastructure Lifecycle & Assets
+              </div>
+
+              <div className="space-y-4 relative z-10">
+                {/* 1. Hardware Lifecycle Cards */}
+                <div className="grid grid-cols-1 gap-3">
+                  {Array.from(new Set([
+                    ...infrastructure.requirements.map(r => r.assetType?.toLowerCase()),
+                    ...infrastructure.requests.filter(r => r.deviceTypeNeeded).map(r => r.deviceTypeNeeded?.toLowerCase()),
+                    ...infrastructure.assets.map(a => a.type?.toLowerCase())
+                  ].filter(Boolean))).map((type, idx) => {
+                    const req = infrastructure.requirements.find(r => r.assetType?.toLowerCase() === type);
+                    const ticket = infrastructure.requests.find(r => r.deviceTypeNeeded?.toLowerCase() === type);
+                    const asset = infrastructure.assets.find(a => a.type?.toLowerCase() === type);
+                    const isFullySetup = !!asset;
+
+                    return (
+                      <div key={idx} className={cn(
+                        "p-4 rounded-3xl border transition-all duration-500 flex flex-col gap-4",
+                        isFullySetup 
+                          ? "bg-green-500/[0.03] border-green-500/10 hover:border-green-500/30" 
+                          : "bg-muted/10 border-white/5 hover:border-primary/20"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all",
+                              isFullySetup ? "bg-green-500/10 text-green-500 border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]" : "bg-primary/10 text-primary border-primary/20"
+                            )}>
+                              {type === 'desktop' ? <Monitor className="w-6 h-6" /> : <Laptop className="w-6 h-6" />}
+                            </div>
+                            <div>
+                              <h5 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                                {type}
+                                {isFullySetup && (
+                                  <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-500 rounded-lg text-[8px] font-black uppercase tracking-widest border border-green-500/30 animate-in fade-in zoom-in duration-500">
+                                    <CheckCircle2 className="w-3 h-3" /> In Possession
+                                  </span>
+                                )}
+                              </h5>
+                              <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">Hardware Lifecycle</p>
+                            </div>
+                          </div>
+                          {asset && (
+                            <div className="text-right">
+                              <p className="text-[10px] font-black text-foreground uppercase tracking-widest">{asset.assetTag}</p>
+                              <p className="text-[8px] font-bold text-muted-foreground/50 uppercase">{asset.model}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Lifecycle Steps */}
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                          <div className={cn(
+                            "p-3 rounded-2xl border flex flex-col gap-1",
+                            req ? (req.status === 'fulfilled' ? "bg-green-500/5 border-green-500/10" : "bg-amber-500/5 border-amber-500/10") : "bg-muted/5 border-white/5 opacity-40"
+                          )}>
+                            <p className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Step 1: Requirement</p>
+                            <p className="text-[10px] font-bold uppercase">{req ? req.status : 'None Raised'}</p>
+                          </div>
+                          <div className={cn(
+                            "p-3 rounded-2xl border flex flex-col gap-1",
+                            ticket ? (ticket.status === 'fulfilled' ? "bg-green-500/5 border-green-500/10" : "bg-blue-500/5 border-blue-500/10") : "bg-muted/5 border-white/5 opacity-40"
+                          )}>
+                            <p className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Step 2: IT Provisioning</p>
+                            <p className="text-[10px] font-bold uppercase">{ticket ? `${ticket.requestCode} · ${ticket.status}` : 'No Active Ticket'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 2. Email Accounts Section */}
+                <div className="pt-4">
+                  <h5 className="text-[9px] font-black uppercase tracking-widest text-blue-500/50 mb-3 px-1 flex items-center gap-2">
+                    <Mail className="w-3 h-3" />
+                    Assigned Email Accounts
+                  </h5>
+                  <div className="grid grid-cols-1 gap-2">
+                    {infrastructure.emails.length === 0 ? (
+                      <div className="p-6 rounded-3xl border border-dashed border-blue-500/20 bg-blue-500/[0.02] text-center group/empty hover:bg-blue-500/[0.05] transition-all">
+                        <Mail className="w-6 h-6 text-blue-500/20 mx-auto mb-2 group-hover/empty:scale-110 transition-transform" />
+                        <p className="text-[10px] font-bold text-blue-500/30 uppercase tracking-widest italic">No Active Emails Assigned</p>
+                      </div>
+                    ) : (
+                      infrastructure.emails.map((email, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-4 rounded-3xl border border-blue-500/10 bg-blue-500/[0.03] hover:bg-blue-500/[0.06] transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.1)]">
+                              <Shield className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-foreground truncate max-w-[240px] tracking-tight">{email.emailAddress}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[8px] font-black uppercase text-blue-500/50 tracking-widest">{email.platform}</span>
+                                <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+                                <span className="text-[8px] font-black uppercase text-green-500 tracking-widest">{email.status}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <span className="px-3 py-1 bg-blue-500/20 text-blue-500 rounded-xl text-[8px] font-black uppercase tracking-widest border border-blue-500/30">
+                            ACTIVE ACCOUNT
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

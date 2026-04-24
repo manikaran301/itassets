@@ -15,7 +15,6 @@ export async function GET() {
     cutoffDate.setDate(cutoffDate.getDate() - DAYS_THRESHOLD);
 
     // Fetch employees who joined in the last 120 days
-    // OR who were created recently (for those without startDate)
     const joiners = await prisma.employee.findMany({
       where: {
         status: 'active',
@@ -27,11 +26,10 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       include: {
         assetRequirements: {
-          select: {
-            id: true,
-            assetType: true,
-            status: true,
-          },
+          select: { id: true, assetType: true, status: true },
+        },
+        currentAssets: {
+          select: { id: true },
         },
         emailAccounts: {
           where: { status: 'active' },
@@ -51,53 +49,52 @@ export async function GET() {
       },
     });
 
-    // Compute onboarding status for each joiner
-    const result = joiners.map((joiner) => {
-      const hardwareReqs = joiner.assetRequirements;
-      const hasHardwareReq = hardwareReqs.length > 0;
-      const hardwareFulfilled = hardwareReqs.some((r) => r.status === 'fulfilled');
-      const hardwarePending = hardwareReqs.some(
-        (r) => r.status === 'pending' || r.status === 'approved'
-      );
+    // Compute onboarding status and filter out those who are "Done"
+    const result = joiners
+      .map((joiner) => {
+        const hardwareReqs = joiner.assetRequirements;
+        const hasHardwareReq = hardwareReqs.length > 0;
+        // fulfilled if requirement is fulfilled OR they already have an asset
+        const hardwareFulfilled = hardwareReqs.some((r) => r.status === 'fulfilled') || joiner.currentAssets.length > 0;
+        const hardwarePending = hardwareReqs.some(
+          (r) => r.status === 'pending' || r.status === 'approved'
+        );
 
-      const hasProvisioningReqs = joiner.provisioningRequests.length > 0;
-      const allProvisioningDone = hasProvisioningReqs && 
-        joiner.provisioningRequests.every((r) => r.status === 'fulfilled' || r.status === 'cancelled');
+        const hasEmail = joiner.emailAccounts.length > 0;
 
-      return {
-        id: joiner.id,
-        employeeCode: joiner.employeeCode,
-        fullName: joiner.fullName,
-        department: joiner.department,
-        designation: joiner.designation,
-        companyName: joiner.companyName,
-        locationJoining: joiner.locationJoining,
-        deskNumber: joiner.deskNumber,
-        startDate: joiner.startDate,
-        photoPath: joiner.photoPath,
-        createdAt: joiner.createdAt,
-        pipeline: {
-          identity: { status: 'ready', label: 'Ready' },
-          hardware: {
-            status: hardwareFulfilled ? 'ready' : hardwarePending ? 'awaiting_it' : hasHardwareReq ? 'pending' : 'not_raised',
-            label: hardwareFulfilled ? 'Ready' : hardwarePending ? 'Awaiting IT' : hasHardwareReq ? 'Pending' : 'Not Raised',
+        return {
+          id: joiner.id,
+          employeeCode: joiner.employeeCode,
+          fullName: joiner.fullName,
+          department: joiner.department,
+          designation: joiner.designation,
+          companyName: joiner.companyName,
+          locationJoining: joiner.locationJoining,
+          deskNumber: joiner.deskNumber,
+          startDate: joiner.startDate,
+          photoPath: joiner.photoPath,
+          createdAt: joiner.createdAt,
+          pipeline: {
+            identity: { status: 'ready', label: 'Ready' },
+            hardware: {
+              status: hardwareFulfilled ? 'ready' : hardwarePending ? 'awaiting_it' : hasHardwareReq ? 'pending' : 'not_raised',
+              label: hardwareFulfilled ? 'Ready' : hardwarePending ? 'Awaiting IT' : hasHardwareReq ? 'Pending' : 'Not Raised',
+            },
+            seating: {
+              status: joiner.deskNumber ? 'ready' : 'pending',
+              label: joiner.deskNumber ? 'Allocated' : 'Pending',
+            },
+            access: {
+              status: hasEmail ? 'ready' : 'pending',
+              label: hasEmail ? 'Ready' : 'Pending',
+            },
           },
-          seating: {
-            status: joiner.deskNumber ? 'ready' : 'pending',
-            label: joiner.deskNumber ? 'Allocated' : 'Pending',
-          },
-          access: {
-            status: joiner.emailAccounts.length > 0 ? 'ready' : 'pending',
-            label: joiner.emailAccounts.length > 0 ? 'Ready' : 'Pending',
-          },
-        },
-        provisioningRequests: joiner.provisioningRequests,
-        isFullyOnboarded: 
-          hardwareFulfilled &&
-          !!joiner.deskNumber &&
-          joiner.emailAccounts.length > 0,
-      };
-    });
+          provisioningRequests: joiner.provisioningRequests,
+          // Fully onboarded if they have BOTH asset and email
+          isFullyOnboarded: hardwareFulfilled && hasEmail,
+        };
+      })
+      .filter((j) => !j.isFullyOnboarded); // Remove those who are already setup
 
     return NextResponse.json(result);
   } catch (error) {

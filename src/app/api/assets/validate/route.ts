@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
 
     const assetTags = records.map(r => r.assetTag?.trim()).filter(Boolean);
     const serialNumbers = records.map(r => r.serialNumber?.trim()).filter(Boolean);
+    const macAddresses = records.map(r => r.macAddress?.trim()).filter(Boolean);
     const employeeCodes = records.map(r => r.employeeCode?.trim()).filter(Boolean);
 
     // 1. Find existing asset tags
@@ -32,24 +33,42 @@ export async function POST(request: NextRequest) {
     });
     const existingSerialSet = new Set(existingSerials.map(a => a.serialNumber).filter(Boolean) as string[]);
 
-    // 3. Find valid employees
+    // 3. Find existing MAC addresses
+    const existingMacs = await prisma.asset.findMany({
+      where: { macAddress: { in: macAddresses } },
+      select: { macAddress: true }
+    });
+    const existingMacSet = new Set(existingMacs.map(a => a.macAddress).filter(Boolean) as string[]);
+
+    // 4. Find valid employees
     const validEmployees = await prisma.employee.findMany({
       where: { employeeCode: { in: employeeCodes } },
       select: { employeeCode: true }
     });
     const validEmployeeSet = new Set(validEmployees.map(e => e.employeeCode));
 
-    // 4. Construct results and check for internal duplicates
+    // 5. Construct results and check for internal duplicates
     const seenTags = new Set<string>();
     const seenSerials = new Set<string>();
+    const seenMacs = new Set<string>();
 
     const results = records.map(record => {
       const tag = record.assetTag?.trim();
       const serial = record.serialNumber?.trim();
+      const mac = record.macAddress?.trim();
+      const ip = record.ipAddress?.trim();
       const empCode = record.employeeCode?.trim();
       
       let error = '';
-      if (!tag) {
+      
+      // Length Checks
+      if (tag && tag.length > 30) error = 'Tag too long (max 30)';
+      else if (mac && mac.length > 17) error = 'MAC Address too long (max 17)';
+      else if (ip && ip.length > 15) error = 'IP Address too long (max 15)';
+      else if (serial && serial.length > 60) error = 'Serial too long (max 60)';
+      
+      // Requirement & Uniqueness Checks
+      else if (!tag) {
         error = 'Asset Tag is required';
       } else if (seenTags.has(tag)) {
         error = 'Duplicate Tag in this sheet';
@@ -59,12 +78,17 @@ export async function POST(request: NextRequest) {
         error = 'Duplicate Serial in this sheet';
       } else if (serial && existingSerialSet.has(serial)) {
         error = 'Serial Number already exists in system';
+      } else if (mac && seenMacs.has(mac)) {
+        error = 'Duplicate MAC in this sheet';
+      } else if (mac && existingMacSet.has(mac)) {
+        error = 'MAC Address already exists in system';
       } else if (empCode && !validEmployeeSet.has(empCode)) {
         error = 'Employee code not found';
       }
 
       if (tag) seenTags.add(tag);
       if (serial) seenSerials.add(serial);
+      if (mac) seenMacs.add(mac);
 
       return {
         id: record.id,

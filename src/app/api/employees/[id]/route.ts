@@ -27,6 +27,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       where: { id },
       include: {
         manager: true,
+        assetRequirements: true,
+        provisioningRequests: true,
+        currentAssets: true,
+        emailAccounts: true,
       }
     });
 

@@ -64,6 +64,8 @@ export default function NewAccessoryPage() {
         const formatted = data.map((emp: any) => ({
           value: emp.id,
           label: `${emp.fullName} (${emp.employeeCode})`,
+          image: emp.photoPath,
+          initials: emp.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
         }));
         setEmployees(formatted);
       } catch (err) {
@@ -306,6 +308,7 @@ export default function NewAccessoryPage() {
                   }}
                   placeholder="Search by name or employee code..."
                   icon={<UserPlus className="w-4 h-4" />}
+                  showAvatars
                 />
               </div>
             </div>

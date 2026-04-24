@@ -29,7 +29,7 @@ interface AssignmentLog {
   assetCategory: string;
   asset?: { assetTag: string } | null;
   accessory?: { assetTag: string } | null;
-  employee?: { fullName: string } | null;
+  employee?: { fullName: string; employeeCode: string; photoPath?: string } | null;
 }
 
 export default function AssignmentsPage() {
@@ -362,14 +362,29 @@ export default function AssignmentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-secondary/10 flex items-center justify-center">
-                          <User className="w-3 h-3 text-secondary" />
+                      {log.employee ? (
+                        <div className="flex items-center gap-3">
+                          <div className="relative group/avatar">
+                            {log.employee.photoPath ? (
+                              <img 
+                                src={log.employee.photoPath} 
+                                alt={log.employee.fullName}
+                                className="w-8 h-8 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-[9px] font-black text-secondary uppercase group-hover/avatar:scale-110 transition-transform">
+                                {log.employee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-black uppercase tracking-tight leading-none mb-1">{log.employee.fullName}</p>
+                            <p className="text-[8px] opacity-40 font-black uppercase tracking-widest">{log.employee.employeeCode}</p>
+                          </div>
                         </div>
-                        <span className="text-sm font-medium">
-                          {log.employee?.fullName || "—"}
-                        </span>
-                      </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted-foreground/30 italic">Unassigned Pool</span>
+                      )}
                     </td>
                     <td className="px-6 py-5">
                       <span

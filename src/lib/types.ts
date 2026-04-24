@@ -61,7 +61,7 @@ export type Accessory = PrismaAccessory & {
 // Email Account Types
 // =============================================================================
 
-export type EmailAccountEmployee = Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode' | 'photoPath'>;
+export type EmailAccountEmployee = Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode' | 'photoPath' | 'locationJoining'>;
 
 export type EmailAccount = PrismaEmailAccount & {
   employee?: EmailAccountEmployee | null;
