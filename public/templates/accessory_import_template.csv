@@ -1,0 +1,6 @@
+assetTag,type,make,model,serialNumber,condition,employeeCode,purchaseDate,warrantyExpiry,notes
+ACC-M-001,Monitor,Dell,UltraSharp 24,SN12345678,excellent,EMP001,2024-01-15,2027-01-15,Assigned to developer desk
+ACC-K-001,Keyboard,Logitech,MX Keys,SN87654321,good,EMP002,2023-11-20,2024-11-20,Wireless keyboard
+ACC-MS-001,Mouse,Logitech,MX Master 3S,SN11223344,excellent,,2024-02-10,2025-02-10,New in stock
+ACC-WC-001,Webcam,Logitech,C920,SN44332211,fair,,2022-05-12,,Old stock for standby
+ACC-DS-001,Docking Station,Lenovo,ThinkPad Dock,SN99001122,excellent,EMP003,2023-08-05,2026-08-05,USB-C Docking station

@@ -67,6 +67,15 @@ const AssetImportSchema = z.object({
   warrantyExpiry: z.string().optional(),
   purchaseDate: z.string().optional(),
   cost: z.string().optional(),
+  graphicCard: z.string().optional(),
+  monitorSize: z.string().optional(),
+  lanPorts: z.string().optional(),
+  screenSize: z.string().optional(),
+  channel: z.string().optional(),
+  rackNumber: z.string().optional(),
+  allottedArea: z.string().optional(),
+  installedCameras: z.string().optional(),
+  connectionType: z.string().optional(),
   status: z.enum(['available', 'assigned', 'in_repair', 'retired', 'lost']).default('available'),
   employeeCode: z.string().optional(),
   seatNumber: z.string().optional(),
@@ -89,18 +98,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+    let records: Record<string, string>[] = [];
+    const contentType = request.headers.get('content-type') || '';
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      if (!file) {
+        return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+      }
+      const content = await file.text();
+      records = parseCSV(content);
+    } else if (contentType.includes('application/json')) {
+      const body = await request.json();
+      records = body.records || [];
+    } else {
+      return NextResponse.json({ error: 'Unsupported content type' }, { status: 400 });
     }
 
-    const content = await file.text();
-    const records = parseCSV(content);
-
     if (records.length === 0) {
-      return NextResponse.json({ error: 'No valid records in CSV' }, { status: 400 });
+      return NextResponse.json({ error: 'No valid records found' }, { status: 400 });
     }
 
     let imported = 0;
@@ -114,6 +131,12 @@ export async function POST(request: NextRequest) {
         const ssdGb = row.ssdGb ? parseInt(row.ssdGb, 10) : undefined;
         const hddGb = row.hddGb ? parseInt(row.hddGb, 10) : undefined;
         const cost = row.cost ? parseFloat(row.cost) : undefined;
+        const lanPorts = row.lanPorts ? parseInt(row.lanPorts, 10) : undefined;
+        const installedCameras = row.installedCameras ? parseInt(row.installedCameras, 10) : undefined;
+
+        // Map zero_client to n_computing for database compatibility
+        let type = row.type?.toLowerCase() || 'other';
+        if (type === 'zero_client') type = 'n_computing';
 
         // Validate required fields
         if (!row.assetTag) {
@@ -170,7 +193,7 @@ export async function POST(request: NextRequest) {
         const asset = await prisma.asset.create({
           data: {
             assetTag: row.assetTag.trim(),
-            type: row.type as any,
+            type: type as any,
             make: row.make ? row.make.trim() : undefined,
             model: row.model ? row.model.trim() : undefined,
             serialNumber: row.serialNumber ? row.serialNumber.trim() : undefined,
@@ -183,6 +206,15 @@ export async function POST(request: NextRequest) {
             ssdType: row.ssdType ? row.ssdType.trim() : undefined,
             hddGb: isNaN(hddGb || 0) ? undefined : hddGb,
             hddType: row.hddType ? row.hddType.trim() : undefined,
+            graphicCard: row.graphicCard?.trim() || undefined,
+            monitorSize: row.monitorSize?.trim() || undefined,
+            lanPorts: isNaN(lanPorts || 0) ? undefined : lanPorts,
+            screenSize: row.screenSize?.trim() || undefined,
+            channel: row.channel?.trim() || undefined,
+            rackNumber: row.rackNumber?.trim() || undefined,
+            allottedArea: row.allottedArea?.trim() || undefined,
+            installedCameras: isNaN(installedCameras || 0) ? undefined : installedCameras,
+            connectionType: row.connectionType?.trim() || undefined,
             os: row.os ? row.os.trim() : undefined,
             osVersion: row.osVersion ? row.osVersion.trim() : undefined,
             antivirusStatus: row.antivirusStatus as any,

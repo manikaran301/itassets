@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import fetch from 'node-fetch';
 
 // Configuration
 const API_URL = process.env.API_URL || 'http://localhost:3000';

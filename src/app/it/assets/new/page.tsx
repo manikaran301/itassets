@@ -44,7 +44,7 @@ const formatMacAddress = (mac: string): string => {
 const DEVICE_TYPES = [
   { value: "laptop", label: "Laptop", icon: Monitor },
   { value: "desktop", label: "Desktop", icon: Monitor },
-  { value: "zero_client", label: "Zero Client", icon: ScreenShare },
+  { value: "n_computing", label: "Zero Client", icon: ScreenShare },
   { value: "nuc", label: "NUC", icon: Boxes },
   { value: "server", label: "Server", icon: Server },
   { value: "printer", label: "Printer", icon: Package },
@@ -251,7 +251,7 @@ export default function NewAssetPage() {
       "antivirusName",
       "antivirusStatus",
     ],
-    zero_client: [
+    n_computing: [
       "ramGb",
       "hddGb",
       "serialNumber",
@@ -320,14 +320,14 @@ export default function NewAssetPage() {
     "desktop",
     "laptop",
     "nuc",
-    "zero_client",
+    "n_computing",
     "server",
   ].includes(formData.type);
   const showNetworkSoftware = [
     "desktop",
     "laptop",
     "nuc",
-    "zero_client",
+    "n_computing",
     "server",
   ].includes(formData.type);
   const showDeviceSpecific = [
@@ -361,7 +361,7 @@ export default function NewAssetPage() {
     try {
       const payload = {
         assetTag: formData.assetTag.trim(),
-        type: formData.type === "zero_client" ? "n_computing" : formData.type,
+        type: formData.type,
         make: formData.make.trim() || null,
         model: formData.model.trim() || null,
         cpu: formData.cpu.trim() || null,

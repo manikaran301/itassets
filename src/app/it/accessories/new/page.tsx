@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -11,9 +11,11 @@ import {
   Box,
   Tag,
   Layers,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 const ACCESSORY_TYPES = [
   { value: "Monitor", label: "Monitor", icon: Box },
@@ -49,7 +51,27 @@ export default function NewAccessoryPage() {
     serialNumber: "",
     condition: "Good",
     status: "available",
+    currentEmployeeId: "",
   });
+
+  const [employees, setEmployees] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch("/api/employees");
+        const data = await response.json();
+        const formatted = data.map((emp: any) => ({
+          value: emp.id,
+          label: `${emp.fullName} (${emp.employeeCode})`,
+        }));
+        setEmployees(formatted);
+      } catch (err) {
+        console.error("Error fetching employees:", err);
+      }
+    };
+    fetchEmployees();
+  }, []);
 
   const handleSubmit = async () => {
     setError("");
@@ -188,22 +210,13 @@ export default function NewAccessoryPage() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">
                   Type *
                 </label>
-                <div className="relative">
-                  <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                  <select
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value })
-                    }
-                    className="w-full pl-12 pr-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-2xl outline-none focus:border-primary/50 focus:bg-white/5 transition-all text-sm appearance-none cursor-pointer"
-                  >
-                    {ACCESSORY_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableSelect
+                  options={ACCESSORY_TYPES.map(t => ({ value: t.value, label: t.label }))}
+                  value={formData.type}
+                  onChange={(val) => setFormData({ ...formData, type: val })}
+                  placeholder="Select accessory type..."
+                  icon={<Tag className="w-4 h-4" />}
+                />
               </div>
 
               {/* Model */}
@@ -241,7 +254,7 @@ export default function NewAccessoryPage() {
           </div>
 
           {/* Section 2: Status & Condition */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-50">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40">
             <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none group-hover:scale-110 transition-transform" />
 
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-secondary mb-6 relative z-10">
@@ -255,19 +268,12 @@ export default function NewAccessoryPage() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">
                   Status
                 </label>
-                <select
+                <SearchableSelect
+                  options={STATUS_OPTIONS}
                   value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
-                  className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-2xl outline-none focus:border-primary/50 focus:bg-white/5 transition-all text-sm appearance-none cursor-pointer"
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, status: val })}
+                  placeholder="Select status..."
+                />
               </div>
 
               {/* Condition */}
@@ -275,19 +281,32 @@ export default function NewAccessoryPage() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">
                   Condition
                 </label>
-                <select
+                <SearchableSelect
+                  options={CONDITIONS}
                   value={formData.condition}
-                  onChange={(e) =>
-                    setFormData({ ...formData, condition: e.target.value })
-                  }
-                  className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-2xl outline-none focus:border-primary/50 focus:bg-white/5 transition-all text-sm appearance-none cursor-pointer"
-                >
-                  {CONDITIONS.map((cond) => (
-                    <option key={cond.value} value={cond.value}>
-                      {cond.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, condition: val })}
+                  placeholder="Select condition..."
+                />
+              </div>
+
+              {/* Assignment (Optional) */}
+              <div className="group/field space-y-2 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">
+                  Assign To Employee (Optional)
+                </label>
+                <SearchableSelect
+                  options={employees}
+                  value={formData.currentEmployeeId}
+                  onChange={(val) => {
+                    setFormData({ 
+                      ...formData, 
+                      currentEmployeeId: val,
+                      status: val ? "in_use" : formData.status 
+                    });
+                  }}
+                  placeholder="Search by name or employee code..."
+                  icon={<UserPlus className="w-4 h-4" />}
+                />
               </div>
             </div>
           </div>
@@ -356,6 +375,20 @@ export default function NewAccessoryPage() {
                   {formData.status.replace("_", " ")}
                 </p>
               </div>
+
+              {formData.currentEmployeeId && (
+                <>
+                  <div className="h-px bg-white/5" />
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-muted-foreground/60 uppercase tracking-widest font-bold">
+                      Assigned To
+                    </p>
+                    <p className="text-sm font-black tracking-tight text-primary">
+                      {employees.find(e => e.value === formData.currentEmployeeId)?.label || "Selected Employee"}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

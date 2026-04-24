@@ -1,0 +1,7 @@
+assetTag,type,make,model,serialNumber,macAddress,ipAddress,cpu,ramGb,ramType,ssdGb,ssdType,hddGb,hddType,graphicCard,monitorSize,lanPorts,screenSize,channel,rackNumber,allottedArea,installedCameras,connectionType,os,osVersion,antivirusStatus,antivirusName,warrantyExpiry,purchaseDate,cost,status,employeeCode,seatNumber,notes
+ASSET-001,laptop,Dell,Latitude 5420,S3R1AL1,00:1A:2B:3C:4D:5E,192.168.1.10,Intel i5,16,DDR4,512,NVMe,0,,NVIDIA MX450,,,,,205,,USB,Windows,11 Pro,yes,BitDefender,31-12-2025,15-01-2023,55000,available,,,Initial stock,
+ASSET-002,desktop,HP,ProDesk 600,S3R1AL2,00:1A:2B:3C:4D:5F,192.168.1.11,Intel i7,8,DDR4,256,SATA,1000,HDD,,"24""",,,,,,,,Windows,10 Pro,no,,30-06-2024,20-05-2022,42000,assigned,EMP001,,Developer machine
+NC-001,n_computing,N-Computing,RX420,SN-NC-101,88:A2:9E:09:55:3D,172.16.15.10,,1,,,,16,,,,,,A-Block,,,no,,01-01-2026,10-05-2023,5600,available,,,Zero Client Setup,,,,
+SW-001,switch,Cisco,C9200L,SN-SW-202,00:1B:2C:3D:4E:5F,10.0.0.1,,,,,,,,,24,,Rack-01,Server Room,,,no,,01-01-2027,15-08-2023,85000,available,,,Core Switch,,,,
+NVR-001,nvr,Hikvision,DS-7600,SN-NVR-303,00:1C:2D:3E:4F:60,10.0.0.50,,,,,,,,,,,16,,Rack-02,Security Room,12,,no,,31-12-2026,12-10-2023,25000,available,,,CCTV Storage,,
+NVR-001,nvr,Hikvision,DS-7600,SN-NVR-303,00:1C:2D:3E:4F:60,10.0.0.50,,,,,,,,,,,16,,Rack-02,Security Room,12,,no,,31-12-2026,12-10-2023,25000,available,,,CCTV Storage,,

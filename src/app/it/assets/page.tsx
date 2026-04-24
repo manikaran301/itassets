@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  Download,
   Edit2,
   Trash2,
   HardDrive,
@@ -21,17 +20,297 @@ import {
   Boxes,
   Copy,
   User,
+  Upload,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+  X,
+  Download,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { AssetListItem } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { SearchableSelect } from "@/components/SearchableSelect";
+
+// ── Asset Import Preview Modal ────────────────────────────────────────────────
+interface AssetImportRecord {
+  id: string;
+  assetTag: string;
+  type: string;
+  make: string;
+  model: string;
+  serialNumber: string;
+  macAddress: string;
+  ipAddress: string;
+  cpu: string;
+  ramGb: string;
+  ssdGb: string;
+  hddGb: string;
+  os: string;
+  status: string;
+  employeeCode: string;
+  purchaseDate?: string;
+  cost?: string;
+  notes: string;
+  isValid: boolean;
+  error?: string;
+}
+
+function AssetImportPreviewModal({
+  data,
+  onClose,
+  onImport,
+}: {
+  data: AssetImportRecord[];
+  onClose: () => void;
+  onImport: (finalData: any[]) => Promise<void>;
+}) {
+  const [records, setRecords] = useState<AssetImportRecord[]>(data);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+
+  const validateRecords = async (recordsToValidate: AssetImportRecord[]) => {
+    setIsValidating(true);
+    try {
+      const res = await fetch("/api/assets/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records: recordsToValidate }),
+      });
+      const data = await res.json();
+      if (data.results) {
+        setRecords((prev) =>
+          prev.map((r) => {
+            const validation = data.results.find((v: any) => v.id === r.id);
+            if (validation) {
+              return { ...r, isValid: validation.isValid, error: validation.error };
+            }
+            return r;
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Validation error:", error);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const updateRecord = (id: string, field: keyof AssetImportRecord, value: string) => {
+    setRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const handleFinalImport = async () => {
+    const validRecords = records.filter((r) => r.isValid);
+    if (validRecords.length === 0) {
+      alert("No valid records to import");
+      return;
+    }
+    setIsSubmitting(true);
+    await onImport(validRecords);
+    setIsSubmitting(false);
+  };
+
+  const modalContent = (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999 }} className="flex items-center justify-center p-4">
+      <div style={{ position: "fixed", inset: 0 }} className="bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-7xl h-[85vh] bg-card border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+        <div className="flex items-center justify-between p-6 border-b border-white/5">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+              <Upload className="w-4 h-4 text-primary" />
+              Asset Registry Import & Validation
+            </h2>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold">
+              Review asset tags, serial numbers and assignments before bulk registry.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black uppercase bg-muted px-3 py-1 rounded-full">
+              {records.filter(r => r.isValid).length} / {records.length} Valid
+            </span>
+            <button
+              onClick={() => validateRecords(records)}
+              disabled={isValidating}
+              className="p-2 hover:bg-white/5 rounded-xl transition-all text-primary flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+            >
+              {isValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              Re-Validate
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-all text-muted-foreground"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto p-2">
+          <table className="w-full text-left border-collapse text-[10px]">
+            <thead className="sticky top-0 bg-card z-20">
+              <tr className="bg-muted/30 border-b border-border/50">
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Status</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Asset Tag</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Type</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Make & Model</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Hardware Specs</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Serial / MAC</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Purchase Info</th>
+                <th className="px-4 py-3 font-black uppercase tracking-widest text-muted-foreground/50">Assign To</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/10">
+              {records.map((record) => (
+                <tr key={record.id} className={cn("hover:bg-white/5 transition-all", !record.isValid && "bg-red-500/5")}>
+                  <td className="px-4 py-2">
+                    {isValidating ? (
+                      <Loader2 className="w-4 h-4 animate-spin opacity-20" />
+                    ) : record.isValid ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-500">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="font-black uppercase text-[8px] whitespace-nowrap">{record.error || "Error"}</span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-2 py-1">
+                    <input
+                      value={record.assetTag}
+                      onChange={(e) => updateRecord(record.id, "assetTag", e.target.value)}
+                      className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold uppercase"
+                    />
+                  </td>
+                  <td className="px-2 py-1">
+                    <select
+                      value={record.type}
+                      onChange={(e) => updateRecord(record.id, "type", e.target.value)}
+                      className="bg-transparent border-none outline-none font-black uppercase"
+                    >
+                      <option value="laptop">LAPTOP</option>
+                      <option value="desktop">DESKTOP</option>
+                      <option value="nuc">NUC</option>
+                      <option value="server">SERVER</option>
+                      <option value="other">OTHER</option>
+                    </select>
+                  </td>
+                  <td className="px-2 py-1">
+                    <div className="flex gap-1">
+                      <input
+                        value={record.make}
+                        placeholder="Make"
+                        onChange={(e) => updateRecord(record.id, "make", e.target.value)}
+                        className="w-1/2 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold uppercase"
+                      />
+                      <input
+                        value={record.model}
+                        placeholder="Model"
+                        onChange={(e) => updateRecord(record.id, "model", e.target.value)}
+                        className="w-1/2 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold uppercase"
+                      />
+                    </div>
+                  </td>
+                  <td className="px-2 py-1">
+                    <div className="flex flex-col gap-1 min-w-[120px]">
+                      <input
+                        value={record.cpu}
+                        placeholder="CPU"
+                        onChange={(e) => updateRecord(record.id, "cpu", e.target.value)}
+                        className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold"
+                      />
+                      <div className="flex gap-1">
+                        <input
+                          value={record.ramGb}
+                          placeholder="RAM"
+                          onChange={(e) => updateRecord(record.id, "ramGb", e.target.value)}
+                          className="w-1/2 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black"
+                        />
+                        <input
+                          value={record.ssdGb || record.hddGb}
+                          placeholder="Disk"
+                          onChange={(e) => updateRecord(record.id, record.ssdGb ? "ssdGb" : "hddGb", e.target.value)}
+                          className="w-1/2 bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black"
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-1">
+                    <div className="flex flex-col gap-1 min-w-[140px]">
+                      <input
+                        value={record.serialNumber}
+                        placeholder="Serial"
+                        onChange={(e) => updateRecord(record.id, "serialNumber", e.target.value)}
+                        className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold uppercase"
+                      />
+                      <input
+                        value={record.macAddress}
+                        placeholder="MAC"
+                        onChange={(e) => updateRecord(record.id, "macAddress", e.target.value)}
+                        className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 text-[8px] font-bold"
+                      />
+                    </div>
+                  </td>
+                  <td className="px-2 py-1">
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="date"
+                        value={record.purchaseDate}
+                        onChange={(e) => updateRecord(record.id, "purchaseDate", e.target.value)}
+                        className="bg-transparent border-none outline-none font-bold"
+                      />
+                      <input
+                        value={record.cost}
+                        placeholder="Cost"
+                        onChange={(e) => updateRecord(record.id, "cost", e.target.value)}
+                        className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-mono font-black"
+                      />
+                    </div>
+                  </td>
+                  <td className="px-2 py-1">
+                    <input
+                      value={record.employeeCode}
+                      placeholder="Emp Code"
+                      onChange={(e) => updateRecord(record.id, "employeeCode", e.target.value)}
+                      className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold uppercase"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="p-6 border-t border-white/5 flex items-center justify-between bg-muted/20">
+          <p className="text-[10px] font-bold text-muted-foreground italic">
+            * Assets with duplicate tags or missing required fields are marked in red.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-white/5 transition-all">Cancel</button>
+            <button
+              onClick={handleFinalImport}
+              disabled={isSubmitting || records.filter(r => r.isValid).length === 0}
+              className="px-8 py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20"
+            >
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+              Finalize Registry
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return createPortal(modalContent, document.body);
+}
+
 export default function AssetsPage() {
   const router = useRouter();
   const [assets, setAssets] = useState<AssetListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [previewData, setPreviewData] = useState<AssetImportRecord[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -139,6 +418,97 @@ export default function AssetsPage() {
     window.location.href = "/api/assets/export";
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split("\n").filter((l) => l.trim());
+      if (lines.length < 2) {
+        alert("Empty or invalid CSV");
+        setImporting(false);
+        return;
+      }
+
+      const headers = lines[0].split(",").map((h) => h.trim());
+      const parsedRecords: AssetImportRecord[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values: string[] = [];
+        let currentValue = "";
+        let insideQuotes = false;
+        for (let j = 0; j < lines[i].length; j++) {
+          const char = lines[i][j];
+          if (char === '"') insideQuotes = !insideQuotes;
+          else if (char === "," && !insideQuotes) {
+            values.push(currentValue.trim());
+            currentValue = "";
+          } else currentValue += char;
+        }
+        values.push(currentValue.trim());
+
+        const record: any = { id: Math.random().toString(36).substr(2, 9) };
+        headers.forEach((header, index) => {
+          record[header] = values[index] || "";
+        });
+
+        // Basic default validation
+        record.isValid = !!record.assetTag;
+        if (!record.isValid) record.error = "Missing tag";
+
+        parsedRecords.push(record);
+      }
+
+      setPreviewData(parsedRecords);
+      setImporting(false);
+      e.target.value = ""; // Reset
+
+      // Trigger server-side validation immediately
+      fetch("/api/assets/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records: parsedRecords }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.results) {
+            setPreviewData((prev) =>
+              prev?.map((r) => {
+                const v = data.results.find((res: any) => res.id === r.id);
+                return v ? { ...r, isValid: v.isValid, error: v.error } : r;
+              }) || null
+            );
+          }
+        });
+    };
+    reader.readAsText(file);
+  };
+
+  const finalizeImport = async (finalRecords: any[]) => {
+    try {
+      const response = await fetch("/api/assets/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records: finalRecords }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`Registry Updated!\nImported: ${data.summary.imported}\nSkipped: ${data.summary.skipped}\nErrors: ${data.summary.errors}`);
+        setPreviewData(null);
+        window.location.reload(); // Refresh to show new assets
+      } else {
+        alert(`Import Failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      alert("Failed to register assets.");
+    }
+  };
+
   const stats = [
     { label: "Total Assets", value: assets.length, icon: Boxes, color: "text-foreground bg-muted border-border" },
     { label: "Assigned Assets", value: assets.filter((a) => a.status === "assigned").length, icon: ShieldCheck, color: "text-primary bg-primary/10 border-primary/20" },
@@ -148,8 +518,45 @@ export default function AssetsPage() {
 
   return (
     <div className="space-y-4 animate-fade-in pb-20 pt-4">
+      {previewData && (
+        <AssetImportPreviewModal
+          data={previewData}
+          onClose={() => setPreviewData(null)}
+          onImport={finalizeImport}
+        />
+      )}
+
       {/* Action Row */}
       <div className="flex justify-end items-center gap-2 px-1">
+        <input
+          type="file"
+          id="asset-import"
+          accept=".csv"
+          className="hidden"
+          onChange={handleImport}
+          disabled={importing}
+        />
+        <label
+          htmlFor="asset-import"
+          className={cn(
+            "flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer",
+            importing && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          {importing ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Upload className="w-3.5 h-3.5" />
+          )}
+          Import CSV
+        </label>
+        <a
+          href="/templates/asset_import_template.csv"
+          download
+          className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
+        >
+          <Download className="w-3.5 h-3.5" /> Template
+        </a>
         <button 
           onClick={handleExport}
           disabled={loading || filteredAssets.length === 0}
@@ -191,31 +598,39 @@ export default function AssetsPage() {
         </div>
         
         <div className="flex gap-2 w-full lg:w-auto">
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all w-full lg:w-40"
-          >
-            <option value="all">ALL TYPES</option>
-            <option value="laptop">LAPTOPS</option>
-            <option value="desktop">DESKTOPS</option>
-            <option value="n_computing">N-COMPUTING</option>
-            <option value="nuc">NUC</option>
-            <option value="server">SERVERS</option>
-            <option value="other">OTHER</option>
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all w-full lg:w-40"
-          >
-            <option value="all">ALL STATUS</option>
-            <option value="available">AVAILABLE</option>
-            <option value="assigned">ASSIGNED</option>
-            <option value="in_repair">IN REPAIR</option>
-            <option value="retired">RETIRED</option>
-            <option value="lost">LOST</option>
-          </select>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL TYPES" },
+                { value: "laptop", label: "LAPTOPS" },
+                { value: "desktop", label: "DESKTOPS" },
+                { value: "n_computing", label: "N-COMPUTING" },
+                { value: "nuc", label: "NUC" },
+                { value: "server", label: "SERVERS" },
+                { value: "other", label: "OTHER" }
+              ]}
+              value={typeFilter}
+              onChange={(val) => setTypeFilter(val || "all")}
+              placeholder="ALL TYPES"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL STATUS" },
+                { value: "available", label: "AVAILABLE" },
+                { value: "assigned", label: "ASSIGNED" },
+                { value: "in_repair", label: "IN REPAIR" },
+                { value: "retired", label: "RETIRED" },
+                { value: "lost", label: "LOST" }
+              ]}
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val || "all")}
+              placeholder="ALL STATUS"
+              compact
+            />
+          </div>
         </div>
       </div>
 
@@ -287,16 +702,41 @@ export default function AssetsPage() {
                       <td className="px-4 py-3">
                         {asset.currentEmployee ? (
                           <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-muted border border-border flex items-center justify-center text-[9px] font-black text-primary uppercase">
-                              {asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            <div className="relative group/avatar">
+                              {asset.currentEmployee.photoPath ? (
+                                <img 
+                                  src={asset.currentEmployee.photoPath} 
+                                  alt={asset.currentEmployee.fullName}
+                                  className="w-9 h-9 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase group-hover/avatar:scale-110 transition-transform">
+                                  {asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                </div>
+                              )}
+                              {asset.currentEmployee.deskNumber && (
+                                <div className="absolute -right-1.5 -bottom-1 px-1.5 py-0.5 bg-background border border-white/5 rounded-md text-[7px] font-black uppercase text-muted-foreground shadow-xl">
+                                  {asset.currentEmployee.deskNumber}
+                                </div>
+                              )}
                             </div>
-                            <div>
-                              <p className="text-[10px] font-black truncate max-w-[120px]">{asset.currentEmployee.fullName}</p>
-                              <p className="text-[8px] opacity-40 font-black uppercase tracking-widest">{asset.currentEmployee.employeeCode} {asset.currentEmployee.deskNumber ? `· ${asset.currentEmployee.deskNumber}` : ''}</p>
+                            <div className="flex flex-col">
+                              <p className="text-[11px] font-black tracking-tight uppercase leading-none mb-1">{asset.currentEmployee.fullName}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] opacity-40 font-black uppercase tracking-widest">{asset.currentEmployee.employeeCode}</span>
+                                {asset.currentEmployee.deskNumber && (
+                                  <span className="text-[8px] text-primary/40 font-black uppercase tracking-widest leading-none">• SEAT {asset.currentEmployee.deskNumber}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-[8px] font-black opacity-20 uppercase tracking-widest pl-10">Floating</span>
+                          <div className="flex items-center gap-3 opacity-20">
+                            <div className="w-9 h-9 rounded-xl bg-muted border border-border/50 flex items-center justify-center">
+                              <User className="w-4 h-4" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">In Store</span>
+                          </div>
                         )}
                       </td>
 

@@ -18,6 +18,7 @@ export async function GET() {
             fullName: true,
             employeeCode: true,
             deskNumber: true,
+            photoPath: true,
           },
         },
         creator: {

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Save, Loader2, Edit2, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Edit2, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface AccessoryDetail {
   id: string;
@@ -36,11 +37,28 @@ export default function AccessoryDetailPage() {
     model: "",
     status: "available",
     condition: "good",
+    currentEmployeeId: "",
   });
+  const [employees, setEmployees] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     fetchAccessory();
+    fetchEmployees();
   }, [accessoryId]);
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch("/api/employees");
+      const data = await response.json();
+      const formatted = data.map((emp: any) => ({
+        value: emp.id,
+        label: `${emp.fullName} (${emp.employeeCode})`,
+      }));
+      setEmployees(formatted);
+    } catch (err) {
+      console.error("Error fetching employees:", err);
+    }
+  };
 
   const fetchAccessory = async () => {
     try {
@@ -52,6 +70,7 @@ export default function AccessoryDetailPage() {
         model: data.model || "",
         status: data.status,
         condition: data.condition,
+        currentEmployeeId: data.currentEmployeeId || "",
       });
     } catch (error) {
       console.error("Failed to fetch accessory:", error);
@@ -285,9 +304,27 @@ export default function AccessoryDetailPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
               Currently With
             </p>
-            <p className="text-sm font-black mt-1">
-              {accessory.currentEmployee?.fullName || "In Store"}
-            </p>
+            {editing ? (
+              <div className="mt-2">
+                <SearchableSelect
+                  options={employees}
+                  value={formData.currentEmployeeId}
+                  onChange={(val) => {
+                    setFormData({ 
+                      ...formData, 
+                      currentEmployeeId: val,
+                      status: val ? "in_use" : formData.status 
+                    });
+                  }}
+                  placeholder="Select Employee..."
+                  icon={<UserPlus className="w-4 h-4" />}
+                />
+              </div>
+            ) : (
+              <p className="text-sm font-black mt-1">
+                {accessory.currentEmployee?.fullName || "In Store"}
+              </p>
+            )}
           </div>
         </div>
       </div>

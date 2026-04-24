@@ -39,6 +39,7 @@ export async function GET() {
             id: true,
             fullName: true,
             employeeCode: true,
+            photoPath: true,
           },
         },
         forwarding: {

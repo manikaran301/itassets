@@ -56,24 +56,61 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { displayName, password, status, accountType } = body;
+    const { emailAddress, displayName, password, status, accountType, platform, employeeId, forwardingAddresses } = body;
 
     // Validate email exists
-    const existing = await prisma.emailAccount.findUnique({ where: { id } });
+    const existing = await prisma.emailAccount.findUnique({ 
+      where: { id },
+      include: { forwarding: true }
+    });
+    
     if (!existing) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    // Update email account
-    const updated = await prisma.emailAccount.update({
-      where: { id },
-      data: {
-        displayName: displayName ?? existing.displayName,
-        password: password ?? existing.password,
-        status: status ?? existing.status,
-        accountType: accountType ?? existing.accountType,
-        updatedAt: new Date(),
-      },
+    // Update email account and handle forwarding rules
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. Update the main account
+      const account = await tx.emailAccount.update({
+        where: { id },
+        data: {
+          emailAddress: emailAddress ?? existing.emailAddress,
+          displayName: displayName ?? existing.displayName,
+          password: password ?? existing.password,
+          status: status ?? (existing.status as any),
+          accountType: accountType ?? (existing.accountType as any),
+          platform: platform ?? (existing.platform as any),
+          employeeId: employeeId !== undefined ? employeeId : existing.employeeId,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 2. Handle forwarding rules if provided
+      if (forwardingAddresses && Array.isArray(forwardingAddresses)) {
+        // Delete existing rules for this account
+        await tx.emailForwarding.deleteMany({
+          where: { emailAccountId: id }
+        });
+
+        // Create new ones
+        if (forwardingAddresses.length > 0) {
+          await tx.emailForwarding.createMany({
+            data: forwardingAddresses.map(addr => ({
+              emailAccountId: id,
+              forwardToAddress: addr,
+              isActive: true,
+              createdBy: session.user.id
+            }))
+          });
+        }
+      }
+
+      return account;
+    });
+
+    // Fetch the fully updated record with inclusions
+    const finalRecord = await prisma.emailAccount.findUnique({
+      where: { id: updated.id },
       include: {
         employee: { select: { id: true, fullName: true, employeeCode: true } },
         forwarding: {
@@ -87,7 +124,7 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json(finalRecord);
   } catch (error) {
     console.error('Email update error:', error);
     return NextResponse.json(

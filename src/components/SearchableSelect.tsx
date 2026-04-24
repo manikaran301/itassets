@@ -13,6 +13,7 @@ interface SearchableSelectProps {
   label?: string;
   allowCustom?: boolean;
   limit?: number; // New prop to limit displayed items
+  compact?: boolean;
 }
 
 export function SearchableSelect({
@@ -24,6 +25,7 @@ export function SearchableSelect({
   label,
   allowCustom = false,
   limit,
+  compact = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -83,7 +85,7 @@ export function SearchableSelect({
   };
 
   return (
-    <div className="group/field space-y-2">
+    <div className={cn("group/field", !compact && "space-y-2")}>
       {label && (
         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">
           {label}
@@ -93,10 +95,11 @@ export function SearchableSelect({
         {/* Trigger Input Area */}
         <div
           className={cn(
-            "relative w-full bg-muted/35 border rounded-[22px] px-6 py-4 transition-all flex items-center gap-3 cursor-text",
-            isOpen
-              ? "border-primary/45 shadow-xl shadow-primary/10 ring-4 ring-primary/10"
-              : "border-border/70 hover:border-border",
+            "relative w-full transition-all flex items-center gap-3 cursor-text",
+            compact 
+              ? "bg-muted/30 border border-border px-4 py-2.5 rounded-xl" 
+              : "bg-muted/35 border border-border/70 rounded-[22px] px-6 py-4 hover:border-border",
+            isOpen && (compact ? "border-primary/40 shadow-md ring-2 ring-primary/10" : "border-primary/45 shadow-xl shadow-primary/10 ring-4 ring-primary/10")
           )}
           onClick={() => {
             setIsOpen(true);
@@ -107,6 +110,7 @@ export function SearchableSelect({
             <span
               className={cn(
                 "shrink-0 transition-colors",
+                compact ? "w-3.5 h-3.5" : "w-4 h-4",
                 isOpen ? "text-primary" : "text-muted-foreground/70",
               )}
             >
@@ -116,7 +120,10 @@ export function SearchableSelect({
           <input
             ref={inputRef}
             type="text"
-            className="flex-1 min-w-0 bg-transparent border-none outline-none text-xs font-black text-foreground placeholder:font-semibold placeholder:text-muted-foreground/70"
+            className={cn(
+              "flex-1 min-w-0 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/70",
+              compact ? "text-[9px] font-black uppercase tracking-widest placeholder:font-black" : "text-xs font-black placeholder:font-semibold"
+            )}
             placeholder={placeholder}
             value={search}
             onChange={(e) => {
@@ -131,12 +138,13 @@ export function SearchableSelect({
               onClick={handleClear}
               className="p-1 hover:bg-primary/10 rounded-lg transition-colors text-muted-foreground/70 hover:text-primary shrink-0"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
             </button>
           )}
           <ChevronDown
             className={cn(
-              "w-4 h-4 text-muted-foreground/70 shrink-0 transition-transform duration-300",
+              "text-muted-foreground/70 shrink-0 transition-transform duration-300",
+              compact ? "w-3.5 h-3.5" : "w-4 h-4",
               isOpen && "rotate-180 text-primary",
             )}
           />

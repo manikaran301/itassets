@@ -33,7 +33,7 @@ export type EmployeeListItem = Pick<PrismaEmployee,
 // =============================================================================
 
 export type AssetCurrentEmployee = Pick<PrismaEmployee, 
-  'id' | 'fullName' | 'employeeCode' | 'deskNumber'
+  'id' | 'fullName' | 'employeeCode' | 'deskNumber' | 'photoPath'
 >;
 
 export type Asset = PrismaAsset & {
@@ -61,7 +61,7 @@ export type Accessory = PrismaAccessory & {
 // Email Account Types
 // =============================================================================
 
-export type EmailAccountEmployee = Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode'>;
+export type EmailAccountEmployee = Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode' | 'photoPath'>;
 
 export type EmailAccount = PrismaEmailAccount & {
   employee?: EmailAccountEmployee | null;

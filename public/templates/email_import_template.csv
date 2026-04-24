@@ -1,0 +1,7 @@
+emailAddress,displayName,employeeCode,accountType,platform,status,passwordHash,forwardingAddresses,notes
+john.doe@50hertz.in,John Doe,EMP001,personal,google_workspace,active,SecurePass123!,,Standard personal account
+hr@50hertz.in,HR Department,,shared,microsoft_365,active,HR@Shared2024,admin@50hertz.in; manager@50hertz.in,Shared mailbox for recruitment
+all-staff@50hertz.in,All Staff List,,distribution,zoho,active,,,Company-wide distribution list
+it-support@50hertz.in,IT Support Alias,,alias,google_workspace,active,,it.admin@50hertz.in,Alias for IT admin
+backup-service@50hertz.in,Backup Service,,service,other,active,Svc_Account_99,,Automated backup service account
+jane.smith@50hertz.in,Jane Smith,EMP002,personal,google_workspace,suspended,Jane@2024,,Account suspended during notice period
