@@ -26,6 +26,7 @@ export type EmployeeListItem = Pick<PrismaEmployee,
   'status' | 'startDate' | 'deskNumber' | 'companyName' | 'locationJoining' | 'photoPath'
 > & {
   manager?: Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode'> | null;
+  workspace?: { code: string; floor: string } | null;
 };
 
 // =============================================================================
@@ -34,7 +35,9 @@ export type EmployeeListItem = Pick<PrismaEmployee,
 
 export type AssetCurrentEmployee = Pick<PrismaEmployee, 
   'id' | 'fullName' | 'employeeCode' | 'deskNumber' | 'photoPath'
->;
+> & {
+  workspace?: { code: string } | null;
+};
 
 export type Asset = PrismaAsset & {
   currentEmployee?: AssetCurrentEmployee | null;
@@ -47,6 +50,7 @@ export type AssetListItem = Pick<PrismaAsset,
 > & {
   currentEmployee?: AssetCurrentEmployee | null;
   creator?: Pick<PrismaSystemUser, 'id' | 'fullName'> | null;
+  workspace?: { code: string; floor: string } | null;
 };
 
 // =============================================================================

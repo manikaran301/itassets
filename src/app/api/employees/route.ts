@@ -20,6 +20,7 @@ const EmployeeSchema = z.object({
   status: z.enum(['active', 'exit_pending', 'inactive']).default('active'),
   photoPath: z.string().trim().nullable().optional(),
   createdBy: z.string().uuid().nullable().optional().or(z.literal('')),
+  workspaceId: z.string().uuid().nullable().optional().or(z.literal('')),
 });
 
 export async function GET(request: Request) {
@@ -49,6 +50,12 @@ export async function GET(request: Request) {
               id: true,
               fullName: true,
             },
+          },
+          workspace: {
+            select: {
+              code: true,
+              floor: true
+            }
           },
         },
         orderBy: {
@@ -117,6 +124,7 @@ export async function POST(request: Request) {
         photoPath: data.photoPath || null,
         manager: managerId ? { connect: { id: managerId } } : undefined,
         creator: creatorId ? { connect: { id: creatorId } } : undefined,
+        workspace: data.workspaceId ? { connect: { id: data.workspaceId } } : undefined,
       },
     });
 

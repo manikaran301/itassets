@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { SeatSelectorModal } from "@/components/SeatSelectorModal";
 
 const ACCESSORY_TYPES = [
   { value: "Monitor", label: "Monitor", icon: Box },
@@ -44,6 +45,7 @@ export default function NewAccessoryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isSeatModalOpen, setIsSeatModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     assetTag: "",
     type: "Monitor",
@@ -52,6 +54,8 @@ export default function NewAccessoryPage() {
     condition: "Good",
     status: "available",
     currentEmployeeId: "",
+    workspaceId: "",
+    workspaceCode: "",
   });
 
   const [employees, setEmployees] = useState<{ value: string; label: string }[]>([]);
@@ -292,7 +296,7 @@ export default function NewAccessoryPage() {
               </div>
 
               {/* Assignment (Optional) */}
-              <div className="group/field space-y-2 md:col-span-2">
+              <div className="group/field space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">
                   Assign To Employee (Optional)
                 </label>
@@ -309,6 +313,45 @@ export default function NewAccessoryPage() {
                   placeholder="Search by name or employee code..."
                   icon={<UserPlus className="w-4 h-4" />}
                   showAvatars
+                />
+              </div>
+
+              {/* Workspace Assignment (Optional) */}
+              <div className="group/field space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/85 ml-1">
+                  Assign To Workspace (Optional)
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative group/field flex-1">
+                    <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="Select Workspace..."
+                      value={formData.workspaceCode}
+                      readOnly
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 pr-6 py-3.5 text-xs outline-none transition-all font-mono font-black tracking-widest cursor-default"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSeatModalOpen(true)}
+                    className="px-6 py-3.5 bg-primary/10 text-primary border border-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
+                  >
+                    Browse
+                  </button>
+                </div>
+                <SeatSelectorModal
+                  isOpen={isSeatModalOpen}
+                  onClose={() => setIsSeatModalOpen(false)}
+                  selectedId={formData.workspaceId}
+                  onSelect={(ws) => {
+                    setFormData({
+                      ...formData,
+                      workspaceId: ws.id,
+                      workspaceCode: ws.code
+                    });
+                    setIsSeatModalOpen(false);
+                  }}
                 />
               </div>
             </div>
@@ -388,6 +431,20 @@ export default function NewAccessoryPage() {
                     </p>
                     <p className="text-sm font-black tracking-tight text-primary">
                       {employees.find(e => e.value === formData.currentEmployeeId)?.label || "Selected Employee"}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {formData.workspaceId && (
+                <>
+                  <div className="h-px bg-white/5" />
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-muted-foreground/60 uppercase tracking-widest font-bold">
+                      Assigned Workspace
+                    </p>
+                    <p className="text-sm font-black tracking-tight text-secondary">
+                      {formData.workspaceCode}
                     </p>
                   </div>
                 </>

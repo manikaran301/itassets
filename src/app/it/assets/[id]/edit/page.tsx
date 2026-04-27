@@ -31,6 +31,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { SeatSelectorModal } from "@/components/SeatSelectorModal";
 
 // Format MAC address to use colons (D0:46:0C:8B:9B:C0)
 const formatMacAddress = (mac: string): string => {
@@ -169,6 +170,7 @@ export default function EditAssetPage({ params }: EditAssetProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [isSeatModalOpen, setIsSeatModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     assetTag: "",
@@ -203,6 +205,8 @@ export default function EditAssetPage({ params }: EditAssetProps) {
     cost: "",
     status: "available",
     notes: "",
+    workspaceId: "",
+    workspaceCode: "",
   });
 
   // Field visibility per device type
@@ -298,6 +302,8 @@ export default function EditAssetPage({ params }: EditAssetProps) {
           cost: data.cost?.toString() || "",
           status: data.status || "available",
           notes: data.notes || "",
+          workspaceId: data.workspaceId || "",
+          workspaceCode: data.workspace?.code || "",
         });
       } catch (err: any) {
         setError(err.message);
@@ -356,6 +362,7 @@ export default function EditAssetPage({ params }: EditAssetProps) {
         cost: formData.cost ? parseFloat(formData.cost) : null,
         status: formData.status,
         notes: formData.notes.trim() || null,
+        workspaceId: formData.workspaceId || null,
         changedBy: (session?.user as any)?.id || null,
       };
 
@@ -823,6 +830,50 @@ export default function EditAssetPage({ params }: EditAssetProps) {
               </div>
             </div>
           )}
+
+          {/* Section: Assignment & Location */}
+          <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <Layers className="w-4 h-4" />
+              Assignment & Location
+            </h3>
+            <div className="space-y-4">
+              <div className="group/field space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                  Assigned Workspace / Seat
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative group/field flex-1">
+                    <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="Not Assigned..."
+                      value={formData.workspaceCode}
+                      readOnly
+                      className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 rounded-[20px] pl-12 pr-6 py-3 text-xs outline-none transition-all font-mono font-black tracking-widest cursor-default"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSeatModalOpen(true)}
+                    className="px-6 py-3 bg-primary/10 text-primary border border-primary/20 rounded-[20px] text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
+                  >
+                    Browse
+                  </button>
+                </div>
+                <SeatSelectorModal
+                  isOpen={isSeatModalOpen}
+                  onClose={() => setIsSeatModalOpen(false)}
+                  selectedId={formData.workspaceId}
+                  onSelect={(ws) => {
+                    updateField("workspaceId", ws.id);
+                    updateField("workspaceCode", ws.code);
+                    setIsSeatModalOpen(false);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Section: Operational Info (Status & Notes) */}
           <div className="premium-card rounded-[32px] p-6 bg-card/40 border border-white/5 space-y-6">

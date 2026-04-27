@@ -78,6 +78,7 @@ export async function POST(request: Request) {
         status: (statusMap[body.status] || 'available') as any,
         condition: (conditionMap[body.condition] || 'good') as any,
         currentEmployeeId: body.currentEmployeeId || null,
+        workspace: body.workspaceId ? { connect: { id: body.workspaceId } } : undefined,
       },
       include: {
         currentEmployee: {

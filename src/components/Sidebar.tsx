@@ -19,6 +19,7 @@ import {
   Truck,
   ArrowRightLeft,
   LogOut,
+  Layout,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -39,7 +40,7 @@ const sidebarLinks = [
       { name: "Employees", href: "/hr/employees", icon: Users },
       { name: "Joiners", href: "/hr/joiners", icon: UserCheck },
       { name: "Exits", href: "/hr/exits", icon: UserX },
-      { name: "Seats", href: "/hr/seats", icon: ShieldCheck },
+      { name: "Seats Registry", href: "/hr/seats", icon: ShieldCheck },
     ],
   },
   {
@@ -49,6 +50,7 @@ const sidebarLinks = [
       { name: "Assets", href: "/it/assets", icon: Monitor },
       { name: "Provisioning", href: "/it/provisioning", icon: Truck },
       { name: "Assignments", href: "/it/assignments", icon: ArrowRightLeft },
+      { name: "Seating Plan", href: "/it/workspaces", icon: Layout },
       { name: "Email Accounts", href: "/it/email", icon: Mail },
       { name: "Accessories", href: "/it/accessories", icon: HardDrive },
     ],

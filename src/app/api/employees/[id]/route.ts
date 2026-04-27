@@ -31,6 +31,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         provisioningRequests: true,
         currentAssets: true,
         emailAccounts: true,
+        workspace: true,
       }
     });
 
@@ -73,6 +74,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         photoPath: data.photoPath || null,
         manager: managerId 
           ? { connect: { id: managerId } } 
+          : { disconnect: true },
+        workspace: data.workspaceId
+          ? { connect: { id: data.workspaceId } }
           : { disconnect: true },
       },
     });

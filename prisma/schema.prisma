@@ -129,6 +129,21 @@ enum SystemRole {
   readonly
 }
 
+enum WorkspaceType {
+  workstation
+  cabin
+  meeting_room
+  executive
+  other
+}
+
+enum CompanyBranch {
+  MPL
+  MAL
+  FIFTY_HERTZ @map("50-Hertz")
+  OTHER
+}
+
 enum AuditEntityType {
   employee
   asset
@@ -207,6 +222,7 @@ model Employee {
   provisioningRequests ProvisioningRequest[]
   emailAccounts        EmailAccount[]             @relation("CurrentEmployee")
   previouslyHeldEmails EmailAccount[]             @relation("PreviousUser")
+  workspace            Workspace?
 
   @@index([status])
   @@index([department])
@@ -281,6 +297,8 @@ model Asset {
   creator         SystemUser?           @relation("AssetCreator", fields: [createdBy], references: [id])
   assignments     AssignmentHistory[]
   provisioning    ProvisioningRequest[]
+  workspaceId     String?               @db.Uuid
+  workspace       Workspace?            @relation(fields: [workspaceId], references: [id])
 
   @@index([status])
   @@index([currentEmployeeId])
@@ -308,6 +326,8 @@ model Accessory {
 
   currentEmployee Employee?           @relation(fields: [currentEmployeeId], references: [id])
   assignments     AssignmentHistory[]
+  workspaceId     String?             @db.Uuid
+  workspace       Workspace?          @relation(fields: [workspaceId], references: [id])
 
   @@index([currentEmployeeId])
   @@index([status])
@@ -441,4 +461,26 @@ model AuditLog {
   @@index([changedAt])
   @@index([changedBy])
   @@map("audit_log")
+}
+
+model Workspace {
+  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code     String        @unique @db.VarChar(50)
+  company  CompanyBranch @default(MPL)
+  type     WorkspaceType @default(workstation)
+  floor    String?       @db.VarChar(20)
+  capacity Int           @default(1)
+
+  employeeId String?   @unique @db.Uuid
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  assets      Asset[]
+  accessories Accessory[]
+
+  createdAt DateTime @default(now()) @db.Timestamp
+  updatedAt DateTime @updatedAt @db.Timestamp
+
+  @@index([company])
+  @@index([type])
+  @@map("workspaces")
 }

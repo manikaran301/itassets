@@ -19,7 +19,18 @@ export async function GET() {
             employeeCode: true,
             deskNumber: true,
             photoPath: true,
+            workspace: {
+              select: {
+                code: true
+              }
+            }
           },
+        },
+        workspace: {
+          select: {
+            code: true,
+            floor: true
+          }
         },
         creator: {
           select: {
@@ -81,6 +92,7 @@ const AssetSchema = z.object({
   status: z.enum(['available', 'assigned', 'in_repair', 'retired', 'lost']).default('available'),
   notes: z.string().trim().nullable().optional(),
   changedBy: z.string().uuid().nullable().optional(),
+  workspaceId: z.string().uuid().nullable().optional().or(z.literal('')),
 });
 
 export async function POST(request: Request) {
@@ -140,6 +152,7 @@ export async function POST(request: Request) {
         status: data.status,
         notes: data.notes || null,
         createdBy: data.changedBy || null,
+        workspace: data.workspaceId ? { connect: { id: data.workspaceId } } : undefined,
       },
     });
 

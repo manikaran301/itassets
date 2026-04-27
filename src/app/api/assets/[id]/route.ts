@@ -211,6 +211,7 @@ export async function GET(
       where: { id },
       include: {
         currentEmployee: true,
+        workspace: true,
         creator: {
           select: {
             id: true,

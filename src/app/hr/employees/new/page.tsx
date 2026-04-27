@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { SeatSelectorModal } from "@/components/SeatSelectorModal";
 
 interface ManagerOption {
   value: string;
@@ -38,6 +39,7 @@ export default function NewEmployeePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [isSeatModalOpen, setIsSeatModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -52,6 +54,7 @@ export default function NewEmployeePage() {
     deskNumber: "",
     startDate: "",
     status: "active",
+    workspaceId: "",
   });
 
   const [photo, setPhoto] = useState<File | null>(null);
@@ -555,18 +558,36 @@ export default function NewEmployeePage() {
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
                     Assigned Seat / Desk
                   </label>
-                  <div className="relative group/field">
-                    <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
-                    <input
-                      type="text"
-                      placeholder="e.g. F1-WS-024"
-                      value={formData.deskNumber}
-                      onChange={(e) =>
-                        updateField("deskNumber", e.target.value)
-                      }
-                      className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs outline-none transition-all font-mono font-black tracking-widest"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative group/field flex-1">
+                      <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
+                      <input
+                        type="text"
+                        placeholder="Select from Seating Map..."
+                        value={formData.deskNumber}
+                        readOnly
+                        className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs outline-none transition-all font-mono font-black tracking-widest cursor-default"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsSeatModalOpen(true)}
+                      className="px-6 py-3.5 bg-primary/10 text-primary border border-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
+                    >
+                      Browse
+                    </button>
                   </div>
+                  
+                  <SeatSelectorModal
+                    isOpen={isSeatModalOpen}
+                    onClose={() => setIsSeatModalOpen(false)}
+                    selectedId={formData.workspaceId}
+                    onSelect={(ws) => {
+                      updateField("workspaceId", ws.id);
+                      updateField("deskNumber", ws.code);
+                      setIsSeatModalOpen(false);
+                    }}
+                  />
                 </div>
 
                 <div className="space-y-2">

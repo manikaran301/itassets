@@ -299,9 +299,23 @@ export default function EmployeesPage() {
                     </td>
 
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground/70 uppercase tracking-tighter">
-                        <MapPin className="w-3 h-3 opacity-30" />
-                        {emp.locationJoining || "—"}
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground/70 uppercase tracking-tighter">
+                          <MapPin className="w-3 h-3 opacity-30" />
+                          {emp.locationJoining || "—"}
+                        </div>
+                        { (emp.workspace?.code || emp.deskNumber) && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[8px] font-black uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded tracking-[0.1em]">
+                              SEAT {emp.workspace?.code || emp.deskNumber}
+                            </span>
+                            { emp.workspace?.floor && (
+                              <span className="text-[7px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                                • FLOOR {emp.workspace.floor}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
 

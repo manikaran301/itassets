@@ -759,9 +759,9 @@ export default function AssetsPage() {
                                   {asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                                 </div>
                               )}
-                              {asset.currentEmployee.deskNumber && (
+                              { (asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber) && (
                                 <div className="absolute -right-1.5 -bottom-1 px-1.5 py-0.5 bg-background border border-white/5 rounded-md text-[7px] font-black uppercase text-muted-foreground shadow-xl">
-                                  {asset.currentEmployee.deskNumber}
+                                  {asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber}
                                 </div>
                               )}
                             </div>
@@ -769,8 +769,8 @@ export default function AssetsPage() {
                               <p className="text-[11px] font-black tracking-tight uppercase leading-none mb-1">{asset.currentEmployee.fullName}</p>
                               <div className="flex items-center gap-2">
                                 <span className="text-[8px] opacity-40 font-black uppercase tracking-widest">{asset.currentEmployee.employeeCode}</span>
-                                {asset.currentEmployee.deskNumber && (
-                                  <span className="text-[8px] text-primary/40 font-black uppercase tracking-widest leading-none">• SEAT {asset.currentEmployee.deskNumber}</span>
+                                { (asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber) && (
+                                  <span className="text-[8px] text-primary/40 font-black uppercase tracking-widest leading-none">• SEAT {asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber}</span>
                                 )}
                               </div>
                             </div>
