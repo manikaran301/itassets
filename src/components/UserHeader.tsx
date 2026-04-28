@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useSearch } from "@/contexts/SearchContext";
 import { LogOut, User, Settings, ChevronDown, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,9 +35,9 @@ const headerContent = [
     subtitle: "Offboarding and Recovery Queue",
   },
   {
-    matcher: (pathname: string) => pathname === "/hr/seats",
-    title: "Seat Allocation",
-    subtitle: "Workspace Capacity Ledger",
+    matcher: (pathname: string) => pathname === "/seats",
+    title: "Seats Registry",
+    subtitle: "Common Workspace Occupancy & Hardware Map",
   },
   {
     matcher: (pathname: string) => pathname === "/it/assets",
@@ -138,6 +139,8 @@ export function UserHeader() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const { searchQuery, setSearchQuery } = useSearch();
+
   return (
     <header className="sticky top-0 z-30 flex min-h-16 items-center border-b border-border bg-card/60 px-6 backdrop-blur-md">
       <div className="min-w-0">
@@ -152,7 +155,9 @@ export function UserHeader() {
         <div className="relative group hidden sm:block">
           <input
             type="text"
-            placeholder="Search assets..."
+            placeholder="Search everything..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-muted px-4 py-1.5 rounded-full text-sm border border-transparent focus:border-primary/30 outline-none transition-all w-48 lg:w-64 focus:w-80"
           />
         </div>

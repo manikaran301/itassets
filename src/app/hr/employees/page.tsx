@@ -13,9 +13,11 @@ import {
   Calendar,
   MapPin,
   Briefcase,
+  Lock,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 import type { EmployeeListItem } from "@/lib/types";
 import Link from "next/link";
@@ -24,6 +26,7 @@ import { format } from "date-fns";
 export default function EmployeesPage() {
   const PAGE_SIZE = 50;
   const router = useRouter();
+  const { checkPermission, loading: permsLoading } = usePermissions();
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -174,16 +177,46 @@ export default function EmployeesPage() {
     { label: "Total Locations", value: locations.length, icon: MapPin, color: "text-accent bg-accent/10 border-accent/20" },
   ];
 
+  if (loading || permsLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center py-20 gap-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">
+          {permsLoading ? "Securing HR Registry..." : "Synchronizing Associate Matrix..."}
+        </p>
+      </div>
+    );
+  }
+
+  // Permission Check: View
+  if (!checkPermission("HR", "EMPLOYEES", "canView")) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-6 p-8 text-center animate-fade-in">
+        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-2">
+          <Lock className="w-10 h-10 text-red-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-2xl font-black tracking-tight uppercase">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You do not have authorization to view the <span className="font-bold text-foreground">Employee Registry</span>. 
+            Please contact your system administrator to request <code className="bg-muted px-1.5 py-0.5 rounded text-primary">HR_EMPLOYEES_VIEW</code> clearance.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 animate-fade-in pb-20 pt-4 h-full flex flex-col">
-      {/* Compact Action Row */}
       <div className="flex justify-end items-center gap-2 px-1">
         <button onClick={() => fetchEmployees(0)} className="p-2.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-muted-foreground transition-all">
           <Loader2 className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
         </button>
-        <Link href="/hr/employees/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-          <Plus className="w-4 h-4" /> Enroll Employee
-        </Link>
+        {checkPermission("HR", "EMPLOYEES", "canCreate") && (
+          <Link href="/hr/employees/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+            <Plus className="w-4 h-4" /> Enroll Employee
+          </Link>
+        )}
       </div>
 
       {/* Mini Stats Row */}
@@ -338,9 +371,25 @@ export default function EmployeesPage() {
                     </td>
 
                     <td className="px-6 py-3 text-right pr-10">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={(e) => { e.stopPropagation(); router.push(`/hr/employees/${emp.id}/edit`); }} className="p-1.5 text-muted-foreground hover:text-primary transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(emp.id, emp.fullName); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => e.stopPropagation()}>
+                        {checkPermission("HR", "EMPLOYEES", "canEdit") && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); router.push(`/hr/employees/${emp.id}/edit`); }} 
+                            className="p-1.5 text-muted-foreground hover:text-primary transition-all"
+                            title="Edit Profile"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {checkPermission("HR", "EMPLOYEES", "canDelete") && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(emp.id, emp.fullName); }} 
+                            className="p-1.5 text-muted-foreground hover:text-destructive transition-all"
+                            title="Remove Associate"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -6,6 +6,8 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
+import { SearchProvider } from "@/contexts/SearchContext";
+import { cookies } from "next/headers";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -24,13 +26,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("mams-theme")?.value || "light";
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={theme} suppressHydrationWarning>
       <body
         className={`${jakarta.variable} ${jbMono.variable} antialiased font-sans`}
       >
@@ -38,9 +43,11 @@ export default function RootLayout({
           <AuthProvider>
             <SidebarProvider>
               <NotificationProvider>
-                <SidebarWrapper>
-                  {children}
-                </SidebarWrapper>
+                <SearchProvider>
+                  <SidebarWrapper>
+                    {children}
+                  </SidebarWrapper>
+                </SearchProvider>
               </NotificationProvider>
             </SidebarProvider>
           </AuthProvider>

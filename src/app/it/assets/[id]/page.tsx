@@ -417,32 +417,52 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
               </h4>
 
               <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-                {/* Current Assignee */}
-                  <div className="relative group/avatar">
-                    {asset.currentEmployee?.photoPath ? (
-                      <img 
-                        src={asset.currentEmployee.photoPath} 
-                        className="w-20 h-20 rounded-[28px] object-cover border border-primary/20 shadow-xl group-hover/avatar:scale-105 transition-transform duration-500"
-                        alt=""
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-2xl font-black text-primary border border-primary/20 shadow-xl group-hover/avatar:scale-105 transition-transform duration-500 ring-4 ring-primary/5">
-                        {asset.currentEmployee ? (
-                          asset.currentEmployee.fullName.split(' ').map((n: any) => n[0]).join('').slice(0, 2)
-                        ) : (
-                          <Activity className="w-10 h-10 opacity-20" />
-                        )}
-                      </div>
-                    )}
-                    {asset.currentEmployee?.deskNumber && (
-                      <div className="absolute -right-2 -bottom-2 px-2 py-1 bg-background border border-border rounded-lg text-[8px] font-black uppercase text-primary shadow-xl">
-                        Seat {asset.currentEmployee.deskNumber}
-                      </div>
-                    )}
+                {/* Current Assignee Profile Section */}
+                <div className="flex flex-col items-center gap-4 group/profile">
+                  <div className="relative">
+                    {/* Primary Profile Image */}
+                    <div className="w-24 h-24 rounded-[32px] overflow-hidden border-2 border-primary/20 shadow-[0_10px_30px_rgba(0,0,0,0.2)] group-hover/profile:scale-105 transition-all duration-500 relative">
+                      {asset.currentEmployee?.photoPath ? (
+                        <img 
+                          src={asset.currentEmployee.photoPath} 
+                          className="w-full h-full object-cover"
+                          alt={asset.currentEmployee.fullName}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/5 flex items-center justify-center text-3xl font-black text-primary border border-primary/20">
+                          {asset.currentEmployee ? (
+                            asset.currentEmployee.fullName.split(' ').map((n: any) => n[0]).join('').slice(0, 2)
+                          ) : (
+                            <User className="w-10 h-10 opacity-20" />
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Integrated Glassmorphic Name Overlay */}
+                      {asset.currentEmployee && (
+                        <div className="absolute inset-x-0 bottom-0 bg-background/60 backdrop-blur-md border-t border-white/10 p-1.5 flex flex-col items-center translate-y-full group-hover/profile:translate-y-0 transition-transform duration-300">
+                          <p className="text-[7px] font-black uppercase text-primary tracking-widest leading-none mb-0.5">Assigned To</p>
+                          <p className="text-[9px] font-bold text-foreground truncate w-full text-center leading-none">{asset.currentEmployee.fullName.split(' ')[0]}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                <div className="hidden md:block">
-                  <ChevronRight className="w-8 h-8 text-muted-foreground/20" />
+                  {asset.currentEmployee && (
+                    <div className="text-center space-y-1">
+                      <h5 className="text-sm font-black uppercase tracking-tight text-foreground">{asset.currentEmployee.fullName}</h5>
+                      <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest leading-none">{asset.currentEmployee.employeeCode}</p>
+                      {(asset.currentEmployee?.workspace?.code || asset.workspace?.code || asset.currentEmployee?.deskNumber) && (
+                        <p className="text-[10px] font-black text-primary uppercase tracking-tighter pt-1">
+                          (Seat {asset.currentEmployee?.workspace?.code || asset.workspace?.code || asset.currentEmployee?.deskNumber})
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="hidden md:block opacity-20">
+                  <ChevronRight className="w-8 h-8 text-muted-foreground" />
                 </div>
 
                 {/* Reassignment Controls */}
@@ -649,10 +669,12 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                           <span className={cn(
                             "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
                             event.type === 'assignment' ? "bg-primary text-primary-foreground border-primary" : 
+                            event.isEmployeeUpdate ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
                             event.action === 'created' ? "bg-green-500/10 text-green-500 border-green-500/20" :
                             "bg-blue-500/10 text-blue-500 border-blue-500/20"
                           )}>
-                            {event.type === 'assignment' ? (event.actionType?.replace('_', ' ') || 'Assignment') : event.action}
+                            {event.type === 'assignment' ? (event.actionType?.replace('_', ' ') || 'Assignment') : 
+                             event.isEmployeeUpdate ? "LOCATION_CHG" : event.action}
                           </span>
                           <span className="text-[10px] font-mono text-muted-foreground/40 font-bold">
                             {event.logCode || event.id.slice(0, 8)}
@@ -661,6 +683,8 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                         <p className="text-[11px] font-bold text-foreground">
                           {event.type === 'assignment' ? (
                             <>Deployed to <span className="text-primary">{event.employee.fullName}</span></>
+                          ) : event.isEmployeeUpdate ? (
+                            "Associate Location Update"
                           ) : event.action === 'created' ? (
                             "Inventory Initialization"
                           ) : (

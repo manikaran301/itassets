@@ -22,6 +22,16 @@ export async function GET() {
             companyName: true,
             locationJoining: true,
             deskNumber: true,
+            workspace: {
+              include: {
+                assets: {
+                  select: { assetTag: true, type: true }
+                },
+                accessories: {
+                  select: { assetTag: true, type: true }
+                }
+              }
+            }
           },
         },
         fulfiller: { select: { id: true, fullName: true } },

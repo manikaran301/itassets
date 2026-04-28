@@ -38,6 +38,10 @@ interface ProvisioningRequest {
     companyName: string | null;
     locationJoining: string | null;
     deskNumber: string | null;
+    workspace: {
+      assets: Array<{ assetTag: string; type: string }>;
+      accessories: Array<{ assetTag: string; type: string }>;
+    } | null;
   };
   fulfiller: { id: string; fullName: string } | null;
   requester: { id: string; fullName: string } | null;
@@ -227,25 +231,51 @@ export default function ProvisioningPage() {
                     </div>
 
                     {/* Location & Seat - Inline */}
-                    <div className="p-2.5 rounded-xl bg-muted/20 border-2 border-white/15 space-y-1">
+                    <div className="p-2.5 rounded-xl bg-muted/20 border-2 border-white/15 space-y-2">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                         <span className="text-[9px] font-bold text-muted-foreground/75 truncate">
                           {req.employee.locationJoining || "Location TBD"}
                         </span>
                       </div>
-                      <div className="text-[10px] font-black text-foreground/85">
-                        Seat:{" "}
-                        <span
-                          className={
-                            req.employee.deskNumber
-                              ? "text-primary"
-                              : "text-amber-500"
-                          }
-                        >
-                          {req.employee.deskNumber || "⚠️ Not Assigned"}
-                        </span>
+                      <div className="flex justify-between items-center">
+                        <div className="text-[10px] font-black text-foreground/85">
+                          Seat:{" "}
+                          <span
+                            className={
+                              req.employee.deskNumber
+                                ? "text-primary"
+                                : "text-amber-500"
+                            }
+                          >
+                            {req.employee.deskNumber || "⚠️ Not Assigned"}
+                          </span>
+                        </div>
+                        {req.employee.workspace && (req.employee.workspace.assets.length > 0 || req.employee.workspace.accessories.length > 0) && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-primary/10 border border-primary/20">
+                            <span className="text-[7px] font-black uppercase text-primary animate-pulse">Hardware Detected</span>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Ghost Inventory List (IT Only View) */}
+                      {req.employee.workspace && (req.employee.workspace.assets.length > 0 || req.employee.workspace.accessories.length > 0) && (
+                        <div className="pt-2 mt-2 border-t border-white/5 space-y-1.5">
+                          <p className="text-[7px] font-black uppercase text-muted-foreground/40 tracking-widest">Pre-Provisioned Stock</p>
+                          <div className="flex flex-wrap gap-1">
+                            {req.employee.workspace.assets.map(a => (
+                              <span key={a.assetTag} className="px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[7px] font-bold text-foreground/70">
+                                💻 {a.assetTag}
+                              </span>
+                            ))}
+                            {req.employee.workspace.accessories.map(a => (
+                              <span key={a.assetTag} className="px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[7px] font-bold text-foreground/70">
+                                ⌨️ {a.assetTag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Type & Company - Row */}

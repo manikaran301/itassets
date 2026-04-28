@@ -227,12 +227,22 @@ export default async function UsersPage() {
                     </td>
 
                     <td className="px-6 py-5 text-right">
-                      <a
-                        href={`/admin/users/${user.id}/edit`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </a>
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={`/admin/users/${user.id}/permissions`}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                          title="Manage Permissions"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                        </a>
+                        <a
+                          href={`/admin/users/${user.id}/edit`}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                          title="Edit User"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 );

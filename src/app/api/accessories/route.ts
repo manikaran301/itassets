@@ -17,6 +17,17 @@ export async function GET() {
             fullName: true,
             employeeCode: true,
             photoPath: true,
+            department: true,
+            manager: {
+              select: {
+                fullName: true
+              }
+            },
+            workspace: {
+              select: {
+                code: true
+              }
+            }
           },
         },
       },

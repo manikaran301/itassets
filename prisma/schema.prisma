@@ -187,8 +187,31 @@ model SystemUser {
   returnedAssignments   AssignmentHistory[]        @relation("ReturnedBy")
   createdAssets         Asset[]                    @relation("AssetCreator")
   auditLogs             AuditLog[]
+  permissions           UserPermission[]
 
   @@map("system_users")
+}
+
+model UserPermission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  category    String   @db.VarChar(50)    // e.g., "IT", "HR", "FACILITY", "ADMIN"
+  subcategory String   @db.VarChar(50)    // e.g., "ASSETS", "EMPLOYEES", "SEATS"
+  
+  canView     Boolean  @default(false)
+  canCreate   Boolean  @default(false)
+  canEdit     Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+  canImport   Boolean  @default(false)
+  canExport   Boolean  @default(false)
+
+  createdAt   DateTime @default(now()) @db.Timestamp
+  updatedAt   DateTime @updatedAt @db.Timestamp
+
+  user        SystemUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, subcategory])
+  @@map("user_permissions")
 }
 
 model Employee {

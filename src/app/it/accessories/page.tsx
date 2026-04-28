@@ -22,6 +22,7 @@ import {
   ArrowRight,
   RefreshCw,
   Copy,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -41,7 +42,14 @@ interface Accessory {
   status: string;
   condition: string;
   currentEmployeeId?: string | null;
-  currentEmployee?: { fullName: string; employeeCode: string; photoPath?: string | null } | null;
+  currentEmployee?: { 
+    fullName: string; 
+    employeeCode: string; 
+    photoPath?: string | null;
+    department?: string | null;
+    manager?: { fullName: string } | null;
+    workspace?: { code: string } | null;
+  } | null;
   createdAt: string;
 }
 
@@ -389,7 +397,7 @@ export default function AccessoriesPage() {
       </div>
 
       {/* ── Inventory Grid Table ── */}
-      <div className="premium-card rounded-[32px] overflow-hidden border border-white/5 bg-card/20 relative group">
+      <div className="premium-card rounded-[32px] overflow-visible border border-white/5 bg-card/20 relative group">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -447,23 +455,79 @@ export default function AccessoriesPage() {
                     </td>
                     <td className="px-4 py-4">
                       {acc.currentEmployee ? (
-                        <div className="flex items-center gap-3">
-                          <div className="relative group/avatar">
-                            {acc.currentEmployee.photoPath ? (
-                              <img 
-                                src={acc.currentEmployee.photoPath} 
-                                alt={acc.currentEmployee.fullName}
-                                className="w-9 h-9 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase group-hover/avatar:scale-110 transition-transform">
-                                {acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        <div className="flex items-center gap-3 group/profile relative">
+                          <div className="relative">
+                            {/* Enhanced Avatar with Hover Effect */}
+                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 shadow-lg group-hover/profile:scale-110 transition-all duration-300 relative">
+                              {acc.currentEmployee.photoPath ? (
+                                <img 
+                                  src={acc.currentEmployee.photoPath} 
+                                  alt={acc.currentEmployee.fullName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase">
+                                  {acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                </div>
+                              )}
+                              {/* Glassmorphic Hover Overlay */}
+                              <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px] opacity-0 group-hover/profile:opacity-100 transition-opacity flex items-center justify-center">
+                                <User className="w-4 h-4 text-white" />
                               </div>
-                            )}
+                            </div>
                           </div>
+
                           <div>
-                            <p className="text-[11px] font-black truncate max-w-[150px] uppercase leading-none mb-1">{acc.currentEmployee.fullName}</p>
+                            <p className="text-[11px] font-black truncate max-w-[150px] uppercase leading-none mb-1 group-hover/profile:text-primary transition-colors">{acc.currentEmployee.fullName}</p>
                             <p className="text-[9px] opacity-40 font-black uppercase tracking-widest">{acc.currentEmployee.employeeCode}</p>
+                          </div>
+
+                          {/* Premium Hover Card - "Inside Container" implementation */}
+                          <div className="absolute left-0 top-0 opacity-0 group-hover/profile:opacity-100 scale-95 group-hover/profile:scale-100 transition-all duration-300 pointer-events-none z-[100] w-full min-w-[240px]">
+                            <div className="bg-card/98 backdrop-blur-2xl border border-primary/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-4 relative overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
+                              <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-2 pb-2 border-b border-white/5">
+                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
+                                    {acc.currentEmployee.photoPath ? (
+                                      <img 
+                                        src={acc.currentEmployee.photoPath} 
+                                        alt={acc.currentEmployee.fullName}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase text-foreground leading-none">
+                                      {acc.currentEmployee.fullName} <span className="text-muted-foreground/60 ml-1">({acc.currentEmployee.employeeCode})</span>
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase tracking-tight">
+                                    <span>{acc.currentEmployee.department || 'N/A'}</span>
+                                    <span className="opacity-20 text-[10px]">|</span>
+                                    <span>{acc.currentEmployee.manager?.fullName || 'No Manager'}</span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2 bg-white/5 px-2 py-1.5 rounded-lg border border-white/5">
+                                    <div className="space-y-0.5 border-r border-white/5 pr-2">
+                                      <p className="text-[6px] font-black uppercase text-muted-foreground/50 tracking-widest leading-none">Workspace ID</p>
+                                      <p className="text-[9px] font-black text-primary uppercase leading-none truncate">
+                                        {acc.currentEmployee?.workspace?.code || 'No Seat'}
+                                      </p>
+                                    </div>
+                                    <div className="space-y-0.5 pl-1">
+                                      <p className="text-[6px] font-black uppercase text-muted-foreground/50 tracking-widest leading-none">Status</p>
+                                      <p className="text-[9px] font-black text-primary uppercase leading-none truncate">
+                                        {acc.status.replace('_', ' ')}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ) : (

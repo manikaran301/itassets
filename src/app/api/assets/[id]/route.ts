@@ -210,7 +210,11 @@ export async function GET(
     const asset = await prisma.asset.findUnique({
       where: { id },
       include: {
-        currentEmployee: true,
+        currentEmployee: {
+          include: {
+            workspace: true
+          }
+        },
         workspace: true,
         creator: {
           select: {
@@ -233,8 +237,8 @@ export async function GET(
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
 
-    // Fetch AuditLogs separately to avoid overly deep includes if not needed
-    const logs = await prisma.auditLog.findMany({
+    // Fetch AuditLogs for the asset
+    const assetLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'asset',
         entityId: id,
@@ -243,11 +247,45 @@ export async function GET(
         user: true,
       },
       orderBy: { changedAt: 'desc' },
-      take: 20,
+      take: 30,
     });
 
+    // Fetch AuditLogs for the current employee (specifically regarding seat/workspace changes)
+    let employeeLogs: any[] = [];
+    if (asset.currentEmployeeId) {
+      employeeLogs = await prisma.auditLog.findMany({
+        where: {
+          entityType: 'employee',
+          entityId: asset.currentEmployeeId,
+          // Only show updates (as seat changes are updates)
+          action: 'updated'
+        },
+        include: {
+          user: true,
+        },
+        orderBy: { changedAt: 'desc' },
+        take: 20,
+      });
+
+      // Filter to only include logs that changed workspace or desk info
+      employeeLogs = employeeLogs.filter(log => {
+        const newVal = log.newValue as any;
+        const oldVal = log.oldValue as any;
+        if (!newVal || !oldVal) return false;
+        return (newVal.workspaceId !== oldVal.workspaceId) || (newVal.deskNumber !== oldVal.deskNumber);
+      }).map(log => ({
+        ...log,
+        isEmployeeUpdate: true // Mark for the UI to handle differently
+      }));
+    }
+
+    // Merge and sort
+    const allLogs = [...assetLogs, ...employeeLogs].sort((a: any, b: any) => 
+      new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime()
+    ).slice(0, 40);
+
     // Manually serialize BigInt entries in audit logs for JSON response
-    const serializedLogs = logs.map((log) => ({
+    const serializedLogs = allLogs.map((log) => ({
       ...log,
       id: log.id.toString(), // Convert BigInt to string
     }));

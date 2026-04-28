@@ -26,6 +26,7 @@ import {
   RefreshCw,
   X,
   Download,
+  Lock,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 import type { AssetListItem } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { SearchableSelect } from "@/components/SearchableSelect";
 
@@ -324,6 +326,7 @@ function AssetImportPreviewModal({
 
 export default function AssetsPage() {
   const router = useRouter();
+  const { checkPermission, loading: permsLoading } = usePermissions();
   const [assets, setAssets] = useState<AssetListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -560,6 +563,35 @@ export default function AssetsPage() {
     { label: "Maintenance", value: assets.filter((a) => a.status === "in_repair").length, icon: Wrench, color: "text-accent bg-accent/10 border-accent/20" },
   ];
 
+  if (loading || permsLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center py-20 gap-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">
+          {permsLoading ? "Securing Asset Registry..." : "Syncing Hardware Matrix..."}
+        </p>
+      </div>
+    );
+  }
+
+  // Permission Check: View
+  if (!checkPermission("IT", "ASSETS", "canView")) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-6 p-8 text-center animate-fade-in">
+        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-2">
+          <Lock className="w-10 h-10 text-red-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-2xl font-black tracking-tight uppercase">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You do not have authorization to view the <span className="font-bold text-foreground">IT Asset Registry</span>. 
+            Please contact your system administrator to request <code className="bg-muted px-1.5 py-0.5 rounded text-primary">IT_ASSETS_VIEW</code> clearance.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 animate-fade-in pb-20 pt-4">
       {previewData && (
@@ -570,47 +602,56 @@ export default function AssetsPage() {
         />
       )}
 
-      {/* Action Row */}
       <div className="flex justify-end items-center gap-2 px-1">
-        <input
-          type="file"
-          id="asset-import"
-          accept=".csv"
-          className="hidden"
-          onChange={handleImport}
-          disabled={importing}
-        />
-        <label
-          htmlFor="asset-import"
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer",
-            importing && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          {importing ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Upload className="w-3.5 h-3.5" />
-          )}
-          Import CSV
-        </label>
-        <a
-          href="/templates/asset_import_template.csv"
-          download
-          className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
-        >
-          <Download className="w-3.5 h-3.5" /> Template
-        </a>
-        <button 
-          onClick={handleExport}
-          disabled={loading || filteredAssets.length === 0}
-          className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Download className="w-3.5 h-3.5" /> Export
-        </button>
-        <Link href="/it/assets/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-          <Plus className="w-4 h-4" /> Register Asset
-        </Link>
+        {checkPermission("IT", "ASSETS", "canImport") && (
+          <>
+            <input
+              type="file"
+              id="asset-import"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImport}
+              disabled={importing}
+            />
+            <label
+              htmlFor="asset-import"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer",
+                importing && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {importing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5" />
+              )}
+              Import CSV
+            </label>
+            <a
+              href="/templates/asset_import_template.csv"
+              download
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
+            >
+              <Download className="w-3.5 h-3.5" /> Template
+            </a>
+          </>
+        )}
+        
+        {checkPermission("IT", "ASSETS", "canExport") && (
+          <button 
+            onClick={handleExport}
+            disabled={loading || filteredAssets.length === 0}
+            className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+        )}
+
+        {checkPermission("IT", "ASSETS", "canCreate") && (
+          <Link href="/it/assets/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+            <Plus className="w-4 h-4" /> Register Asset
+          </Link>
+        )}
       </div>
 
       {/* Mini Stats Row */}
@@ -679,7 +720,7 @@ export default function AssetsPage() {
       </div>
 
       {/* High-Density Grid Container */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border rounded-2xl overflow-visible shadow-sm">
         <div className="overflow-x-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -746,38 +787,84 @@ export default function AssetsPage() {
 
                       <td className="px-4 py-3">
                         {asset.currentEmployee ? (
-                          <div className="flex items-center gap-3">
-                            <div className="relative group/avatar">
-                              {asset.currentEmployee.photoPath ? (
-                                <img 
-                                  src={asset.currentEmployee.photoPath} 
-                                  alt={asset.currentEmployee.fullName}
-                                  className="w-9 h-9 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg"
-                                />
-                              ) : (
-                                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase group-hover/avatar:scale-110 transition-transform">
-                                  {asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          <div className="flex items-center gap-3 group/profile relative">
+                            <div className="relative">
+                              {/* Enhanced Avatar with Hover Effect */}
+                              <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 shadow-lg group-hover/profile:scale-110 transition-all duration-300 relative">
+                                {asset.currentEmployee.photoPath ? (
+                                  <img 
+                                    src={asset.currentEmployee.photoPath} 
+                                    alt={asset.currentEmployee.fullName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase">
+                                    {asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                  </div>
+                                )}
+                                {/* Glassmorphic Hover Overlay */}
+                                <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px] opacity-0 group-hover/profile:opacity-100 transition-opacity flex items-center justify-center">
+                                  <User className="w-4 h-4 text-white" />
                                 </div>
-                              )}
-                              { (asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber) && (
-                                <div className="absolute -right-1.5 -bottom-1 px-1.5 py-0.5 bg-background border border-white/5 rounded-md text-[7px] font-black uppercase text-muted-foreground shadow-xl">
-                                  {asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber}
-                                </div>
-                              )}
+                              </div>
                             </div>
+
                             <div className="flex flex-col">
-                              <p className="text-[11px] font-black tracking-tight uppercase leading-none mb-1">{asset.currentEmployee.fullName}</p>
+                              <p className="text-[11px] font-black tracking-tight uppercase leading-none mb-1 group-hover/profile:text-primary transition-colors">{asset.currentEmployee.fullName}</p>
                               <div className="flex items-center gap-2">
                                 <span className="text-[8px] opacity-40 font-black uppercase tracking-widest">{asset.currentEmployee.employeeCode}</span>
-                                { (asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber) && (
-                                  <span className="text-[8px] text-primary/40 font-black uppercase tracking-widest leading-none">• SEAT {asset.workspace?.code || asset.currentEmployee?.workspace?.code || asset.currentEmployee?.deskNumber}</span>
+                                { (asset.currentEmployee?.workspace?.code || asset.workspace?.code || asset.currentEmployee?.deskNumber) && (
+                                  <span className="text-[8px] text-primary/40 font-black uppercase tracking-widest leading-none">• SEAT {asset.currentEmployee?.workspace?.code || asset.workspace?.code || asset.currentEmployee?.deskNumber}</span>
                                 )}
+                              </div>
+                            </div>
+
+                            {/* Premium Hover Card - "Inside Container" implementation */}
+                            <div className="absolute left-0 top-0 opacity-0 group-hover/profile:opacity-100 scale-95 group-hover/profile:scale-100 transition-all duration-300 pointer-events-none z-[100] w-full min-w-[240px]">
+                              <div className="bg-card/98 backdrop-blur-2xl border border-primary/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-4 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
+                                <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-2 pb-2 border-b border-white/5">
+                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
+                                    {asset.currentEmployee.photoPath ? (
+                                      <img 
+                                        src={asset.currentEmployee.photoPath} 
+                                        alt={asset.currentEmployee.fullName}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase text-foreground leading-none">
+                                      {asset.currentEmployee.fullName} <span className="text-muted-foreground/60 ml-1">({asset.currentEmployee.employeeCode})</span>
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase tracking-tight">
+                                    <span>{asset.currentEmployee.department || 'N/A'}</span>
+                                    <span className="opacity-20 text-[10px]">|</span>
+                                    <span>{asset.currentEmployee.manager?.fullName || 'No Manager'}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center bg-white/5 px-2 py-1.5 rounded-lg border border-white/5">
+                                    <div className="space-y-0.5">
+                                      <p className="text-[6px] font-black uppercase text-muted-foreground/50 tracking-widest">Workspace ID</p>
+                                      <p className="text-[9px] font-black text-primary uppercase leading-none">
+                                        {asset.currentEmployee?.workspace?.code || asset.workspace?.code || asset.currentEmployee?.deskNumber || 'NO SEAT'}
+                                      </p>
+                                    </div>
+                                    <User className="w-3 h-3 text-primary/40" />
+                                  </div>
+                                </div>
+                                </div>
                               </div>
                             </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-3 opacity-20">
-                            <div className="w-9 h-9 rounded-xl bg-muted border border-border/50 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-muted border border-border/50 flex items-center justify-center">
                               <User className="w-4 h-4" />
                             </div>
                             <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">In Store</span>
@@ -794,8 +881,24 @@ export default function AssetsPage() {
 
                       <td className="px-6 py-3 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                          <button onClick={(e) => { e.stopPropagation(); router.push(`/it/assets/${asset.id}`); }} className="p-1.5 text-muted-foreground hover:text-primary transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(asset.id, asset.assetTag); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                          {checkPermission("IT", "ASSETS", "canEdit") && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); router.push(`/it/assets/${asset.id}`); }} 
+                              className="p-1.5 text-muted-foreground hover:text-primary transition-all"
+                              title="Edit Asset"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {checkPermission("IT", "ASSETS", "canDelete") && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDelete(asset.id, asset.assetTag); }} 
+                              className="p-1.5 text-muted-foreground hover:text-destructive transition-all"
+                              title="Decommission"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

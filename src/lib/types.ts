@@ -34,9 +34,10 @@ export type EmployeeListItem = Pick<PrismaEmployee,
 // =============================================================================
 
 export type AssetCurrentEmployee = Pick<PrismaEmployee, 
-  'id' | 'fullName' | 'employeeCode' | 'deskNumber' | 'photoPath'
+  'id' | 'fullName' | 'employeeCode' | 'deskNumber' | 'photoPath' | 'department'
 > & {
   workspace?: { code: string } | null;
+  manager?: { fullName: string } | null;
 };
 
 export type Asset = PrismaAsset & {

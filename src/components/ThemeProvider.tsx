@@ -8,6 +8,7 @@ import {
   useState,
   useRef,
 } from "react";
+import { cn } from "@/lib/utils";
 
 type Theme = "light" | "dark";
 
@@ -41,22 +42,30 @@ function applyTheme(theme: Theme) {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
-  const initialized = useRef(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Initialize theme on mount without setState in effect
   useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true;
-      const initialTheme = getInitialTheme();
-      setTheme(initialTheme);
-      applyTheme(initialTheme);
-    }
+    // Read from cookie first (set by server), then fallback to document class or localStorage
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+    };
+
+    const initialTheme = (getCookie(THEME_STORAGE_KEY) as Theme) || 
+                         (document.documentElement.classList.contains("dark") ? "dark" : "light");
+    
+    setTheme(initialTheme);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!mounted) return;
     applyTheme(theme);
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+    // Set cookie for server-side reading (expires in 1 year)
+    document.cookie = `${THEME_STORAGE_KEY}=${theme}; path=/; max-age=31536000; SameSite=Lax`;
+  }, [theme, mounted]);
 
   const value = useMemo(
     () => ({
@@ -70,7 +79,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>
+      <div className={cn(!mounted && "invisible")}>
+        {children}
+      </div>
+    </ThemeContext.Provider>
   );
 }
 

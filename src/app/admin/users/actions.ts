@@ -14,6 +14,7 @@ export async function createUser(formData: FormData) {
   const password = formData.get("password") as string;
   const companyName = formData.get("companyName") as string;
   const isActive = formData.get("isActive") === "on";
+  const permissionsJson = formData.get("permissions") as string;
 
   if (!fullName || !username || !email || !role || !password) {
     throw new Error("Missing required fields");
@@ -21,7 +22,7 @@ export async function createUser(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await prisma.systemUser.create({
+  const user = await prisma.systemUser.create({
     data: {
       fullName,
       username,
@@ -32,6 +33,30 @@ export async function createUser(formData: FormData) {
       isActive,
     },
   });
+
+  // Handle Permissions
+  if (permissionsJson) {
+    try {
+      const perms = JSON.parse(permissionsJson);
+      if (Array.isArray(perms) && perms.length > 0) {
+        await prisma.userPermission.createMany({
+          data: perms.map((p: any) => ({
+            userId: user.id,
+            category: p.category,
+            subcategory: p.subcategory,
+            canView: !!p.canView,
+            canCreate: !!p.canCreate,
+            canEdit: !!p.canEdit,
+            canDelete: !!p.canDelete,
+            canImport: !!p.canImport,
+            canExport: !!p.canExport,
+          }))
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create initial permissions:", error);
+    }
+  }
 
   revalidatePath("/admin/users");
   redirect("/admin/users");

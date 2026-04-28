@@ -31,7 +31,10 @@ import { useTheme } from "@/components/ThemeProvider";
 const sidebarLinks = [
   {
     group: "Overview",
-    links: [{ name: "Dashboard", href: "/", icon: LayoutDashboard }],
+    links: [
+      { name: "Dashboard", href: "/", icon: LayoutDashboard },
+      { name: "Seats Registry", href: "/seats", icon: Layout },
+    ],
   },
   {
     group: "HR Module",
@@ -40,7 +43,6 @@ const sidebarLinks = [
       { name: "Employees", href: "/hr/employees", icon: Users },
       { name: "Joiners", href: "/hr/joiners", icon: UserCheck },
       { name: "Exits", href: "/hr/exits", icon: UserX },
-      { name: "Seats Registry", href: "/hr/seats", icon: ShieldCheck },
     ],
   },
   {
@@ -50,7 +52,6 @@ const sidebarLinks = [
       { name: "Assets", href: "/it/assets", icon: Monitor },
       { name: "Provisioning", href: "/it/provisioning", icon: Truck },
       { name: "Assignments", href: "/it/assignments", icon: ArrowRightLeft },
-      { name: "Seating Plan", href: "/it/workspaces", icon: Layout },
       { name: "Email Accounts", href: "/it/email", icon: Mail },
       { name: "Accessories", href: "/it/accessories", icon: HardDrive },
     ],

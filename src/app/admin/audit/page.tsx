@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function AuditLogPage({
   searchParams,
 }: {
-  searchParams: { page?: string };
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const page = Number(searchParams.page) || 1;
+  const resolvedParams = await searchParams;
+  const page = Number(resolvedParams.page) || 1;
   const pageSize = 15;
   const skip = (page - 1) * pageSize;
 

@@ -103,6 +103,13 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     if (wasActive && isNowExiting) {
       try {
+        // Fetch employee's current workspace to preserve hardware location
+        const employeeWithWorkspace = await prisma.employee.findUnique({
+          where: { id },
+          include: { workspace: true }
+        });
+        const currentWorkspaceId = employeeWithWorkspace?.workspace?.id;
+
         // Recover all currently assigned assets
         const assignedAssets = await prisma.asset.findMany({
           where: { currentEmployeeId: id },
@@ -120,14 +127,19 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
               actionType: 'recovery_exit',
               assignedDate: new Date(),
               returnedDate: new Date(),
-              notes: `Asset recovered on employee exit (status: ${data.status})`,
+              notes: `Asset recovered on employee exit. Physical location preserved at seat ${employeeWithWorkspace?.workspace?.code || 'unknown'}.`,
             },
           });
 
-          // Unassign the asset
+          // Unassign the employee but preserve (or set) the workspace/seat
           await prisma.asset.update({
             where: { id: asset.id },
-            data: { currentEmployeeId: null, status: 'available' },
+            data: { 
+              currentEmployeeId: null, 
+              status: 'available',
+              // Preserve existing workspaceId, or use the employee's current one if asset wasn't linked
+              workspaceId: asset.workspaceId || currentWorkspaceId 
+            },
           });
         }
 
@@ -148,14 +160,18 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
               actionType: 'recovery_exit',
               assignedDate: new Date(),
               returnedDate: new Date(),
-              notes: `Accessory recovered on employee exit (status: ${data.status})`,
+              notes: `Accessory recovered on employee exit. Physical location preserved at seat ${employeeWithWorkspace?.workspace?.code || 'unknown'}.`,
             },
           });
 
-          // Unassign the accessory
+          // Unassign the employee but preserve (or set) the workspace/seat
           await prisma.accessory.update({
             where: { id: acc.id },
-            data: { currentEmployeeId: null, status: 'available' },
+            data: { 
+              currentEmployeeId: null, 
+              status: 'available',
+              workspaceId: acc.workspaceId || currentWorkspaceId
+            },
           });
         }
       } catch (exitError) {

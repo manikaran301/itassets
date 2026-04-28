@@ -8,6 +8,7 @@ import {
   useCallback,
   ReactNode,
 } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface Notifications {
   provisioning: {
@@ -31,24 +32,34 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
   const [notifications, setNotifications] = useState<Notifications | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (status !== 'authenticated') return;
+    
     try {
       const res = await fetch('/api/notifications');
-      if (!res.ok) throw new Error('Failed to fetch notifications');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Failed to fetch notifications: ${res.status} ${errorData.error || res.statusText}`);
+      }
       const data = await res.json();
       setNotifications(data);
     } catch (error) {
       console.error('Notification fetch error:', error);
     }
-  }, []);
+  }, [status]);
 
   // Initial load
   useEffect(() => {
-    refresh().finally(() => setLoading(false));
-  }, [refresh]);
+    if (status === 'authenticated') {
+      refresh().finally(() => setLoading(false));
+    } else if (status !== 'loading') {
+      setLoading(false);
+    }
+  }, [status, refresh]);
 
   // Auto-refresh every 30 seconds, only when tab is visible
   useEffect(() => {

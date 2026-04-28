@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { PermissionMatrixModal } from "./PermissionMatrixModal";
+
 interface SystemUserData {
   id?: string;
   fullName?: string;
@@ -30,12 +32,16 @@ interface UserFormProps {
 
 export function UserForm({ initialData, action }: UserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPermsModal, setShowPermsModal] = useState(false);
+  const [permissions, setPermissions] = useState<any[]>([]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       const formData = new FormData(e.currentTarget);
+      // Ensure permissions are included as JSON string
+      formData.set("permissions", JSON.stringify(permissions));
       await action(formData);
     } catch (error) {
       console.error(error);
@@ -174,7 +180,30 @@ export function UserForm({ initialData, action }: UserFormProps) {
             </div>
           </div>
 
-          <div className="pt-6 border-t border-border">
+          <div className="pt-6 border-t border-border space-y-4">
+            {!initialData && (
+              <div className="flex items-center justify-between p-4 rounded-2xl border border-dashed border-primary/30 bg-primary/5">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                    <ShieldCheck className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black uppercase tracking-tight">Security Matrix</h4>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      {permissions.length === 0 ? "Default permissions will be applied" : `${permissions.length} granular rules configured`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPermsModal(true)}
+                  className="px-4 py-2 bg-background border border-border rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-muted transition-all"
+                >
+                  Configure Permissions
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-muted/10">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-background shadow-sm border border-border">
                 <Activity className="h-5 w-5 text-primary" />
@@ -209,6 +238,17 @@ export function UserForm({ initialData, action }: UserFormProps) {
           </button>
         </div>
       </form>
+
+      {showPermsModal && (
+        <PermissionMatrixModal
+          initialPermissions={permissions}
+          onSave={(newPerms) => {
+            setPermissions(newPerms);
+            setShowPermsModal(false);
+          }}
+          onClose={() => setShowPermsModal(false)}
+        />
+      )}
     </div>
   );
 }

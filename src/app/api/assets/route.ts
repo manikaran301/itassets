@@ -18,6 +18,13 @@ export async function GET() {
             fullName: true,
             employeeCode: true,
             deskNumber: true,
+            department: true,
+            reportingManagerId: true,
+            manager: {
+              select: {
+                fullName: true
+              }
+            },
             photoPath: true,
             workspace: {
               select: {
@@ -152,7 +159,7 @@ export async function POST(request: Request) {
         status: data.status,
         notes: data.notes || null,
         createdBy: data.changedBy || null,
-        workspace: data.workspaceId ? { connect: { id: data.workspaceId } } : undefined,
+        workspaceId: data.workspaceId || null,
       },
     });
 
