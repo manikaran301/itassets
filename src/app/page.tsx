@@ -11,6 +11,9 @@ import {
   History,
   ShieldCheck,
   BarChart3,
+  UserPlus,
+  UserMinus,
+  Calendar,
 } from "lucide-react";
 import { StatsCard } from "@/components/StatsCard";
 import { cn } from "@/lib/utils";
@@ -26,20 +29,49 @@ export default async function DashboardPage() {
     activeEmployeeCount,
     assetCount,
     inRepairAssetCount,
+    availableAssetCount,
     provisioningCount,
     pendingProvisioningCount,
     emailCount,
     activeEmailCount,
+    noticePeriodCount,
+    accessoryCount,
+    upcomingJoiningCount,
+    upcomingJoiners,
+    upcomingExits,
     recentAssignments,
   ] = await Promise.all([
     prisma.employee.count(),
     prisma.employee.count({ where: { status: "active" } }),
     prisma.asset.count(),
     prisma.asset.count({ where: { status: "in_repair" } }),
+    prisma.asset.count({ where: { status: "available" } }),
     prisma.provisioningRequest.count(),
     prisma.provisioningRequest.count({ where: { status: "pending" } }),
     prisma.emailAccount.count(),
     prisma.emailAccount.count({ where: { status: "active" } }),
+    prisma.employee.count({ where: { status: { in: ["notice_period", "exit_pending"] as any } } }),
+    prisma.accessory.count(),
+    prisma.upcomingJoining.count({ 
+      where: { 
+        status: "upcoming",
+        joiningDate: {
+          gte: new Date(),
+          lte: new Date(new Date().setDate(new Date().getDate() + 30))
+        }
+      } 
+    }),
+    prisma.upcomingJoining.findMany({
+      where: { status: "upcoming" },
+      take: 5,
+      orderBy: { joiningDate: 'asc' }
+    }),
+    prisma.employee.findMany({
+      where: { status: { in: ["notice_period", "exit_pending"] as any } },
+      take: 5,
+      orderBy: { exitDate: 'asc' },
+      select: { id: true, fullName: true, employeeCode: true, department: true, exitDate: true, status: true }
+    }),
     prisma.assignmentHistory.findMany({
       take: 5,
       orderBy: { assignedDate: "desc" },
@@ -65,8 +97,8 @@ export default async function DashboardPage() {
       icon: Cpu,
     },
     {
-      title: "Active Accounts",
-      desc: `${activeEmailCount} email identities are active.`,
+      title: "Notice Period",
+      desc: `${noticePeriodCount} employees exiting. Prepare recovery.`,
       type: "info" as const,
       icon: ShieldCheck,
     },
@@ -77,20 +109,20 @@ export default async function DashboardPage() {
       <section className="animate-fade-in pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
-            title="Total Employees"
+            title="Total Workforce"
             value={employeeCount}
-            count={`${activeEmployeeCount} active`}
-            description="Active workforce tracking across 8 departments."
+            count={`${upcomingJoiningCount} joiners next 30d`}
+            description="Active employees and scheduled onboarding pipeline."
             icon={Users}
-            trend="neutral"
-            trendValue="Live"
+            trend={upcomingJoiningCount > 0 ? "up" : "neutral"}
+            trendValue={upcomingJoiningCount > 0 ? `+${upcomingJoiningCount}` : "Stable"}
             className="border-l-4 border-l-primary"
           />
           <StatsCard
-            title="Active Assets"
-            value={assetCount}
-            count={`${inRepairAssetCount} in repair`}
-            description="Laptops, desktops, and mobile devices managed."
+            title="Hardware Stock"
+            value={assetCount + accessoryCount}
+            count={`${availableAssetCount} ready to deploy`}
+            description="Combined inventory of primary assets and accessories."
             icon={Monitor}
             trend="neutral"
             trendValue="Live"
@@ -99,152 +131,149 @@ export default async function DashboardPage() {
           <StatsCard
             title="Provisioning"
             value={provisioningCount}
-            count={`${pendingProvisioningCount} pending`}
-            description="Hardware and software setup for new joiners."
+            count={`${pendingProvisioningCount} pending action`}
+            description="Active resource fulfillment and logistics queue."
             icon={Truck}
-            trend="neutral"
-            trendValue="Live"
+            trend={pendingProvisioningCount > 5 ? "down" : "up"}
+            trendValue={pendingProvisioningCount > 5 ? "Busy" : "Clear"}
             className="border-l-4 border-l-accent"
           />
           <StatsCard
-            title="Email Accounts"
+            title="Identities"
             value={emailCount}
-            count={`${activeEmailCount} active`}
-            description="Workplace identities managed on Google Workspace."
+            count={`${activeEmailCount} active accounts`}
+            description="Digital identities and workspace access management."
             icon={Mail}
             trend="neutral"
-            trendValue="Live"
+            trendValue="Secure"
             className="border-l-4 border-l-muted-foreground"
           />
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <section className="lg:col-span-2 space-y-6 animate-fade-in delay-100">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              Recent Asset Movements
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-fade-in delay-100">
+        {/* COLUMN 1: ASSET MOVEMENTS */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Recent Movements
             </h3>
-            <Link
-              href="/it/assignments"
-              className="text-xs font-semibold text-primary hover:underline uppercase tracking-widest"
-            >
-              View All
-            </Link>
+            <Link href="/it/assignments" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
           </div>
-
-          <div className="premium-card rounded-2xl overflow-hidden glass border-border/50">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-muted/50 border-b border-border">
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Log Code
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Employee
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Asset Tag
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Action
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {recentAssignments.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-muted/30 transition-colors group cursor-default"
-                  >
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-mono font-semibold bg-muted px-2 py-1 rounded border border-border group-hover:bg-primary/10 transition-colors">
-                        {row.logCode}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold ring-1 ring-border shadow-sm">
-                          {row.employee.fullName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </div>
-                        <span className="text-sm font-medium">
-                          {row.employee.fullName}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-muted-foreground">
-                      {row.asset?.assetTag ?? row.accessory?.assetTag ?? "-"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={cn(
-                          "text-[10px] uppercase font-bold px-2 py-1 rounded-full",
-                          row.actionType === "new_assignment"
-                            ? "bg-primary/10 text-primary"
-                            : row.actionType === "reassignment"
-                              ? "bg-secondary/10 text-secondary"
-                              : "bg-accent/10 text-accent",
-                        )}
-                      >
-                        {row.actionType.replaceAll("_", " ")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {new Date(row.assignedDate).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+            <div className="divide-y divide-border/50">
+              {recentAssignments.map((row) => (
+                <div key={row.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold truncate max-w-[150px]">{row.employee.fullName}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded border border-border">{row.logCode}</span>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase">{row.asset?.assetTag ?? row.accessory?.assetTag ?? "-"}</span>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[8px] font-black uppercase px-2 py-1 rounded-full",
+                    row.actionType === "new_assignment" ? "bg-primary/10 text-primary" : "bg-secondary/10 text-secondary"
+                  )}>
+                    {row.actionType.split('_')[0]}
+                  </span>
+                </div>
+              ))}
+              {recentAssignments.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No recent movements</div>
+              )}
+            </div>
           </div>
-        </section>
+        </div>
 
-        <aside className="space-y-6 animate-fade-in delay-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight">
-              <AlertCircle className="w-5 h-5 text-accent" />
-              Critical Alerts
+        {/* COLUMN 2: UPCOMING JOINERS */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-green-500" />
+              Onboarding Pipeline
             </h3>
-            <span className="h-2 w-2 rounded-full bg-accent animate-ping" />
+            <Link href="/hr/upcoming" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
           </div>
+          <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+            <div className="divide-y divide-border/50">
+              {upcomingJoiners.map((joiner) => (
+                <div key={joiner.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold truncate max-w-[150px]">{joiner.fullName}</p>
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{joiner.department} • {joiner.companyName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-primary">{new Date(joiner.joiningDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase">JOINING</p>
+                  </div>
+                </div>
+              ))}
+              {upcomingJoiners.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No joiners scheduled</div>
+              )}
+            </div>
+          </div>
+        </div>
 
-          <div className="space-y-4">
-            {alertCards.map((alert, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-2xl bg-card border border-border premium-card flex gap-4 group"
-              >
-                <div
-                  className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                    alert.type === "warning"
-                      ? "bg-accent/10 text-accent"
-                      : alert.type === "danger"
-                        ? "bg-red-500/10 text-red-500"
-                        : "bg-primary/10 text-primary",
-                  )}
-                >
-                  <alert.icon className="w-5 h-5 group-hover:scale-125 transition-transform" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold uppercase tracking-wide">
-                    {alert.title}
-                  </h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {alert.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
+        {/* COLUMN 3: UPCOMING EXITS */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+              <UserMinus className="w-4 h-4 text-red-500" />
+              Offboarding / Exits
+            </h3>
+            <Link href="/hr/exits" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
           </div>
-        </aside>
+          <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+            <div className="divide-y divide-border/50">
+              {upcomingExits.map((emp: any) => (
+                <div key={emp.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold truncate max-w-[150px]">{emp.fullName}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{emp.employeeCode} • {emp.department}</span>
+                      <span className={cn(
+                        "text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full",
+                        emp.status === "notice_period" ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"
+                      )}>
+                        {emp.status === "notice_period" ? "NOTICE" : "EXIT"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-red-500">
+                      {emp.exitDate ? new Date(emp.exitDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'TBD'}
+                    </p>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase">LAST DAY</p>
+                  </div>
+                </div>
+              ))}
+              {upcomingExits.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No exits in pipeline</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER ALERTS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in delay-200">
+        {alertCards.map((alert, i) => (
+          <div key={i} className="p-4 rounded-2xl bg-card border border-border premium-card flex items-center gap-4 group">
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+              alert.type === "warning" ? "bg-accent/10 text-accent" : alert.type === "danger" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary",
+            )}>
+              <alert.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className="space-y-0.5">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{alert.title}</h4>
+              <p className="text-xs font-bold leading-tight">{alert.desc}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
