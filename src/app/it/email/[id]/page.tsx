@@ -267,7 +267,7 @@ export default function EmailDetailPage() {
                 Core Identity
               </div>
 
-              <div className="space-y-4 relative z-[50]">
+              <div className="space-y-4 relative z-[100]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/85 ml-1">

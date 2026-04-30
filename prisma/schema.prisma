@@ -9,6 +9,7 @@ datasource db {
 // Enums
 enum EmployeeStatus {
   active
+  notice_period
   exit_pending
   inactive
 }
@@ -507,3 +508,25 @@ model Workspace {
   @@index([type])
   @@map("workspaces")
 }
+
+model UpcomingJoining {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName         String   @db.VarChar(100)
+  designation      String   @db.VarChar(100)
+  department       String?  @db.VarChar(100)
+  email            String?  @db.VarChar(150)
+  phoneNumber      String?  @db.VarChar(20)
+  companyName      String   @db.VarChar(100)
+  reportingManager String   @db.VarChar(100)
+  joiningDate      DateTime @db.Date
+  experience       String?  @db.VarChar(50)
+  placeOfPosting   String   @db.VarChar(100)
+  joiningLocation  String   @db.VarChar(100)
+  status           String   @default("upcoming") // upcoming, joined, on_hold, not_joined, retained, cancelled
+  statusReason     String?  @db.Text
+  createdAt        DateTime @default(now()) @db.Timestamp
+  updatedAt        DateTime @updatedAt @db.Timestamp
+
+  @@map("upcoming_joinings")
+}
+

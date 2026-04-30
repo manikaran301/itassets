@@ -22,6 +22,7 @@ import {
   Layout,
   ChevronLeft,
   ChevronRight,
+  PlaneTakeoff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -40,8 +41,9 @@ const sidebarLinks = [
     group: "HR Module",
     roles: ["hr", "admin"],
     links: [
+      { name: "Upcoming Joinings", href: "/hr/upcoming", icon: PlaneTakeoff },
+      { name: "Onboarding", href: "/hr/joiners", icon: UserCheck },
       { name: "Employees", href: "/hr/employees", icon: Users },
-      { name: "Joiners", href: "/hr/joiners", icon: UserCheck },
       { name: "Exits", href: "/hr/exits", icon: UserX },
     ],
   },

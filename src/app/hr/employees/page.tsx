@@ -14,6 +14,7 @@ import {
   MapPin,
   Briefcase,
   Lock,
+  Activity,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ export default function EmployeesPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const scrollRef = useRef<HTMLDivElement>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -165,8 +167,11 @@ export default function EmployeesPage() {
     const matchesLocation =
       selectedLocation === "all" || emp.locationJoining === selectedLocation;
 
+    const matchesStatus =
+      selectedStatus === "all" || emp.status === selectedStatus;
+
     return (
-      matchesSearch && matchesDepartment && matchesCompany && matchesLocation
+      matchesSearch && matchesDepartment && matchesCompany && matchesLocation && matchesStatus
     );
   });
 
@@ -260,6 +265,12 @@ export default function EmployeesPage() {
             <option value="all">LOCATIONS</option>
             {locations.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
           </select>
+          <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
+            <option value="all">ALL STATUSES</option>
+            <option value="active">ACTIVE</option>
+            <option value="inactive">INACTIVE</option>
+            <option value="exit_pending">EXIT PENDING</option>
+          </select>
         </div>
       </div>
 
@@ -293,7 +304,7 @@ export default function EmployeesPage() {
                 </tr>
               ) : (
                 filteredEmployees.map((emp, idx) => (
-                  <tr key={`${emp.id}-${idx}`} className="group hover:bg-muted/20 cursor-default transition-all border-l-2 border-l-transparent hover:border-l-primary" onClick={() => router.push(`/hr/employees/${emp.id}/edit`)}>
+                  <tr key={`${emp.id}-${idx}`} className="group hover:bg-muted/20 cursor-default transition-all border-l-2 border-l-transparent hover:border-l-primary" onClick={() => router.push(`/hr/employees/${emp.id}`)}>
                     <td className="pl-6 pr-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 overflow-hidden shrink-0">
@@ -314,7 +325,16 @@ export default function EmployeesPage() {
                             <p className="text-xs font-black tracking-tight">{emp.fullName}</p>
                             <span className={cn("w-1 h-1 rounded-full", emp.status === "active" ? "bg-green-500" : "bg-red-500")} />
                           </div>
-                          <p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">{emp.employeeCode}</p>
+                          <div className="flex flex-col gap-0.5">
+                            <p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest leading-none">
+                              {emp.employeeCode}
+                            </p>
+                            {emp.emailAccounts && emp.emailAccounts.length > 0 && (
+                              <p className="text-[8px] font-bold text-primary/70 truncate max-w-[150px] leading-none">
+                                {emp.emailAccounts[0].emailAddress}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -372,14 +392,23 @@ export default function EmployeesPage() {
 
                     <td className="px-6 py-3 text-right pr-10">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => e.stopPropagation()}>
+                        <Link
+                          href={`/hr/employees/${emp.id}`}
+                          className="p-1.5 text-muted-foreground hover:text-primary transition-all"
+                          title="View Details"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Activity className="w-3.5 h-3.5" />
+                        </Link>
                         {checkPermission("HR", "EMPLOYEES", "canEdit") && (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); router.push(`/hr/employees/${emp.id}/edit`); }} 
+                          <Link
+                            href={`/hr/employees/${emp.id}/edit`}
                             className="p-1.5 text-muted-foreground hover:text-primary transition-all"
                             title="Edit Profile"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                          </Link>
                         )}
                         {checkPermission("HR", "EMPLOYEES", "canDelete") && (
                           <button 

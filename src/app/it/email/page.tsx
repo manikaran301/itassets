@@ -475,6 +475,18 @@ export default function EmailAccountsPage() {
   const [importing, setImporting] = useState(false);
   const [previewData, setPreviewData] = useState<ImportRecord[] | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [provisioningTarget, setProvisioningTarget] = useState<string | null>(null);
+  const [isProvisioningFlow, setIsProvisioningFlow] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("assignTo");
+    const flow = params.get("flow");
+    if (target) setProvisioningTarget(target);
+    if (flow === "provisioning") {
+      setIsProvisioningFlow(true);
+    }
+  }, []);
 
   useEffect(() => {
     fetchEmails();
@@ -678,6 +690,28 @@ export default function EmailAccountsPage() {
 
   return (
     <div className="space-y-4 animate-fade-in pb-20 pt-4">
+      {isProvisioningFlow && provisioningTarget && (
+        <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-center justify-between animate-in slide-in-from-top duration-500">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+              <Mail className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-blue-500">Provisioning Workflow</h3>
+              <p className="text-[10px] font-bold text-muted-foreground">Setting up Email for Joiner ID: <span className="text-foreground">{provisioningTarget}</span></p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setIsProvisioningFlow(false);
+              setProvisioningTarget(null);
+            }}
+            className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground px-4 py-2"
+          >
+            Exit Flow
+          </button>
+        </div>
+      )}
       {forwardingModal && (
         <ForwardingModal
           emailId={forwardingModal.id}
@@ -951,52 +985,83 @@ export default function EmailAccountsPage() {
                     </td>
 
                     <td className="px-6 py-2.5 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/it/email/${email.id}`);
-                          }} 
-                          className="p-1.5 text-muted-foreground hover:text-primary transition-all"
-                          title="Edit Account"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!window.confirm(`Update status for ${email.emailAddress}?`)) return;
-                            setSuspending(email.id);
-                            const newStatus = email.status === "active" ? "suspended" : "active";
-                            await fetch(`/api/emails/${email.id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
-                            fetchEmails();
-                            setSuspending(null);
-                          }}
-                          disabled={suspending === email.id}
-                          className="p-1.5 text-muted-foreground hover:text-amber-500 transition-all disabled:opacity-50"
-                          title={email.status === "active" ? "Suspend Account" : "Activate Account"}
-                        >
-                          {suspending === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-                        </button>
-                        <button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!window.confirm(`PERMANENTLY DELETE ${email.emailAddress}?\nThis action cannot be undone.`)) return;
-                            setDeletingId(email.id);
-                            try {
-                              const res = await fetch(`/api/emails/${email.id}`, { method: 'DELETE' });
-                              if (res.ok) fetchEmails();
-                              else alert("Failed to delete account");
-                            } finally {
-                              setDeletingId(null);
-                            }
-                          }}
-                          disabled={deletingId === email.id}
-                          className="p-1.5 text-muted-foreground hover:text-red-500 transition-all disabled:opacity-50"
-                          title="Delete Account"
-                        >
-                          {deletingId === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {isProvisioningFlow && !email.employeeId && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Assign ${email.emailAddress} to joiner ${provisioningTarget}?`)) return;
+                              
+                              try {
+                                const res = await fetch(`/api/emails/${email.id}/assign`, {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ employeeId: provisioningTarget }),
+                                });
+                                
+                                if (res.ok) {
+                                  // Flow Complete! Back to joiners.
+                                  router.push(`/hr/joiners?status=onboarded&id=${provisioningTarget}`);
+                                } else {
+                                  const err = await res.json();
+                                  alert(err.error || "Assignment failed");
+                                }
+                              } catch (error) {
+                                alert("Failed to assign email");
+                              }
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                          >
+                            Assign & Finish <CheckCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <div className={cn("flex items-center justify-end gap-1 transition-all", isProvisioningFlow ? "opacity-40 hover:opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/it/email/${email.id}`);
+                            }} 
+                            className="p-1.5 text-muted-foreground hover:text-primary transition-all"
+                            title="Edit Account"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!window.confirm(`Update status for ${email.emailAddress}?`)) return;
+                              setSuspending(email.id);
+                              const newStatus = email.status === "active" ? "suspended" : "active";
+                              await fetch(`/api/emails/${email.id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+                              fetchEmails();
+                              setSuspending(null);
+                            }}
+                            disabled={suspending === email.id}
+                            className="p-1.5 text-muted-foreground hover:text-amber-500 transition-all disabled:opacity-50"
+                            title={email.status === "active" ? "Suspend Account" : "Activate Account"}
+                          >
+                            {suspending === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+                          </button>
+                          <button 
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!window.confirm(`PERMANENTLY DELETE ${email.emailAddress}?\nThis action cannot be undone.`)) return;
+                              setDeletingId(email.id);
+                              try {
+                                const res = await fetch(`/api/emails/${email.id}`, { method: 'DELETE' });
+                                if (res.ok) fetchEmails();
+                                else alert("Failed to delete account");
+                              } finally {
+                                setDeletingId(null);
+                              }
+                            }}
+                            disabled={deletingId === email.id}
+                            className="p-1.5 text-muted-foreground hover:text-red-500 transition-all disabled:opacity-50"
+                            title="Delete Account"
+                          >
+                            {deletingId === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>

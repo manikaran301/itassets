@@ -52,6 +52,7 @@ export default function ProvisioningPage() {
   const [requests, setRequests] = useState<ProvisioningRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [errorMessages, setErrorMessages] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -73,6 +74,8 @@ export default function ProvisioningPage() {
   const updateStatus = async (id: string, newStatus: string) => {
     const userId = (session?.user as { id?: string })?.id;
     setUpdating(id);
+    setErrorMessages(prev => ({ ...prev, [id]: "" })); // Clear previous error
+
     try {
       const res = await fetch(`/api/provisioning/${id}`, {
         method: "PATCH",
@@ -85,13 +88,13 @@ export default function ProvisioningPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || "Failed to update");
+        setErrorMessages(prev => ({ ...prev, [id]: err.error || "Failed to update" }));
         return;
       }
 
       await fetchRequests();
     } catch {
-      alert("Something went wrong");
+      setErrorMessages(prev => ({ ...prev, [id]: "Network error. Please try again." }));
     } finally {
       setUpdating(null);
     }
@@ -137,7 +140,7 @@ export default function ProvisioningPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in pt-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in pt-4 px-6">
       {/* Stats + Filter */}
       <div className="shrink-0 pb-4 space-y-4">
         <div className="flex items-center gap-3">
@@ -175,7 +178,7 @@ export default function ProvisioningPage() {
             <p className="text-sm font-bold">No provisioning requests</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
             {filteredRequests.map((req) => {
               const typeLabel = req.deviceTypeNeeded
                 ? req.deviceTypeNeeded
@@ -302,6 +305,15 @@ export default function ProvisioningPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Inline Error Message */}
+                  {errorMessages[req.id] && (
+                    <div className="mx-3 mb-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl animate-in slide-in-from-top-1 duration-200">
+                      <p className="text-[10px] font-bold text-red-500 leading-tight">
+                        ⚠️ {errorMessages[req.id]}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Action Buttons - Compact */}
                   <div className="p-3 pt-0 flex gap-2">

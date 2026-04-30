@@ -27,6 +27,7 @@ export type EmployeeListItem = Pick<PrismaEmployee,
 > & {
   manager?: Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode'> | null;
   workspace?: { code: string; floor: string } | null;
+  emailAccounts?: PrismaEmailAccount[];
 };
 
 // =============================================================================
@@ -73,7 +74,7 @@ export type EmailAccount = PrismaEmailAccount & {
 };
 
 export type EmailAccountListItem = Pick<PrismaEmailAccount,
-  'id' | 'emailAddress' | 'displayName' | 'accountType' | 'status' | 'platform' | 'forwardingEnabled'
+  'id' | 'emailAddress' | 'displayName' | 'accountType' | 'status' | 'platform' | 'forwardingEnabled' | 'employeeId'
 > & {
   employee?: EmailAccountEmployee | null;
   forwardingCount?: number;

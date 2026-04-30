@@ -139,313 +139,222 @@ export default function AssignmentsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in pt-4">
-      {/* Action Row */}
-      <div className="flex justify-end px-1">
-        <button
-          onClick={() => {
-            const csv = filteredAssignments
-              .map(
-                (a) =>
-                  `${a.logCode},${a.asset?.assetTag || a.accessory?.assetTag},${a.employee?.fullName},${a.actionType},${new Date(a.assignedDate).toLocaleDateString()},${a.returnedDate ? new Date(a.returnedDate).toLocaleDateString() : ""}`,
-              )
-              .join("\n");
-            const blob = new Blob(
-              [
-                "Log Code,Asset Tag,Employee,Action Type,Assigned Date,Returned Date\n" +
-                  csv,
-              ],
-              { type: "text/csv" },
-            );
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `assignment-ledger-${new Date().toISOString().split("T")[0]}.csv`;
-            a.click();
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-muted/50 text-muted-foreground hover:bg-muted rounded-xl border border-border/50 transition-all font-black uppercase text-[10px] tracking-widest shadow-sm"
-          title="Export to CSV"
-        >
-          <Download className="w-4 h-4" />
-          Export Data
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 border border-primary/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                Total Logs
-              </p>
-              <p className="text-2xl font-black tracking-tighter mt-2">
-                {stats.total}
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-primary" />
-            </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in pt-4 px-6 space-y-4">
+      {/* Header & Stats Strip */}
+      <div className="shrink-0 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20">
+            <RotateCcw className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-black uppercase tracking-tight leading-none">Assignment Ledger</h1>
+            <p className="text-[10px] font-bold text-muted-foreground/50 mt-1 uppercase tracking-widest">Tracking {stats.total} lifecycle events</p>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-2xl p-4 border border-green-500/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                Active
-              </p>
-              <p className="text-2xl font-black tracking-tighter mt-2">
-                {stats.active}
-              </p>
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+          {[
+            { label: "Active", count: stats.active, color: "text-green-500", bg: "bg-green-500/10" },
+            { label: "Returned", count: stats.returned, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Repair", count: stats.inRepair, color: "text-amber-500", bg: "bg-amber-500/10" }
+          ].map(s => (
+            <div key={s.label} className={cn("px-3 py-1.5 rounded-lg border border-white/5 flex items-center gap-3", s.bg)}>
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{s.label}</span>
+              <span className={cn("text-xs font-black", s.color)}>{s.count}</span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-2xl p-4 border border-blue-500/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                Returned
-              </p>
-              <p className="text-2xl font-black tracking-tighter mt-2">
-                {stats.returned}
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <RotateCcw className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-4 border border-accent/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                In Repair
-              </p>
-              <p className="text-2xl font-black tracking-tighter mt-2">
-                {stats.inRepair}
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-accent" />
-            </div>
-          </div>
+          ))}
+          <button
+            onClick={() => {
+              const csv = filteredAssignments
+                .map(a => `${a.logCode},${a.asset?.assetTag || a.accessory?.assetTag},${a.employee?.fullName},${a.actionType},${new Date(a.assignedDate).toLocaleDateString()},${a.returnedDate ? new Date(a.returnedDate).toLocaleDateString() : ""}`)
+                .join("\n");
+              const blob = new Blob(["Log Code,Asset Tag,Employee,Action Type,Assigned Date,Returned Date\n" + csv], { type: "text/csv" });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `assignment-ledger-${new Date().toISOString().split("T")[0]}.csv`;
+              a.click();
+            }}
+            className="ml-2 p-2 bg-muted/30 hover:bg-muted/50 rounded-lg border border-white/5 transition-all"
+            title="Export Ledger"
+          >
+            <Download className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
       </div>
 
-      {/* Search & Filters - Inline */}
-      <div className="flex flex-col lg:flex-row gap-3 items-end">
-        {/* Search */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+      {/* Filter Ribbon */}
+      <div className="shrink-0 bg-card/40 border border-white/5 p-1.5 rounded-2xl flex flex-col md:flex-row gap-2 items-center">
+        <div className="relative flex-1 group w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="Search log code, asset tag, employee..."
+            placeholder="FILTER BY LOG, ASSET, EMPLOYEE..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-card/40 border border-white/5 pl-12 pr-4 py-3 rounded-xl outline-none focus:border-primary/30 transition-all text-sm"
+            className="w-full bg-transparent pl-11 pr-4 py-2 rounded-xl text-[10px] font-bold border border-transparent focus:bg-background/40 outline-none transition-all placeholder:text-[8px] placeholder:font-black placeholder:tracking-widest"
           />
         </div>
 
-        {/* Status Filter */}
-        <div className="w-full lg:w-48 relative">
-          <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+        <div className="flex gap-2 w-full md:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full bg-card/40 border border-white/5 pl-12 pr-4 py-3 rounded-xl outline-none focus:border-primary/30 transition-all text-sm appearance-none cursor-pointer"
+            className="bg-muted/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 focus:border-primary/30 outline-none cursor-pointer min-w-[120px]"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="returned">Returned</option>
-            <option value="repair">In Repair</option>
+            <option value="all">ALL STATUS</option>
+            <option value="active">ACTIVE</option>
+            <option value="returned">RETURNED</option>
+            <option value="repair">IN REPAIR</option>
           </select>
-        </div>
 
-        {/* Action Filter */}
-        <div className="w-full lg:w-56 relative">
-          <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="w-full bg-card/40 border border-white/5 pl-12 pr-4 py-3 rounded-xl outline-none focus:border-primary/30 transition-all text-sm appearance-none cursor-pointer"
+            className="bg-muted/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 focus:border-primary/30 outline-none cursor-pointer min-w-[140px]"
           >
-            <option value="all">All Actions</option>
-            <option value="new_assignment">New Assignment</option>
-            <option value="reassignment">Reassignment</option>
-            <option value="repair_send">Repair Send</option>
-            <option value="repair_return">Repair Return</option>
-            <option value="recovery_exit">Recovery/Exit</option>
+            <option value="all">ALL ACTIONS</option>
+            <option value="new_assignment">NEW ASSIGNMENT</option>
+            <option value="reassignment">REASSIGNMENT</option>
+            <option value="repair_send">REPAIR SEND</option>
+            <option value="repair_return">REPAIR RETURN</option>
+            <option value="recovery_exit">RECOVERY/EXIT</option>
           </select>
         </div>
       </div>
 
-      <div className="premium-card rounded-2xl overflow-hidden glass border-border/50 animate-fade-in delay-100">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-muted/50 border-b border-border">
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Log Code
-              </th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Asset & Category
-              </th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Assigned To
-              </th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Action Type
-              </th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Assigned Date
-              </th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Returned Date
-              </th>
-              <th className="px-6 py-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filteredAssignments.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-6 py-12 text-center">
-                  <AlertCircle className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">
-                    No assignment logs found
-                  </p>
-                </td>
+      {/* Concise Table Container */}
+      <div className="flex-1 min-h-0 bg-card/20 border border-white/5 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        <div className="overflow-auto scrollbar-hide flex-1">
+          <table className="w-full text-left border-collapse table-fixed">
+            <thead className="sticky top-0 z-10 bg-[#0f1115]/95 backdrop-blur-md">
+              <tr className="border-b border-white/5">
+                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">ID</th>
+                <th className="w-[20%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Asset Info</th>
+                <th className="w-[20%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Stakeholder</th>
+                <th className="w-[15%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Event</th>
+                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Assigned</th>
+                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Returned</th>
+                <th className="w-[9%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-right pr-6">Status</th>
               </tr>
-            ) : (
-              filteredAssignments.map((log) => {
-                const status = log.returnedDate
-                  ? "Returned"
-                  : log.actionType === "repair_send"
-                    ? "In Repair"
-                    : "Active";
-
-                return (
-                  <tr
-                    key={log.id}
-                    className="hover:bg-muted/20 transition-all group"
-                  >
-                    <td className="px-6 py-5">
-                      <span className="text-xs font-mono font-bold bg-muted px-2 py-1 rounded border border-border group-hover:bg-primary/10 transition-colors uppercase">
-                        {log.logCode}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center text-primary">
-                          {log.assetCategory === "asset" ? (
-                            <Monitor className="w-4 h-4" />
-                          ) : (
-                            <HardDrive className="w-4 h-4" />
-                          )}
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-sm font-bold tracking-tight">
-                            {log.asset?.assetTag ??
-                              log.accessory?.assetTag ??
-                              "-"}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
-                            {log.assetCategory}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      {log.employee ? (
-                        <div className="flex items-center gap-3">
-                          <div className="relative group/avatar">
-                            {log.employee.photoPath ? (
-                              <img 
-                                src={log.employee.photoPath} 
-                                alt={log.employee.fullName}
-                                className="w-8 h-8 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-[9px] font-black text-secondary uppercase group-hover/avatar:scale-110 transition-transform">
-                                {log.employee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-black uppercase tracking-tight leading-none mb-1">{log.employee.fullName}</p>
-                            <p className="text-[8px] opacity-40 font-black uppercase tracking-widest">{log.employee.employeeCode}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] font-bold text-muted-foreground/30 italic">Unassigned Pool</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-5">
-                      <span
-                        className={cn(
-                          "text-[10px] uppercase font-black px-3 py-1 rounded-full border shadow-sm whitespace-nowrap",
-                          getTypeStyle(log.actionType),
-                        )}
-                      >
-                        {log.actionType.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                        <Clock className="w-3 h-3" />
-                        {new Date(log.assignedDate).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      {log.returnedDate ? (
-                        <div className="flex items-center gap-2 text-xs text-blue-600 font-medium">
-                          <RotateCcw className="w-3 h-3" />
-                          {new Date(log.returnedDate).toLocaleDateString()}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground/50">
-                          —
+            </thead>
+            <tbody className="divide-y divide-white/[0.03]">
+              {filteredAssignments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-20 text-center">
+                    <AlertCircle className="w-10 h-10 mx-auto mb-4 text-primary/10" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">Ledger Empty</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredAssignments.map((log) => {
+                  const status = log.returnedDate ? "Returned" : log.actionType === "repair_send" ? "In Repair" : "Active";
+                  const statusColor = status === "Returned" ? "text-blue-500" : status === "In Repair" ? "text-amber-500" : "text-green-500";
+                  
+                  return (
+                    <tr key={log.id} className="group hover:bg-white/[0.02] transition-colors border-white/5">
+                      {/* ID / Code */}
+                      <td className="px-4 py-2.5">
+                        <span className="text-[9px] font-mono font-bold text-muted-foreground/40 group-hover:text-primary transition-colors">
+                          {log.logCode}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                        {status === "Returned" ? (
-                          <>
-                            <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                            <span className="text-xs font-semibold text-blue-600 uppercase">
-                              Returned
-                            </span>
-                          </>
-                        ) : status === "In Repair" ? (
-                          <>
-                            <Wrench className="w-4 h-4 text-accent" />
-                            <span className="text-xs font-semibold text-accent uppercase">
-                              In Repair
-                            </span>
-                          </>
+                      </td>
+
+                      {/* Asset Info */}
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn(
+                            "w-7 h-7 rounded-lg flex items-center justify-center border border-white/5",
+                            log.assetCategory === "asset" ? "bg-primary/10 text-primary" : "bg-amber-500/10 text-amber-500"
+                          )}>
+                            {log.assetCategory === "asset" ? <Monitor className="w-3.5 h-3.5" /> : <HardDrive className="w-3.5 h-3.5" />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-black truncate leading-tight">
+                              {log.asset?.assetTag ?? log.accessory?.assetTag ?? "-"}
+                            </p>
+                            <p className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest truncate">
+                              {log.assetCategory}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Stakeholder */}
+                      <td className="px-4 py-2.5">
+                        {log.employee ? (
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center overflow-hidden">
+                              {log.employee.photoPath ? (
+                                <img src={log.employee.photoPath} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase">
+                                  {log.employee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold truncate leading-tight">{log.employee.fullName}</p>
+                              <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-widest">{log.employee.employeeCode}</p>
+                            </div>
+                          </div>
                         ) : (
-                          <>
-                            <AlertCircle className="w-4 h-4 text-green-600" />
-                            <span className="text-xs font-semibold text-green-600 uppercase">
-                              Active
-                            </span>
-                          </>
+                          <span className="text-[9px] font-black text-muted-foreground/20 italic uppercase tracking-widest">Inventory Pool</span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      </td>
+
+                      {/* Event Type */}
+                      <td className="px-4 py-2.5">
+                        <span className={cn(
+                          "text-[8px] font-black uppercase px-2 py-0.5 rounded-md border tracking-tighter",
+                          getTypeStyle(log.actionType)
+                        )}>
+                          {log.actionType.replace(/_/g, " ")}
+                        </span>
+                      </td>
+
+                      {/* Dates */}
+                      <td className="px-4 py-2.5">
+                        <span className="text-[10px] font-bold text-muted-foreground/60">
+                          {new Date(log.assignedDate).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: '2-digit' })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {log.returnedDate ? (
+                          <span className="text-[10px] font-bold text-blue-500/60">
+                            {new Date(log.returnedDate).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: '2-digit' })}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/10">—</span>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-2.5 text-right pr-6">
+                        <span className={cn("text-[9px] font-black uppercase tracking-widest", statusColor)}>
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Footer info strip */}
+        <div className="shrink-0 bg-white/[0.02] border-t border-white/5 px-6 py-2 flex items-center justify-between">
+          <p className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">
+            Immutable Assignment Log · Authorized IT Personnel Only
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">System Sync Active</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

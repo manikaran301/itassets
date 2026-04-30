@@ -74,13 +74,13 @@ export async function PATCH(
       const account = await tx.emailAccount.update({
         where: { id },
         data: {
-          emailAddress: emailAddress ?? existing.emailAddress,
-          displayName: displayName ?? existing.displayName,
-          password: password ?? existing.password,
-          status: status ?? (existing.status as any),
-          accountType: accountType ?? (existing.accountType as any),
-          platform: platform ?? (existing.platform as any),
-          employeeId: employeeId !== undefined ? employeeId : existing.employeeId,
+          emailAddress: emailAddress || existing.emailAddress,
+          displayName: displayName || existing.displayName,
+          password: password !== undefined ? password : existing.password,
+          status: (status || existing.status) as any,
+          accountType: (accountType || existing.accountType) as any,
+          platform: (platform || existing.platform) as any,
+          employeeId: employeeId === undefined ? existing.employeeId : (employeeId || null),
           updatedAt: new Date(),
         },
       });
@@ -123,6 +123,48 @@ export async function PATCH(
         },
       },
     });
+
+    // AUTO-FULFILL PROVISIONING REQUEST
+    if (finalRecord) {
+      const effectiveEmployeeId = employeeId || finalRecord.employeeId;
+      
+      if (effectiveEmployeeId && finalRecord.status === 'active') {
+      try {
+        // Find matching provisioning request
+        // Broaden the search: any pending/in_progress request that mentions "email" 
+        // OR any request with null deviceType that might be an email request
+        const pendingReq = await prisma.provisioningRequest.findFirst({
+          where: {
+            employeeId: effectiveEmployeeId,
+            status: { in: ['pending', 'in_progress'] },
+            OR: [
+              { specialRequirements: { contains: 'email', mode: 'insensitive' } },
+              { specialRequirements: { contains: 'mail', mode: 'insensitive' } },
+              { specialRequirements: { contains: 'access', mode: 'insensitive' } },
+              // If it's a generic request and we just assigned an email, it's likely a match
+              { AND: [{ deviceTypeNeeded: null }, { specialRequirements: null }] }
+            ]
+          }
+        });
+
+        if (pendingReq) {
+          await prisma.provisioningRequest.update({
+            where: { id: pendingReq.id },
+            data: {
+              status: 'fulfilled',
+              fulfilledBy: (session.user as any).id || null,
+              fulfilledAt: new Date(),
+              notes: (pendingReq.notes || '') + `\nAuto-fulfilled via email assignment (${finalRecord.emailAddress})`
+            }
+          });
+          
+          console.log(`Auto-fulfilled provisioning request ${pendingReq.requestCode} for employee ${effectiveEmployeeId}`);
+        }
+      } catch (autoFulfillError) {
+        console.error('Email auto-fulfillment error:', autoFulfillError);
+      }
+    }
+  }
 
     return NextResponse.json(finalRecord);
   } catch (error) {

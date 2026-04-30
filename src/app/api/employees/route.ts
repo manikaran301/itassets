@@ -21,6 +21,7 @@ const EmployeeSchema = z.object({
   photoPath: z.string().trim().nullable().optional(),
   createdBy: z.string().uuid().nullable().optional().or(z.literal('')),
   workspaceId: z.string().uuid().nullable().optional().or(z.literal('')),
+  upcomingId: z.string().uuid().nullable().optional().or(z.literal('')),
 });
 
 export async function GET(request: Request) {
@@ -35,8 +36,13 @@ export async function GET(request: Request) {
     const skip = parseInt(searchParams.get('skip') || '0');
     const take = parseInt(searchParams.get('take') || '0'); // 0 = all (backward compat)
 
+    const statuses = searchParams.get('status')?.split(',').filter(Boolean);
+
     const [employees, total] = await Promise.all([
       prisma.employee.findMany({
+        where: statuses && statuses.length > 0 ? {
+          status: { in: statuses as any[] }
+        } : {},
         include: {
           manager: {
             select: {
@@ -57,13 +63,20 @@ export async function GET(request: Request) {
               floor: true
             }
           },
+          emailAccounts: true,
+          assetRequirements: true, // For recovery tracking
+          currentAssets: true,      // For recovery tracking
         },
         orderBy: {
           createdAt: 'desc',
         },
         ...(take > 0 ? { skip, take } : {}),
       }),
-      prisma.employee.count(),
+      prisma.employee.count({
+        where: statuses && statuses.length > 0 ? {
+          status: { in: statuses as any[] }
+        } : {},
+      }),
     ]);
 
     // If paginated, return with metadata
@@ -107,26 +120,40 @@ export async function POST(request: Request) {
     const managerId = data.reportingManagerId && data.reportingManagerId.trim() !== "" ? data.reportingManagerId : null;
     const creatorId = data.createdBy && data.createdBy.trim() !== "" ? data.createdBy : null;
 
-    const employee = await prisma.employee.create({
-      data: {
-        employeeCode: data.employeeCode,
-        fullName: data.fullName,
-        personalEmail: data.personalEmail || null,
-        personalPhone: data.personalPhone || null,
-        department: data.department || null,
-        designation: data.designation || null,
-        companyName: data.companyName || null,
-        locationJoining: data.locationJoining || null,
-        deskNumber: data.deskNumber || null,
-        startDate: (data.startDate && data.startDate.trim() !== "") ? new Date(data.startDate) : null,
-        exitDate: (data.exitDate && data.exitDate.trim() !== "") ? new Date(data.exitDate) : null,
-        status: data.status,
-        photoPath: data.photoPath || null,
-        manager: managerId ? { connect: { id: managerId } } : undefined,
-        creator: creatorId ? { connect: { id: creatorId } } : undefined,
-        workspace: data.workspaceId ? { connect: { id: data.workspaceId } } : undefined,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const employee = await tx.employee.create({
+        data: {
+          employeeCode: data.employeeCode,
+          fullName: data.fullName,
+          personalEmail: data.personalEmail || null,
+          personalPhone: data.personalPhone || null,
+          department: data.department || null,
+          designation: data.designation || null,
+          companyName: data.companyName || null,
+          locationJoining: data.locationJoining || null,
+          deskNumber: data.deskNumber || null,
+          startDate: (data.startDate && data.startDate.trim() !== "") ? new Date(data.startDate) : null,
+          exitDate: (data.exitDate && data.exitDate.trim() !== "") ? new Date(data.exitDate) : null,
+          status: data.status,
+          photoPath: data.photoPath || null,
+          manager: managerId ? { connect: { id: managerId } } : undefined,
+          creator: creatorId ? { connect: { id: creatorId } } : undefined,
+          workspace: data.workspaceId ? { connect: { id: data.workspaceId } } : undefined,
+        },
+      });
+
+      // If this onboarding is from the upcoming joinings pipeline, mark as joined
+      if (data.upcomingId && data.upcomingId.trim() !== "") {
+        await tx.upcomingJoining.update({
+          where: { id: data.upcomingId },
+          data: { status: 'joined' }
+        });
+      }
+
+      return employee;
     });
+
+    const employee = result;
 
     // Create audit log Entry
     try {
@@ -144,6 +171,8 @@ export async function POST(request: Request) {
     } catch {
       // Don't fail the whole request if audit log fails
     }
+
+    // Audit log (outside transaction is fine)
 
     return NextResponse.json(employee, { status: 201 });
   } catch (error) {

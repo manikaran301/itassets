@@ -280,7 +280,7 @@ export default function WorkspacesPage() {
         <div className="space-y-2 max-w-md">
           <h2 className="text-2xl font-black tracking-tight uppercase">Access Restricted</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            You do not have authorization to view the <span className="font-bold text-foreground">Facility Registry</span>. 
+            You do not have authorization to view <span className="font-bold text-foreground">Seats & Workspaces</span>. 
             Please contact your system administrator to request <code className="bg-muted px-1.5 py-0.5 rounded text-primary">FACILITY_SEATS_VIEW</code> clearance.
           </p>
         </div>
@@ -294,17 +294,7 @@ export default function WorkspacesPage() {
       <div className="flex flex-col gap-6 shrink-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex flex-col">
-              <h1 className="text-3xl font-black tracking-tighter uppercase flex items-center gap-3">
-                <Layout className="w-8 h-8 text-primary" />
-                Seats Registry
-              </h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-                Architectural Workspace Intelligence
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50 ml-4">
+            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50">
               <button 
                 onClick={() => setViewMode("registry")}
                 className={cn(

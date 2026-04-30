@@ -169,7 +169,7 @@ export default function EditEmployeePage() {
           companyName: data.companyName || "",
           reportingManagerId: data.reportingManagerId || "",
           locationJoining: data.locationJoining || "",
-          deskNumber: data.deskNumber || "",
+          deskNumber: data.workspace?.code || data.deskNumber || "",
           startDate: data.startDate
             ? new Date(data.startDate).toISOString().split("T")[0]
             : "",
@@ -280,9 +280,7 @@ export default function EditEmployeePage() {
       }
 
       setSubmitSuccess(true);
-      setTimeout(() => {
-        router.push("/hr/employees");
-      }, 1500);
+      router.push(`/hr/employees/${employeeId}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -374,7 +372,7 @@ export default function EditEmployeePage() {
         <div className="space-y-1">
           <div className="flex items-center gap-4">
             <Link
-              href="/hr/employees"
+              href={`/hr/employees/${employeeId}`}
               className="p-2.5 hover:bg-white/5 rounded-2xl border border-white/5 transition-all text-muted-foreground/60 hover:text-foreground"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -389,7 +387,7 @@ export default function EditEmployeePage() {
         </div>
         <div className="flex gap-4 items-center">
           <Link
-            href="/hr/employees"
+            href={`/hr/employees/${employeeId}`}
             className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-all"
           >
             Cancel
@@ -637,7 +635,7 @@ export default function EditEmployeePage() {
                 Station & Digital Identity
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+              <div className="grid grid-cols-1 gap-6 relative z-10">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
                     Assigned Seat / Desk
@@ -678,15 +676,17 @@ export default function EditEmployeePage() {
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
                     Account Status
                   </label>
-                  <SearchableSelect
-                    options={[
-                      { value: "active", label: "Active" },
-                      { value: "inactive", label: "Inactive" },
-                    ]}
-                    value={formData.status}
-                    onChange={(val) => updateField("status", val)}
-                    placeholder="Status"
-                  />
+                  <div className="max-w-xs">
+                    <SearchableSelect
+                      options={[
+                        { value: "active", label: "Active" },
+                        { value: "inactive", label: "Inactive" },
+                      ]}
+                      value={formData.status}
+                      onChange={(val) => updateField("status", val)}
+                      placeholder="Status"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

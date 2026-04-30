@@ -188,6 +188,125 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     }, { status: 500 });
   }
 }
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await context.params;
+    const data = await request.json();
+    
+    // Fetch old value for audit logging and change detection
+    const oldEmployee = await prisma.employee.findUnique({ 
+      where: { id },
+      include: { workspace: true }
+    });
+
+    if (!oldEmployee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    const employee = await prisma.employee.update({
+      where: { id },
+      data: {
+        ...(data.status && { status: data.status }),
+        ...(data.exitDate && { exitDate: new Date(data.exitDate) }),
+        ...(data.fullName && { fullName: data.fullName }),
+        ...(data.employeeCode && { employeeCode: data.employeeCode }),
+        ...(data.department && { department: data.department }),
+        ...(data.designation && { designation: data.designation }),
+        ...(data.companyName && { companyName: data.companyName }),
+        ...(data.locationJoining && { locationJoining: data.locationJoining }),
+        ...(data.workspaceId && { workspace: { connect: { id: data.workspaceId } } }),
+        ...(data.reportingManagerId && { manager: { connect: { id: data.reportingManagerId } } }),
+      },
+    });
+
+    // Audit Logging
+    try {
+      await prisma.auditLog.create({
+        data: {
+          entityType: 'employee',
+          entityId: employee.id,
+          action: 'updated',
+          changedBy: data.updatedBy || null,
+          oldValue: JSON.parse(JSON.stringify(oldEmployee, (key, value) => typeof value === 'bigint' ? value.toString() : value)),
+          newValue: JSON.parse(JSON.stringify(employee, (key, value) => typeof value === 'bigint' ? value.toString() : value)),
+        }
+      });
+    } catch (auditError) {
+      console.error('Audit Log Error:', auditError);
+    }
+
+    // Auto-log recovery_exit if employee status changed to inactive/exit_pending
+    const exitStatuses = ['inactive', 'exit_pending'];
+    const wasActive = !exitStatuses.includes(oldEmployee.status);
+    const isNowExiting = exitStatuses.includes(data.status || employee.status);
+
+    if (wasActive && isNowExiting) {
+      const currentWorkspaceId = oldEmployee.workspace?.id;
+
+      // Recover Assets
+      const assignedAssets = await prisma.asset.findMany({ where: { currentEmployeeId: id } });
+      for (const asset of assignedAssets) {
+        const logCode = await generateLogCode();
+        await prisma.assignmentHistory.create({
+          data: {
+            logCode,
+            assetId: asset.id,
+            assetCategory: 'asset',
+            employeeId: id,
+            actionType: 'recovery_exit',
+            assignedDate: new Date(),
+            returnedDate: new Date(),
+            notes: `Asset recovered on employee exit initiation. Location: ${oldEmployee.workspace?.code || 'unknown'}.`,
+          },
+        });
+
+        await prisma.asset.update({
+          where: { id: asset.id },
+          data: { 
+            currentEmployeeId: null, 
+            status: 'available',
+            workspaceId: asset.workspaceId || currentWorkspaceId 
+          },
+        });
+      }
+
+      // Recover Accessories
+      const assignedAccessories = await prisma.accessory.findMany({ where: { currentEmployeeId: id } });
+      for (const acc of assignedAccessories) {
+        const logCode = await generateLogCode();
+        await prisma.assignmentHistory.create({
+          data: {
+            logCode,
+            accessoryId: acc.id,
+            assetCategory: 'accessory',
+            employeeId: id,
+            actionType: 'recovery_exit',
+            assignedDate: new Date(),
+            returnedDate: new Date(),
+            notes: `Accessory recovered on exit. Location: ${oldEmployee.workspace?.code || 'unknown'}.`,
+          },
+        });
+
+        await prisma.accessory.update({
+          where: { id: acc.id },
+          data: { 
+            currentEmployeeId: null, 
+            status: 'available',
+            workspaceId: acc.workspaceId || currentWorkspaceId
+          },
+        });
+      }
+    }
+
+    return NextResponse.json(employee);
+  } catch (error) {
+    console.error('Employee Patch Error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to update employee', 
+      details: error instanceof Error ? error.message : 'Unknown database error' 
+    }, { status: 500 });
+  }
+}
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {

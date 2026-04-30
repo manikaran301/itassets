@@ -115,6 +115,50 @@ export async function PATCH(
               notes: oldAsset.currentEmployeeId ? `Reassigned to new employee` : null,
             },
           });
+
+          // AUTO-FULFILL PROVISIONING REQUEST
+          // If this asset matches a pending/in_progress provisioning request for this employee, fulfill it.
+          try {
+            const assetType = oldAsset.type;
+            
+            // 1. Find matching provisioning request
+            const pendingReq = await prisma.provisioningRequest.findFirst({
+              where: {
+                employeeId: newEmployeeId,
+                status: { in: ['pending', 'in_progress'] },
+                OR: [
+                  { deviceTypeNeeded: assetType as any },
+                  { specialRequirements: { contains: assetType, mode: 'insensitive' } }
+                ]
+              }
+            });
+
+            if (pendingReq) {
+              // Update provisioning request
+              await prisma.provisioningRequest.update({
+                where: { id: pendingReq.id },
+                data: {
+                  status: 'fulfilled',
+                  fulfilledBy: changedBy || null,
+                  notes: (pendingReq.notes || '') + `\nAuto-fulfilled via asset assignment (${oldAsset.assetTag})`
+                }
+              });
+
+              // Also update the linked EmployeeAssetRequirement
+              await prisma.employeeAssetRequirement.updateMany({
+                where: {
+                  employeeId: newEmployeeId,
+                  assetType: assetType as any,
+                  status: { in: ['pending', 'approved'] }
+                },
+                data: {
+                  status: 'fulfilled'
+                }
+              });
+            }
+          } catch (autoFulfillError) {
+            console.error('Auto-fulfillment error:', autoFulfillError);
+          }
         } else if (oldAsset.currentEmployeeId) {
           // Asset returned/unassigned - mark last assignment as returned
           const lastAssignment = await prisma.assignmentHistory.findFirst({

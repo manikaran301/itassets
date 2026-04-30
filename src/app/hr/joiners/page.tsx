@@ -13,8 +13,11 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Search,
+  Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface PipelineStep {
   status: string;
@@ -53,6 +56,12 @@ export default function JoinersPage() {
   const [joiners, setJoiners] = useState<Joiner[]>([]);
   const [loading, setLoading] = useState(true);
   const [raising, setRaising] = useState<string | null>(null);
+  
+  // Filtering States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState("all");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [selectedLocation, setSelectedLocation] = useState("all");
 
   useEffect(() => {
     fetchJoiners();
@@ -60,15 +69,37 @@ export default function JoinersPage() {
 
   const fetchJoiners = async () => {
     try {
+      setLoading(true);
       const res = await fetch("/api/joiners");
       const data = await res.json();
-      setJoiners(data);
+      setJoiners(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch joiners:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Derived filter options
+  const companies = [...new Set(joiners.map((j) => j.companyName).filter((c): c is string => !!c))].sort();
+  const departments = [...new Set(joiners.map((j) => j.department).filter((d): d is string => !!d))].sort();
+  const locations = [...new Set(joiners.map((j) => j.locationJoining).filter((l): l is string => !!l))].sort();
+
+  const filteredJoiners = joiners.filter((j) => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      searchQuery === "" ||
+      j.fullName.toLowerCase().includes(q) ||
+      j.employeeCode.toLowerCase().includes(q) ||
+      (j.department || "").toLowerCase().includes(q) ||
+      (j.companyName || "").toLowerCase().includes(q);
+
+    const matchesCompany = selectedCompany === "all" || j.companyName === selectedCompany;
+    const matchesDept = selectedDepartment === "all" || j.department === selectedDepartment;
+    const matchesLocation = selectedLocation === "all" || j.locationJoining === selectedLocation;
+
+    return matchesSearch && matchesCompany && matchesDept && matchesLocation;
+  });
 
   const raiseRequest = async (
     employeeId: string,
@@ -157,10 +188,43 @@ export default function JoinersPage() {
             <h2 className="text-lg font-bold tracking-tight">
               Onboarding Tracker
             </h2>
-            <p className="text-xs text-muted-foreground/70 max-w-2xl">
-              Track new joiners (last 120 days). Raise provisioning requests for
-              Hardware & Email — IT picks them up on the Provisioning page.
-            </p>
+            <div className="flex items-center gap-4 mt-1">
+               <p className="text-xs text-muted-foreground/70">
+                Track new joiners (last 120 days). Raise provisioning requests for Hardware & Email.
+              </p>
+              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{joiners.length} ACTIVE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Unified Multi-Filter Ribbon */}
+        <div className="bg-card/50 border border-border p-1.5 rounded-2xl flex flex-col lg:flex-row gap-2 items-center shrink-0">
+          <div className="relative flex-1 group w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+            <input
+              type="text"
+              placeholder="SEARCH BY NAME, CODE, DEPT, COMPANY..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent pl-11 pr-4 py-2.5 rounded-xl text-[10px] font-bold border border-transparent focus:bg-background outline-none transition-all placeholder:text-[8px] placeholder:font-black placeholder:tracking-widest opacity-80"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+            <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
+              <option value="all">COMPANIES</option>
+              {companies.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+            </select>
+            <select value={selectedDepartment} onChange={(e) => setSelectedDepartment(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
+              <option value="all">DEPARTMENTS</option>
+              {departments.map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+            </select>
+            <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
+              <option value="all">LOCATIONS</option>
+              {locations.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+            </select>
           </div>
         </div>
 
@@ -236,7 +300,7 @@ export default function JoinersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
-              {joiners.length === 0 ? (
+              {filteredJoiners.length === 0 ? (
                 <tr>
                   <td
                     colSpan={4}
@@ -244,12 +308,12 @@ export default function JoinersPage() {
                   >
                     <Users className="w-10 h-10 mx-auto mb-3 opacity-20" />
                     <p className="text-sm font-bold">
-                      No new joiners in the last 120 days
+                      {searchQuery ? "No matching joiners found" : "No new joiners in the last 120 days"}
                     </p>
                   </td>
                 </tr>
               ) : (
-                joiners.map((joiner) => {
+                filteredJoiners.map((joiner) => {
                   const steps = joiner.pipeline;
                   return (
                     <tr

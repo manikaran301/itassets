@@ -27,6 +27,8 @@ import {
   X,
   Download,
   Lock,
+  Laptop,
+  ArrowRight,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
@@ -334,6 +336,19 @@ export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [provisioningTarget, setProvisioningTarget] = useState<string | null>(null);
+  const [isProvisioningFlow, setIsProvisioningFlow] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("assignTo");
+    const flow = params.get("flow");
+    if (target) setProvisioningTarget(target);
+    if (flow === "provisioning") {
+      setIsProvisioningFlow(true);
+      setStatusFilter("available");
+    }
+  }, []);
 
   useEffect(() => {
     const fetchAssets = async () => {
@@ -602,6 +617,29 @@ export default function AssetsPage() {
         />
       )}
 
+      {isProvisioningFlow && provisioningTarget && (
+        <div className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex items-center justify-between animate-in slide-in-from-top duration-500">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
+              <Laptop className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-primary">Provisioning Workflow</h3>
+              <p className="text-[10px] font-bold text-muted-foreground">Assigning hardware to Joiner ID: <span className="text-foreground">{provisioningTarget}</span></p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setIsProvisioningFlow(false);
+              setProvisioningTarget(null);
+            }}
+            className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground px-4 py-2"
+          >
+            Exit Flow
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-end items-center gap-2 px-1">
         {checkPermission("IT", "ASSETS", "canImport") && (
           <>
@@ -789,7 +827,6 @@ export default function AssetsPage() {
                         {asset.currentEmployee ? (
                           <div className="flex items-center gap-3 group/profile relative">
                             <div className="relative">
-                              {/* Enhanced Avatar with Hover Effect */}
                               <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 shadow-lg group-hover/profile:scale-110 transition-all duration-300 relative">
                                 {asset.currentEmployee.photoPath ? (
                                   <img 
@@ -802,7 +839,6 @@ export default function AssetsPage() {
                                     {asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                                   </div>
                                 )}
-                                {/* Glassmorphic Hover Overlay */}
                                 <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px] opacity-0 group-hover/profile:opacity-100 transition-opacity flex items-center justify-center">
                                   <User className="w-4 h-4 text-white" />
                                 </div>
@@ -819,55 +855,82 @@ export default function AssetsPage() {
                               </div>
                             </div>
 
-                            {/* Premium Hover Card - "Inside Container" implementation */}
+                            {/* Premium Hover Card */}
                             <div className="absolute left-0 top-0 opacity-0 group-hover/profile:opacity-100 scale-95 group-hover/profile:scale-100 transition-all duration-300 pointer-events-none z-[100] w-full min-w-[240px]">
                               <div className="bg-card/98 backdrop-blur-2xl border border-primary/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-4 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
                                 <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-2 pb-2 border-b border-white/5">
-                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
-                                    {asset.currentEmployee.photoPath ? (
-                                      <img 
-                                        src={asset.currentEmployee.photoPath} 
-                                        alt={asset.currentEmployee.fullName}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)
-                                    )}
-                                  </div>
-                                  <div>
-                                    <p className="text-[10px] font-black uppercase text-foreground leading-none">
-                                      {asset.currentEmployee.fullName} <span className="text-muted-foreground/60 ml-1">({asset.currentEmployee.employeeCode})</span>
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase tracking-tight">
-                                    <span>{asset.currentEmployee.department || 'N/A'}</span>
-                                    <span className="opacity-20 text-[10px]">|</span>
-                                    <span>{asset.currentEmployee.manager?.fullName || 'No Manager'}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center bg-white/5 px-2 py-1.5 rounded-lg border border-white/5">
-                                    <div className="space-y-0.5">
-                                      <p className="text-[6px] font-black uppercase text-muted-foreground/50 tracking-widest">Workspace ID</p>
-                                      <p className="text-[9px] font-black text-primary uppercase leading-none">
-                                        {asset.currentEmployee?.workspace?.code || asset.workspace?.code || asset.currentEmployee?.deskNumber || 'NO SEAT'}
+                                  <div className="flex items-center gap-3 mb-2 pb-2 border-b border-white/5">
+                                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
+                                      {asset.currentEmployee.photoPath ? (
+                                        <img src={asset.currentEmployee.photoPath} alt={asset.currentEmployee.fullName} className="w-full h-full object-cover" />
+                                      ) : (
+                                        asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] font-black uppercase text-foreground leading-none">
+                                        {asset.currentEmployee.fullName} <span className="text-muted-foreground/60 ml-1">({asset.currentEmployee.employeeCode})</span>
                                       </p>
                                     </div>
-                                    <User className="w-3 h-3 text-primary/40" />
                                   </div>
-                                </div>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase tracking-tight">
+                                      <span>{asset.currentEmployee.department || 'N/A'}</span>
+                                      <span className="opacity-20 text-[10px]">|</span>
+                                      <span>{asset.currentEmployee.manager?.fullName || 'No Manager'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center bg-white/5 px-2 py-1.5 rounded-lg border border-white/5">
+                                      <div className="space-y-0.5">
+                                        <p className="text-[6px] font-black uppercase text-muted-foreground/50 tracking-widest">Workspace ID</p>
+                                        <p className="text-[9px] font-black text-primary uppercase leading-none">
+                                          {asset.currentEmployee?.workspace?.code || asset.workspace?.code || asset.currentEmployee?.deskNumber || 'NO SEAT'}
+                                        </p>
+                                      </div>
+                                      <User className="w-3 h-3 text-primary/40" />
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-3 opacity-20">
-                            <div className="w-10 h-10 rounded-xl bg-muted border border-border/50 flex items-center justify-center">
-                              <User className="w-4 h-4" />
+                          <div className="flex items-center justify-between gap-3 w-full">
+                            <div className="flex items-center gap-3 opacity-20">
+                              <div className="w-10 h-10 rounded-xl bg-muted border border-border/50 flex items-center justify-center">
+                                <User className="w-4 h-4" />
+                              </div>
+                              <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">In Store</span>
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">In Store</span>
+                            
+                            {isProvisioningFlow && asset.status === "available" && (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!confirm(`Assign this asset to joiner ${provisioningTarget}?`)) return;
+                                  
+                                  try {
+                                    const res = await fetch(`/api/assets/${asset.id}/assign`, {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ employeeId: provisioningTarget }),
+                                    });
+                                    
+                                    if (res.ok) {
+                                      router.push(`/it/email?assignTo=${provisioningTarget}&flow=provisioning`);
+                                    } else {
+                                      const err = await res.json();
+                                      alert(err.error || "Assignment failed");
+                                    }
+                                  } catch (error) {
+                                    alert("Failed to assign asset");
+                                  }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                              >
+                                Assign & Next <ArrowRight className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>

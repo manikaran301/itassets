@@ -278,278 +278,193 @@ export default function AccessoriesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in relative pb-20">
-      
-      {/* ── Premium Header & Actions ── */}
-      <div className="sticky top-14 z-[100] bg-background/80 backdrop-blur-xl -mx-4 md:-mx-6 px-4 md:px-6 py-4 mb-2 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-end gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Import/Export Action Group */}
-          <div className="flex items-center gap-2 mr-2">
-            <input
-              type="file"
-              id="accessory-import"
-              accept=".csv"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-            <label
-              htmlFor="accessory-import"
-              className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Import CSV
-            </label>
-            <a
-              href="/templates/accessory_import_template.csv"
-              download
-              className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Template
-            </a>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              Export
-            </button>
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in pt-4 px-6 space-y-4">
+      {/* Header & Stats Strip */}
+      <div className="shrink-0 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20">
+            <Package className="w-5 h-5 text-primary" />
           </div>
+          <div>
+            <h1 className="text-lg font-black uppercase tracking-tight leading-none">Accessory Inventory</h1>
+            <p className="text-[10px] font-bold text-muted-foreground/50 mt-1 uppercase tracking-widest">Managing {accessories.length} components in active stock</p>
+          </div>
+        </div>
 
-          <Link
-            href="/it/accessories/new"
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-3xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center gap-3"
-          >
-            <Plus className="w-5 h-5" />
-            Add Accessory
-          </Link>
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+          {[
+            { label: "Available", count: accessories.filter(a => a.status === 'available').length, color: "text-green-500", bg: "bg-green-500/10" },
+            { label: "In Use", count: accessories.filter(a => a.status === 'assigned').length, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Repair", count: accessories.filter(a => a.status === 'in_repair').length, color: "text-amber-500", bg: "bg-amber-500/10" }
+          ].map(s => (
+            <div key={s.label} className={cn("px-3 py-1.5 rounded-lg border border-white/5 flex items-center gap-3", s.bg)}>
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{s.label}</span>
+              <span className={cn("text-xs font-black", s.color)}>{s.count}</span>
+            </div>
+          ))}
+          
+          <div className="h-8 w-px bg-white/10 mx-1" />
+          
+          <div className="flex items-center gap-2">
+            <input type="file" id="accessory-import" accept=".csv" className="hidden" onChange={handleFileUpload} />
+            <label htmlFor="accessory-import" className="p-2 bg-muted/30 hover:bg-muted/50 rounded-lg border border-white/5 transition-all cursor-pointer" title="Import CSV">
+              <Upload className="w-4 h-4 text-muted-foreground" />
+            </label>
+            <button onClick={handleExport} className="p-2 bg-muted/30 hover:bg-muted/50 rounded-lg border border-white/5 transition-all" title="Export CSV">
+              <Download className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <Link href="/it/accessories/new" className="ml-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
+              <Plus className="w-3.5 h-3.5" />
+              Add Unit
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* ── Compact Stats Overview ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Total Stock", value: accessories.length, icon: Package, color: "text-foreground bg-muted border-border" },
-          { label: "In Operation", value: accessories.filter(a => a.status === 'assigned').length, icon: MousePointer2, color: "text-primary bg-primary/10 border-primary/20" },
-          { label: "Available", value: accessories.filter(a => a.status === 'available').length, icon: CheckCircle2, color: "text-secondary bg-secondary/10 border-secondary/20" },
-          { label: "Maintenance", value: accessories.filter(a => a.status === 'in_repair').length, icon: Usb, color: "text-yellow-500 bg-yellow-500/10 border-yellow-500/20" },
-        ].map((stat, i) => (
-          <div key={i} className="bg-card border border-border/60 p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all overflow-hidden relative">
-            <div className="space-y-0.5 relative z-10">
-              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">{stat.label}</p>
-              <div className="flex items-baseline gap-1">
-                <h4 className="text-xl font-black">{stat.value}</h4>
-                <span className="text-[8px] font-black text-muted-foreground/20 uppercase">Units</span>
-              </div>
-            </div>
-            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border border-transparent transition-all relative z-10", stat.color)}>
-              <stat.icon className="w-5 h-5" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Search & Filter Controls ── */}
-      <div className="flex flex-col lg:flex-row gap-4 items-center">
-        <div className="flex-1 relative w-full group">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+      {/* Filter Ribbon */}
+      <div className="shrink-0 bg-card/40 border border-white/5 p-1.5 rounded-2xl flex flex-col md:flex-row gap-2 items-center">
+        <div className="relative flex-1 group w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="Search Tag, Model, Serial, or Associate..."
+            placeholder="FILTER BY TAG, MODEL, SERIAL, OR ASSOCIATE..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-muted/20 border border-white/5 pl-14 pr-6 py-4 rounded-[22px] outline-none focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all text-xs font-bold"
+            className="w-full bg-transparent pl-11 pr-4 py-2 rounded-xl text-[10px] font-bold border border-transparent focus:bg-background/40 outline-none transition-all placeholder:text-[8px] placeholder:font-black placeholder:tracking-widest"
           />
         </div>
 
-        <div className="flex gap-3 w-full lg:w-auto">
-          <div className="w-full lg:w-48">
+        <div className="flex gap-2 w-full md:w-auto">
+          <div className="w-40">
             <SearchableSelect
-              options={[
-                { value: "all", label: "All Types" },
-                ...ACCESSORY_TYPES.map((type) => ({ value: type, label: type }))
-              ]}
+              options={[{ value: "all", label: "ALL TYPES" }, ...ACCESSORY_TYPES.map(type => ({ value: type, label: type.toUpperCase() }))]}
               value={typeFilter}
               onChange={(val) => setTypeFilter(val || "all")}
-              placeholder="All Types"
-              icon={<Filter className="w-4 h-4" />}
+              placeholder="CATEGORY"
               compact
             />
           </div>
-
-          <div className="w-full lg:w-48">
+          <div className="w-40">
             <SearchableSelect
               options={[
-                { value: "all", label: "All Status" },
-                { value: "available", label: "Available" },
-                { value: "assigned", label: "In Use" },
-                { value: "in_repair", label: "In Repair" },
-                { value: "retired", label: "Retired" }
+                { value: "all", label: "ALL STATUS" },
+                { value: "available", label: "AVAILABLE" },
+                { value: "assigned", label: "IN USE" },
+                { value: "in_repair", label: "REPAIR" },
+                { value: "retired", label: "RETIRED" }
               ]}
               value={statusFilter}
               onChange={(val) => setStatusFilter(val || "all")}
-              placeholder="All Status"
-              icon={<Filter className="w-4 h-4" />}
+              placeholder="STATUS"
               compact
             />
           </div>
         </div>
       </div>
 
-      {/* ── Inventory Grid Table ── */}
-      <div className="premium-card rounded-[32px] overflow-visible border border-white/5 bg-card/20 relative group">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-muted/40 border-b border-white/5">
-                <th className="pl-6 pr-4 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Identifier & Type</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Condition</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Status</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Associate</th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 text-right">Actions</th>
+      {/* High-Density Table Grid */}
+      <div className="flex-1 min-h-0 bg-card/20 border border-white/5 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        <div className="overflow-auto scrollbar-hide flex-1">
+          <table className="w-full text-left border-collapse table-fixed">
+            <thead className="sticky top-0 z-10 bg-[#0f1115]/95 backdrop-blur-md">
+              <tr className="border-b border-white/5">
+                <th className="w-[18%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Identifier & Unit</th>
+                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-center">Status</th>
+                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-center">Condition</th>
+                <th className="w-[22%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Current Stakeholder</th>
+                <th className="w-[20%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Serial / Make</th>
+                <th className="w-[10%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-right pr-6">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-white/[0.03]">
               {filteredAccessories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-24 text-center">
-                    <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground/10" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">No matching accessories found in current cell</p>
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <Package className="w-10 h-10 mx-auto mb-4 text-primary/10" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">Inventory Empty</p>
                   </td>
                 </tr>
               ) : (
-                filteredAccessories.map((acc, idx) => (
-                  <tr
-                    key={acc.id}
+                filteredAccessories.map((acc) => (
+                  <tr 
+                    key={acc.id} 
                     onClick={() => router.push(`/it/accessories/${acc.id}`)}
-                    className="group/row hover:bg-white/[0.03] transition-all cursor-pointer border-l-2 border-l-transparent hover:border-l-primary"
+                    className="group hover:bg-white/[0.02] transition-colors border-white/5 cursor-pointer"
                   >
-                    <td className="pl-6 pr-4 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 group-hover/row:scale-110 transition-transform">
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary border border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                           {getTypeIcon(acc.type)}
                         </div>
-                        <div>
-                          <p className="text-xs font-black tracking-tight uppercase">{acc.assetTag}</p>
-                          <p className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">{acc.type.replace('_', ' ')} • {acc.model || 'Generic'}</p>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-black truncate leading-tight uppercase">{acc.assetTag}</p>
+                          <p className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest truncate">{acc.type.replace('_', ' ')}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+
+                    <td className="px-4 py-2.5 text-center">
                       <span className={cn(
-                        "text-[9px] font-black uppercase tracking-widest",
-                        acc.condition === 'excellent' ? "text-green-500" : 
-                        acc.condition === 'good' ? "text-primary" : "text-yellow-500"
+                        "text-[8px] font-black uppercase px-2 py-0.5 rounded-md border tracking-tighter",
+                        getStatusColor(acc.status)
+                      )}>
+                        {getStatusLabel(acc.status)}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-2.5 text-center">
+                      <span className={cn(
+                        "text-[8px] font-black uppercase tracking-[0.1em]",
+                        acc.condition === 'excellent' ? "text-green-500" : acc.condition === 'good' ? "text-primary" : "text-amber-500"
                       )}>
                         {acc.condition.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className={cn(
-                        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest transition-all shadow-sm",
-                        getStatusColor(acc.status)
-                      )}>
-                        <div className={cn("w-1.5 h-1.5 rounded-full", acc.status === 'available' ? "bg-green-500" : "bg-primary")} />
-                        {getStatusLabel(acc.status)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
+
+                    <td className="px-4 py-2.5">
                       {acc.currentEmployee ? (
-                        <div className="flex items-center gap-3 group/profile relative">
-                          <div className="relative">
-                            {/* Enhanced Avatar with Hover Effect */}
-                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 shadow-lg group-hover/profile:scale-110 transition-all duration-300 relative">
-                              {acc.currentEmployee.photoPath ? (
-                                <img 
-                                  src={acc.currentEmployee.photoPath} 
-                                  alt={acc.currentEmployee.fullName}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase">
-                                  {acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                </div>
-                              )}
-                              {/* Glassmorphic Hover Overlay */}
-                              <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px] opacity-0 group-hover/profile:opacity-100 transition-opacity flex items-center justify-center">
-                                <User className="w-4 h-4 text-white" />
-                              </div>
-                            </div>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center overflow-hidden">
+                            {acc.currentEmployee.photoPath ? (
+                              <img src={acc.currentEmployee.photoPath} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[9px] font-black text-muted-foreground/40 uppercase">
+                                {acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </span>
+                            )}
                           </div>
-
-                          <div>
-                            <p className="text-[11px] font-black truncate max-w-[150px] uppercase leading-none mb-1 group-hover/profile:text-primary transition-colors">{acc.currentEmployee.fullName}</p>
-                            <p className="text-[9px] opacity-40 font-black uppercase tracking-widest">{acc.currentEmployee.employeeCode}</p>
-                          </div>
-
-                          {/* Premium Hover Card - "Inside Container" implementation */}
-                          <div className="absolute left-0 top-0 opacity-0 group-hover/profile:opacity-100 scale-95 group-hover/profile:scale-100 transition-all duration-300 pointer-events-none z-[100] w-full min-w-[240px]">
-                            <div className="bg-card/98 backdrop-blur-2xl border border-primary/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-4 relative overflow-hidden">
-                              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
-                              <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-2 pb-2 border-b border-white/5">
-                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
-                                    {acc.currentEmployee.photoPath ? (
-                                      <img 
-                                        src={acc.currentEmployee.photoPath} 
-                                        alt={acc.currentEmployee.fullName}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)
-                                    )}
-                                  </div>
-                                  <div>
-                                    <p className="text-[10px] font-black uppercase text-foreground leading-none">
-                                      {acc.currentEmployee.fullName} <span className="text-muted-foreground/60 ml-1">({acc.currentEmployee.employeeCode})</span>
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase tracking-tight">
-                                    <span>{acc.currentEmployee.department || 'N/A'}</span>
-                                    <span className="opacity-20 text-[10px]">|</span>
-                                    <span>{acc.currentEmployee.manager?.fullName || 'No Manager'}</span>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2 bg-white/5 px-2 py-1.5 rounded-lg border border-white/5">
-                                    <div className="space-y-0.5 border-r border-white/5 pr-2">
-                                      <p className="text-[6px] font-black uppercase text-muted-foreground/50 tracking-widest leading-none">Workspace ID</p>
-                                      <p className="text-[9px] font-black text-primary uppercase leading-none truncate">
-                                        {acc.currentEmployee?.workspace?.code || 'No Seat'}
-                                      </p>
-                                    </div>
-                                    <div className="space-y-0.5 pl-1">
-                                      <p className="text-[6px] font-black uppercase text-muted-foreground/50 tracking-widest leading-none">Status</p>
-                                      <p className="text-[9px] font-black text-primary uppercase leading-none truncate">
-                                        {acc.status.replace('_', ' ')}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold truncate leading-tight group-hover:text-primary transition-colors">{acc.currentEmployee.fullName}</p>
+                            <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-widest">{acc.currentEmployee.employeeCode}</p>
                           </div>
                         </div>
                       ) : (
-                        <span className="text-[9px] font-black opacity-20 uppercase tracking-[0.2em] italic">In Warehouse</span>
+                        <span className="text-[9px] font-black text-muted-foreground/10 italic uppercase tracking-widest">In Warehouse</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-all">
+
+                    <td className="px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold truncate leading-tight text-muted-foreground/60">{acc.serialNumber || 'No SN'}</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-widest truncate">{acc.make || 'Generic'} {acc.model || ''}</p>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-2.5 text-right pr-6">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         <button
                           onClick={(e) => { e.stopPropagation(); router.push(`/it/accessories/${acc.id}`); }}
-                          className="p-2 hover:bg-primary/10 text-muted-foreground/40 hover:text-primary rounded-xl transition-all"
+                          className="p-1.5 hover:bg-primary/10 text-muted-foreground/40 hover:text-primary rounded-lg transition-all"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(acc.id, acc.assetTag); }}
                           disabled={deleting === acc.id}
-                          className="p-2 hover:bg-red-500/10 text-muted-foreground/40 hover:text-red-500 rounded-xl transition-all disabled:opacity-50"
+                          className="p-1.5 hover:bg-red-500/10 text-muted-foreground/40 hover:text-red-500 rounded-lg transition-all disabled:opacity-50"
                         >
-                          {deleting === acc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          {deleting === acc.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                         </button>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/20 ml-2" />
                       </div>
                     </td>
                   </tr>
@@ -557,6 +472,19 @@ export default function AccessoriesPage() {
               )}
             </tbody>
           </table>
+        </div>
+        
+        {/* Footer info strip */}
+        <div className="shrink-0 bg-white/[0.02] border-t border-white/5 px-6 py-2 flex items-center justify-between">
+          <p className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">
+            Accessory Inventory System · Authorized Personnel Access Only
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Database Synchronized</span>
+            </div>
+          </div>
         </div>
       </div>
 

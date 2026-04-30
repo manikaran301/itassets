@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { SeatSelectorModal } from "@/components/SeatSelectorModal";
@@ -34,8 +34,9 @@ interface ManagerOption {
 export default function NewEmployeePage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [managers, setManagers] = useState<ManagerOption[]>([]);
-  const [, setLoadingManagers] = useState(true);
+  const [loadingManagers, setLoadingManagers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -55,6 +56,7 @@ export default function NewEmployeePage() {
     startDate: "",
     status: "active",
     workspaceId: "",
+    upcomingId: searchParams.get("upcomingId") || "",
   });
 
   const [photo, setPhoto] = useState<File | null>(null);
@@ -75,6 +77,68 @@ export default function NewEmployeePage() {
       if (photoPreview) URL.revokeObjectURL(photoPreview);
     };
   }, [photoPreview]);
+
+  useEffect(() => {
+    const fetchSupportData = async () => {
+      try {
+        const res = await fetch("/api/employees");
+        const employees = await res.json();
+        const data = employees.data || employees;
+        const managerList = data.map((e: any) => ({
+          value: e.id,
+          label: `${e.fullName} (${e.employeeCode})`,
+          fullName: e.fullName // Keep for matching
+        }));
+        setManagers(managerList);
+        setLoadingManagers(false);
+      } catch (error) {
+        console.error("Failed to fetch managers:", error);
+      }
+    };
+    fetchSupportData();
+  }, []);
+
+  useEffect(() => {
+    const fetchUpcomingData = async () => {
+      const upcomingId = searchParams.get("upcomingId");
+      if (!upcomingId) return;
+
+      try {
+        const res = await fetch(`/api/hr/upcoming?id=${upcomingId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // Match manager name to ID if managers are loaded
+        let matchedManagerId = "";
+        if (data.reportingManager && managers.length > 0) {
+          const match = managers.find(m => 
+            m.label.toLowerCase().trim() === data.reportingManager.toLowerCase().trim()
+          );
+          if (match) matchedManagerId = match.value;
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          fullName: data.fullName || "",
+          personalEmail: data.email || "",
+          personalPhone: data.phoneNumber || "",
+          department: data.department || "",
+          designation: data.designation || "",
+          companyName: data.companyName || "",
+          locationJoining: data.placeOfPosting || "",
+          startDate: data.joiningDate ? new Date(data.joiningDate).toISOString().split('T')[0] : "",
+          reportingManagerId: matchedManagerId,
+          upcomingId: upcomingId
+        }));
+      } catch (err) {
+        console.error("Failed to fetch upcoming candidate data:", err);
+      }
+    };
+
+    if (!loadingManagers) {
+      fetchUpcomingData();
+    }
+  }, [searchParams, loadingManagers, managers]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let file: File | null = null;
@@ -126,6 +190,13 @@ export default function NewEmployeePage() {
       return;
     }
 
+    // Smart Algo: Desktop requires a Physical Seat
+    if (provisions.desktop && !formData.workspaceId) {
+      setError("Strategic Conflict: Desktop provisioning requires an assigned Physical Seat. Please browse and select a desk from the Seating Map before activating the record.");
+      setIsSeatModalOpen(true); // Auto-open the seat selector for them
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
@@ -149,6 +220,7 @@ export default function NewEmployeePage() {
         ...formData,
         photoPath,
         createdBy: userId,
+        upcomingId: formData.upcomingId,
       };
 
       // Step 1: Create the employee
@@ -608,9 +680,17 @@ export default function NewEmployeePage() {
 
             {/* Asset Provisioning */}
             <div className="premium-card p-6 rounded-[32px] border border-white/5 bg-card/40 relative col-span-1 md:col-span-2 z-10">
-              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-4 relative z-10">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
-                Infrastructure Requests
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary">
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
+                  Infrastructure Requests
+                </div>
+                {provisions.desktop && !formData.workspaceId && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full animate-pulse">
+                    <Shield className="w-3 h-3 text-amber-500" />
+                    <span className="text-[8px] font-black uppercase text-amber-500 tracking-widest">Seat Required for Desktop</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 relative z-10">

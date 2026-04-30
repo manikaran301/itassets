@@ -27,6 +27,40 @@ export async function PATCH(
 
     // When marking as fulfilled, record who and when
     if (status === 'fulfilled') {
+      // SAFETY CHECK: Verify if the resource is actually assigned to the employee
+      const employee = await prisma.employee.findUnique({
+        where: { id: existing.employeeId },
+        include: {
+          currentAssets: true,
+          emailAccounts: { where: { status: 'active' } }
+        }
+      });
+
+      if (employee) {
+        const type = (existing.deviceTypeNeeded || existing.specialRequirements || '').toLowerCase();
+        const isEmail = type.includes('email');
+        
+        if (isEmail) {
+          if (employee.emailAccounts.length === 0) {
+            return NextResponse.json({ 
+              error: 'Verification Failed: No active email account found for this employee. Please assign an email first.' 
+            }, { status: 400 });
+          }
+        } else if (type) {
+          // Check if any of the assigned assets match the type
+          const hasAsset = employee.currentAssets.some(a => 
+            a.type.toLowerCase() === type || 
+            type.includes(a.type.toLowerCase())
+          );
+          
+          if (!hasAsset && employee.currentAssets.length === 0) {
+            return NextResponse.json({ 
+              error: `Verification Failed: No ${type} assigned to this employee. Please assign hardware first.` 
+            }, { status: 400 });
+          }
+        }
+      }
+
       updateData.fulfilledBy = fulfilledBy || null;
       updateData.fulfilledAt = new Date();
 
