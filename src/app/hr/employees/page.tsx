@@ -15,14 +15,23 @@ import {
   Briefcase,
   Lock,
   Activity,
+  Upload,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  FileSpreadsheet,
+  RefreshCw,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { usePermissions } from "@/hooks/usePermissions";
+import Papa from "papaparse";
 import { cn } from "@/lib/utils";
 import type { EmployeeListItem } from "@/lib/types";
 import Link from "next/link";
 import { format } from "date-fns";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 export default function EmployeesPage() {
   const PAGE_SIZE = 50;
@@ -42,8 +51,50 @@ export default function EmployeesPage() {
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+
+  // Load initial filters from URL if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const dept = params.get("dept");
+    if (dept) setSelectedDepartment(dept);
+    // Note: Since "Unassigned" in my reports means null/empty, 
+    // and the employees page filter uses exact strings, I'll need to handle the "Unassigned" case.
+  }, []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  // Import State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importRecords, setImportRecords] = useState<{ id: string; isValid: boolean; error?: string; data: any }[]>([]);
+  const [validatingImport, setValidatingImport] = useState(false);
+  const [importingBatch, setImportingBatch] = useState(false);
+
+  const validateImportRecords = async (recordsToValidate: any[]) => {
+    setValidatingImport(true);
+    try {
+      const res = await fetch("/api/employees/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records: recordsToValidate.map(r => r.data) }),
+      });
+      const data = await res.json();
+      setImportRecords(data.results);
+    } catch (err) {
+      console.error("Validation error:", err);
+      alert("Failed to validate import data");
+    } finally {
+      setValidatingImport(false);
+    }
+  };
+
+  const updateImportRecord = (id: string, field: string, value: string) => {
+    setImportRecords(prev => prev.map(r => {
+      if (r.id === id) {
+        return { ...r, data: { ...r.data, [field]: value } };
+      }
+      return r;
+    }));
+  };
 
   const fetchEmployees = useCallback(async (skip = 0, append = false) => {
     try {
@@ -148,6 +199,73 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/employees/export');
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Employee_Registry_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export data');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const rawData = results.data as any[];
+        const dataWithIds = rawData.map((d, i) => ({
+          id: i.toString(),
+          isValid: false,
+          data: d
+        }));
+        setImportRecords(dataWithIds);
+        setShowImportModal(true);
+        await validateImportRecords(dataWithIds);
+      },
+    });
+    e.target.value = "";
+  };
+
+  const processImport = async () => {
+    const validRecords = importRecords.filter((r) => r.isValid).map(r => r.data);
+    if (validRecords.length === 0) return;
+
+    setImportingBatch(true);
+    try {
+      const res = await fetch("/api/employees/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records: validRecords }),
+      });
+
+      if (!res.ok) throw new Error("Import failed");
+
+      alert(`Successfully imported ${validRecords.length} employees!`);
+      setShowImportModal(false);
+      fetchEmployees(0);
+    } catch (err) {
+      console.error("Import error:", err);
+      alert("Failed to complete import process");
+    } finally {
+      setImportingBatch(false);
+    }
+  };
+
   // Filter employees based on search and department
   const filteredEmployees = employees.filter((emp) => {
     const q = searchQuery.toLowerCase();
@@ -161,7 +279,9 @@ export default function EmployeesPage() {
       emp.locationJoining?.toLowerCase().includes(q);
 
     const matchesDepartment =
-      selectedDepartment === "all" || emp.department === selectedDepartment;
+      selectedDepartment === "all" || 
+      emp.department === selectedDepartment ||
+      (selectedDepartment === "Unassigned" && (!emp.department || emp.department === ""));
     const matchesCompany =
       selectedCompany === "all" || emp.companyName === selectedCompany;
     const matchesLocation =
@@ -217,6 +337,44 @@ export default function EmployeesPage() {
         <button onClick={() => fetchEmployees(0)} className="p-2.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-muted-foreground transition-all">
           <Loader2 className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
         </button>
+
+        {checkPermission("HR", "EMPLOYEES", "canImport") && (
+          <>
+            <input
+              type="file"
+              id="employee-import"
+              accept=".csv"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <label
+              htmlFor="employee-import"
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import CSV
+            </label>
+
+            <a
+              href="/templates/employee_import_template.csv"
+              download
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
+            >
+              <Download className="w-3.5 h-3.5" /> Template
+            </a>
+          </>
+        )}
+
+        {checkPermission("HR", "EMPLOYEES", "canExport") && (
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-green-500" />
+            Export CSV
+          </button>
+        )}
+
         {checkPermission("HR", "EMPLOYEES", "canCreate") && (
           <Link href="/hr/employees/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
             <Plus className="w-4 h-4" /> Enroll Employee
@@ -253,24 +411,57 @@ export default function EmployeesPage() {
         </div>
         
         <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-          <select value={selectedDepartment} onChange={(e) => setSelectedDepartment(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="all">DEPARTMENTS</option>
-            {departments.map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
-          </select>
-          <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="all">COMPANIES</option>
-            {companies.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
-          </select>
-          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="all">LOCATIONS</option>
-            {locations.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
-          </select>
-          <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="all">ALL STATUSES</option>
-            <option value="active">ACTIVE</option>
-            <option value="inactive">INACTIVE</option>
-            <option value="exit_pending">EXIT PENDING</option>
-          </select>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "DEPARTMENTS" },
+                { value: "Unassigned", label: "UNASSIGNED (FIX DATA)" },
+                ...departments.map(d => ({ value: d, label: d.toUpperCase() }))
+              ]}
+              value={selectedDepartment}
+              onChange={(val) => setSelectedDepartment(val || "all")}
+              placeholder="DEPARTMENT"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "COMPANIES/SUBSIDIARIES" },
+                ...companies.map(c => ({ value: c, label: c.toUpperCase() }))
+              ]}
+              value={selectedCompany}
+              onChange={(val) => setSelectedCompany(val || "all")}
+              placeholder="COMPANY/SUBSIDIARY"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "LOCATIONS" },
+                ...locations.map(l => ({ value: l, label: l.toUpperCase() }))
+              ]}
+              value={selectedLocation}
+              onChange={(val) => setSelectedLocation(val || "all")}
+              placeholder="LOCATION"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL STATUSES" },
+                { value: "active", label: "ACTIVE" },
+                { value: "inactive", label: "INACTIVE" },
+                { value: "exit_pending", label: "EXIT PENDING" }
+              ]}
+              value={selectedStatus}
+              onChange={(val) => setSelectedStatus(val || "all")}
+              placeholder="STATUS"
+              compact
+            />
+          </div>
         </div>
       </div>
 
@@ -436,6 +627,145 @@ export default function EmployeesPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Employee Import Preview Modal ── */}
+      {showImportModal && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-7xl bg-card border border-border rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 border-b border-border flex items-center justify-between bg-muted/20">
+              <div className="space-y-1">
+                <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-primary" />
+                  Employee Registry Import & Validation
+                </h3>
+                <p className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest">
+                  Review associate details, department mapping and reporting lines before bulk registry.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-black uppercase bg-muted px-4 py-1.5 rounded-full border border-border/50">
+                  {importRecords.filter(r => r.isValid).length} / {importRecords.length} Valid
+                </span>
+                <button
+                  onClick={() => validateImportRecords(importRecords)}
+                  disabled={validatingImport}
+                  className="px-4 py-2 hover:bg-white/5 rounded-xl transition-all text-primary flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border border-primary/20"
+                >
+                  {validatingImport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Re-Validate
+                </button>
+                <button onClick={() => setShowImportModal(false)} className="p-3 hover:bg-muted rounded-2xl transition-all"><X className="w-6 h-6" /></button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4">
+              {validatingImport && importRecords.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <RefreshCw className="w-10 h-10 text-primary animate-spin" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Running integrity checks...</p>
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-border overflow-hidden">
+                  <table className="w-full text-left table-fixed">
+                    <thead className="bg-muted/40 text-[9px] font-black uppercase tracking-widest sticky top-0 z-10">
+                      <tr>
+                        <th className="px-6 py-4 w-20">Status</th>
+                        <th className="px-4 py-4 w-32">Emp Code</th>
+                        <th className="px-4 py-4 w-48">Full Name</th>
+                        <th className="px-4 py-4 w-40">Dept & Company</th>
+                        <th className="px-4 py-4 w-40">Reporting Mgr</th>
+                        <th className="px-4 py-4 w-32">Start Date</th>
+                        <th className="px-6 py-4 w-64">Validation Intelligence</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 bg-card/50">
+                      {importRecords.map((record, i) => (
+                        <tr key={i} className={cn("text-[11px] transition-all hover:bg-muted/10", !record.isValid && "bg-red-500/5")}>
+                          <td className="px-6 py-4 text-center">
+                            {validatingImport ? (
+                              <Loader2 className="w-4 h-4 animate-spin opacity-20 mx-auto" />
+                            ) : record.isValid ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4 text-red-500 mx-auto" />
+                            )}
+                          </td>
+                          <td className="px-2 py-2">
+                            <input
+                              value={record.data.employeeCode || ""}
+                              onChange={(e) => updateImportRecord(record.id, "employeeCode", e.target.value)}
+                              className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-2 font-mono font-black"
+                            />
+                          </td>
+                          <td className="px-2 py-2">
+                            <input
+                              value={record.data.fullName || ""}
+                              onChange={(e) => updateImportRecord(record.id, "fullName", e.target.value)}
+                              className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-2 font-black uppercase"
+                            />
+                          </td>
+                          <td className="px-2 py-2">
+                            <div className="flex flex-col gap-1">
+                              <input
+                                value={record.data.department || ""}
+                                placeholder="Dept"
+                                onChange={(e) => updateImportRecord(record.id, "department", e.target.value)}
+                                className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold uppercase opacity-60"
+                              />
+                              <input
+                                value={record.data.companyName || ""}
+                                placeholder="Company"
+                                onChange={(e) => updateImportRecord(record.id, "companyName", e.target.value)}
+                                className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-1 font-bold uppercase opacity-60"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-2 py-2">
+                            <input
+                              value={record.data.managerCode || ""}
+                              placeholder="Manager Code"
+                              onChange={(e) => updateImportRecord(record.id, "managerCode", e.target.value)}
+                              className="w-full bg-transparent border-b border-transparent focus:border-primary/30 outline-none p-2 font-bold uppercase"
+                            />
+                          </td>
+                          <td className="px-2 py-2">
+                            <input
+                              type="date"
+                              value={record.data.startDate || ""}
+                              onChange={(e) => updateImportRecord(record.id, "startDate", e.target.value)}
+                              className="w-full bg-transparent border-none outline-none p-2 font-bold uppercase text-primary"
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            {record.error ? (
+                              <p className="text-red-500 font-black text-[9px] uppercase tracking-tight leading-tight">• {record.error}</p>
+                            ) : (
+                              <p className="text-green-500/60 font-black text-[9px] uppercase tracking-tight">Verified & Secure</p>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="p-8 border-t border-border bg-muted/20 flex justify-end gap-4">
+              <button onClick={() => setShowImportModal(false)} className="px-8 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-all">Cancel Batch</button>
+              <button
+                disabled={importRecords.filter(r => r.isValid).length === 0 || importingBatch || validatingImport}
+                onClick={processImport}
+                className="px-10 py-3.5 bg-primary text-primary-foreground rounded-3xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center gap-3 disabled:opacity-30"
+              >
+                {importingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {importingBatch ? "Processing Batch..." : `Finalize Registry Entry (${importRecords.filter(r => r.isValid).length} Associates)`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

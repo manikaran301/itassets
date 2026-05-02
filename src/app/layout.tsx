@@ -16,7 +16,7 @@ const jakarta = Plus_Jakarta_Sans({
 const jbMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "M_AMS | Asset Management System",
+  title: "MAMS | Asset Management System",
   description:
     "Next-generation Asset Management System for HR, IT, and Admin teams.",
   icons: {

@@ -172,10 +172,13 @@ model SystemUser {
   role         SystemRole
   passwordHash String     @db.VarChar(255)
   companyName  String?    @db.VarChar(100)
+  companyId    String?    @db.Uuid
   isActive     Boolean    @default(true)
   lastLogin    DateTime?  @db.Timestamp
   createdAt    DateTime   @default(now()) @db.Timestamp
   updatedAt    DateTime   @updatedAt @db.Timestamp
+
+  company               Company?                   @relation(fields: [companyId], references: [id])
 
   employeesCreated      Employee[]                 @relation("CreatedBy")
   fulfilledRequirements EmployeeAssetRequirement[] @relation("FulfilledBy")
@@ -239,6 +242,16 @@ model Employee {
   subordinates Employee[]  @relation("ReportingManager")
   creator      SystemUser? @relation("CreatedBy", fields: [createdBy], references: [id])
 
+  companyId      String?   @db.Uuid
+  departmentId   String?   @db.Uuid
+  designationId  String?   @db.Uuid
+  locationId     String?   @db.Uuid
+
+  company      Company?     @relation(fields: [companyId], references: [id])
+  dept         Department?  @relation(fields: [departmentId], references: [id])
+  desig        Designation? @relation(fields: [designationId], references: [id])
+  loc          Location?    @relation(fields: [locationId], references: [id])
+
   assetRequirements    EmployeeAssetRequirement[]
   currentAssets        Asset[]
   currentAccessories   Accessory[]
@@ -252,7 +265,62 @@ model Employee {
   @@index([department])
   @@index([reportingManagerId])
   @@index([locationJoining])
+  @@index([companyId])
+  @@index([departmentId])
+  @@index([designationId])
+  @@index([locationId])
   @@map("employees")
+}
+
+model Company {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique @db.VarChar(100)
+  code      String?  @unique @db.VarChar(20)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamp
+  updatedAt DateTime @updatedAt @db.Timestamp
+
+  employees Employee[]
+  users     SystemUser[]
+
+  @@map("master_companies")
+}
+
+model Department {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique @db.VarChar(100)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamp
+  updatedAt DateTime @updatedAt @db.Timestamp
+
+  employees Employee[]
+
+  @@map("master_departments")
+}
+
+model Designation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique @db.VarChar(100)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamp
+  updatedAt DateTime @updatedAt @db.Timestamp
+
+  employees Employee[]
+
+  @@map("master_designations")
+}
+
+model Location {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique @db.VarChar(100)
+  address   String?  @db.Text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamp
+  updatedAt DateTime @updatedAt @db.Timestamp
+
+  employees Employee[]
+
+  @@map("master_locations")
 }
 
 model EmployeeAssetRequirement {

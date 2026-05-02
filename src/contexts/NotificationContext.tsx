@@ -39,16 +39,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (status !== 'authenticated') return;
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
     try {
-      const res = await fetch('/api/notifications');
+      const res = await fetch('/api/notifications', { signal: controller.signal });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(`Failed to fetch notifications: ${res.status} ${errorData.error || res.statusText}`);
       }
       const data = await res.json();
       setNotifications(data);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') return;
+      // Suppress "Failed to fetch" noise which often happens during navigation/tab switching
+      if (error instanceof TypeError && error.message === 'Failed to fetch') return;
+      
       console.error('Notification fetch error:', error);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }, [status]);
 

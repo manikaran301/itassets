@@ -74,7 +74,7 @@ export default function AccessoryDetailPage() {
     condition: "good",
     currentEmployeeId: "",
   });
-  const [employees, setEmployees] = useState<{ value: string; label: string; image?: string | null; initials: string }[]>([]);
+  const [employees, setEmployees] = useState<{ value: string; label: string; image?: string; initials: string }[]>([]);
 
   useEffect(() => {
     fetchAccessory();
@@ -88,7 +88,7 @@ export default function AccessoryDetailPage() {
       const formatted = data.map((emp: any) => ({
         value: emp.id,
         label: `${emp.fullName} (${emp.employeeCode})`,
-        image: emp.photoPath,
+        image: emp.photoPath || undefined,
         initials: emp.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
       }));
       setEmployees(formatted);

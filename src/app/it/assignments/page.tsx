@@ -15,8 +15,12 @@ import {
   Loader2,
   AlertCircle,
   RotateCcw,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { usePermissions } from "@/hooks/usePermissions";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface AssignmentLog {
   id: string;
@@ -33,6 +37,9 @@ interface AssignmentLog {
 }
 
 export default function AssignmentsPage() {
+  const { checkPermission, loading: permsLoading } = usePermissions();
+  const canViewAssignments = checkPermission("IT", "ASSIGNMENTS", "canView");
+  const canExportAssignments = checkPermission("IT", "ASSIGNMENTS", "canExport");
   const [assignments, setAssignments] = useState<AssignmentLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,8 +47,10 @@ export default function AssignmentsPage() {
   const [actionFilter, setActionFilter] = useState("all");
 
   useEffect(() => {
-    fetchAssignments();
-  }, []);
+    if (!permsLoading && canViewAssignments) {
+      fetchAssignments();
+    }
+  }, [permsLoading, canViewAssignments]);
 
   const fetchAssignments = async () => {
     try {
@@ -130,7 +139,7 @@ export default function AssignmentsPage() {
     }
   };
 
-  if (loading) {
+  if (permsLoading || (canViewAssignments && loading)) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -138,32 +147,31 @@ export default function AssignmentsPage() {
     );
   }
 
+  if (!canViewAssignments) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-6 p-8 text-center animate-fade-in">
+        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center">
+          <Lock className="w-10 h-10 text-red-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-2xl font-black tracking-tight uppercase">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You do not have permission to view <span className="font-bold text-foreground">IT Assignments</span>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in pt-4 px-6 space-y-4">
-      {/* Header & Stats Strip */}
-      <div className="shrink-0 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20">
-            <RotateCcw className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-black uppercase tracking-tight leading-none">Assignment Ledger</h1>
-            <p className="text-[10px] font-bold text-muted-foreground/50 mt-1 uppercase tracking-widest">Tracking {stats.total} lifecycle events</p>
-          </div>
-        </div>
+      <div className="flex justify-end items-center gap-2 px-1 shrink-0">
+        <button onClick={() => fetchAssignments()} className="p-2.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-muted-foreground transition-all">
+          <Loader2 className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+        </button>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-          {[
-            { label: "Active", count: stats.active, color: "text-green-500", bg: "bg-green-500/10" },
-            { label: "Returned", count: stats.returned, color: "text-blue-500", bg: "bg-blue-500/10" },
-            { label: "Repair", count: stats.inRepair, color: "text-amber-500", bg: "bg-amber-500/10" }
-          ].map(s => (
-            <div key={s.label} className={cn("px-3 py-1.5 rounded-lg border border-white/5 flex items-center gap-3", s.bg)}>
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{s.label}</span>
-              <span className={cn("text-xs font-black", s.color)}>{s.count}</span>
-            </div>
-          ))}
-          <button
+        {canExportAssignments && (
+          <button 
             onClick={() => {
               const csv = filteredAssignments
                 .map(a => `${a.logCode},${a.asset?.assetTag || a.accessory?.assetTag},${a.employee?.fullName},${a.actionType},${new Date(a.assignedDate).toLocaleDateString()},${a.returnedDate ? new Date(a.returnedDate).toLocaleDateString() : ""}`)
@@ -175,67 +183,99 @@ export default function AssignmentsPage() {
               a.download = `assignment-ledger-${new Date().toISOString().split("T")[0]}.csv`;
               a.click();
             }}
-            className="ml-2 p-2 bg-muted/30 hover:bg-muted/50 rounded-lg border border-white/5 transition-all"
-            title="Export Ledger"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"
           >
-            <Download className="w-4 h-4 text-muted-foreground" />
+            <Download className="w-3.5 h-3.5" />
+            Export CSV
           </button>
-        </div>
+        )}
+
+        <Link href="/it/assets?flow=provisioning" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+          <Plus className="w-4 h-4" /> Issue Hardware
+        </Link>
       </div>
 
-      {/* Filter Ribbon */}
-      <div className="shrink-0 bg-card/40 border border-white/5 p-1.5 rounded-2xl flex flex-col md:flex-row gap-2 items-center">
+      {/* KPI Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+        {[
+          { label: "Total Events", value: stats.total, icon: RotateCcw, color: "text-foreground bg-muted/50 border-border" },
+          { label: "Active Holders", value: stats.active, icon: User, color: "text-primary bg-primary/10 border-primary/20" },
+          { label: "Hardware Recovered", value: stats.returned, icon: CheckCircle2, color: "text-green-500 bg-green-500/10 border-green-500/20" },
+          { label: "Maintenance Chain", value: stats.inRepair, icon: Wrench, color: "text-accent bg-accent/10 border-accent/20" },
+        ].map((stat, i) => (
+          <div key={i} className="bg-card border border-border/60 p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+            <div className="space-y-0.5">
+              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">{stat.label}</p>
+              <h4 className="text-xl font-black">{loading ? "..." : stat.value}</h4>
+            </div>
+            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border border-transparent transition-all", stat.color)}>
+              <stat.icon className="w-5 h-5" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Unified Multi-Filter Ribbon */}
+      <div className="bg-card/50 border border-border p-1.5 rounded-2xl flex flex-col lg:flex-row gap-2 items-center shrink-0">
         <div className="relative flex-1 group w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
           <input
             type="text"
             placeholder="FILTER BY LOG, ASSET, EMPLOYEE..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-transparent pl-11 pr-4 py-2 rounded-xl text-[10px] font-bold border border-transparent focus:bg-background/40 outline-none transition-all placeholder:text-[8px] placeholder:font-black placeholder:tracking-widest"
+            className="w-full bg-transparent pl-11 pr-4 py-2.5 rounded-xl text-[10px] font-bold border border-transparent focus:bg-background outline-none transition-all placeholder:text-[8px] placeholder:font-black placeholder:tracking-widest opacity-80"
           />
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-muted/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 focus:border-primary/30 outline-none cursor-pointer min-w-[120px]"
-          >
-            <option value="all">ALL STATUS</option>
-            <option value="active">ACTIVE</option>
-            <option value="returned">RETURNED</option>
-            <option value="repair">IN REPAIR</option>
-          </select>
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL STATUS" },
+                { value: "active", label: "ACTIVE" },
+                { value: "returned", label: "RETURNED" },
+                { value: "repair", label: "IN REPAIR" }
+              ]}
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val || "all")}
+              placeholder="STATUS"
+              compact
+            />
+          </div>
 
-          <select
-            value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-            className="bg-muted/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 focus:border-primary/30 outline-none cursor-pointer min-w-[140px]"
-          >
-            <option value="all">ALL ACTIONS</option>
-            <option value="new_assignment">NEW ASSIGNMENT</option>
-            <option value="reassignment">REASSIGNMENT</option>
-            <option value="repair_send">REPAIR SEND</option>
-            <option value="repair_return">REPAIR RETURN</option>
-            <option value="recovery_exit">RECOVERY/EXIT</option>
-          </select>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL ACTIONS" },
+                { value: "new_assignment", label: "NEW ASSIGNMENT" },
+                { value: "reassignment", label: "REASSIGNMENT" },
+                { value: "repair_send", label: "REPAIR SEND" },
+                { value: "repair_return", label: "REPAIR RETURN" },
+                { value: "recovery_exit", label: "RECOVERY/EXIT" }
+              ]}
+              value={actionFilter}
+              onChange={(val) => setActionFilter(val || "all")}
+              placeholder="ACTION TYPE"
+              compact
+            />
+          </div>
         </div>
       </div>
 
-      {/* Concise Table Container */}
-      <div className="flex-1 min-h-0 bg-card/20 border border-white/5 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+      {/* Registry Container */}
+      <div className="flex-1 min-h-0 bg-card border border-border rounded-2xl overflow-hidden flex flex-col shadow-sm">
         <div className="overflow-auto scrollbar-hide flex-1">
-          <table className="w-full text-left border-collapse table-fixed">
-            <thead className="sticky top-0 z-10 bg-[#0f1115]/95 backdrop-blur-md">
-              <tr className="border-b border-white/5">
-                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">ID</th>
-                <th className="w-[20%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Asset Info</th>
-                <th className="w-[20%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Stakeholder</th>
-                <th className="w-[15%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Event</th>
-                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Assigned</th>
-                <th className="w-[12%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Returned</th>
-                <th className="w-[9%] px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-right pr-6">Status</th>
+          <table className="w-full text-left border-collapse min-w-[1200px]">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-muted/50 backdrop-blur-md border-b border-border/50">
+                <th className="pl-6 pr-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Log ID</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Asset Identifier</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Stakeholder</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Event Type</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Issued Date</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Recovered Date</th>
+                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-right pr-10">Lifecycle</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.03]">
@@ -254,8 +294,8 @@ export default function AssignmentsPage() {
                   return (
                     <tr key={log.id} className="group hover:bg-white/[0.02] transition-colors border-white/5">
                       {/* ID / Code */}
-                      <td className="px-4 py-2.5">
-                        <span className="text-[9px] font-mono font-bold text-muted-foreground/40 group-hover:text-primary transition-colors">
+                      <td className="pl-6 pr-4 py-3">
+                        <span className="text-[9px] font-mono font-black text-muted-foreground/40 group-hover:text-primary transition-colors">
                           {log.logCode}
                         </span>
                       </td>
@@ -304,7 +344,7 @@ export default function AssignmentsPage() {
                       </td>
 
                       {/* Event Type */}
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3 text-center">
                         <span className={cn(
                           "text-[8px] font-black uppercase px-2 py-0.5 rounded-md border tracking-tighter",
                           getTypeStyle(log.actionType)
@@ -314,12 +354,12 @@ export default function AssignmentsPage() {
                       </td>
 
                       {/* Dates */}
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3 text-center">
                         <span className="text-[10px] font-bold text-muted-foreground/60">
                           {new Date(log.assignedDate).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: '2-digit' })}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3 text-center">
                         {log.returnedDate ? (
                           <span className="text-[10px] font-bold text-blue-500/60">
                             {new Date(log.returnedDate).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: '2-digit' })}
@@ -330,7 +370,7 @@ export default function AssignmentsPage() {
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-2.5 text-right pr-6">
+                      <td className="px-6 py-3 text-right pr-10">
                         <span className={cn("text-[9px] font-black uppercase tracking-widest", statusColor)}>
                           {status}
                         </span>

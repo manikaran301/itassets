@@ -464,7 +464,7 @@ export default function EditAssetPage({ params }: EditAssetProps) {
         {/* Main Form Area */}
         <div className="xl:col-span-8 space-y-6">
           {/* Section 1: Identity */}
-          <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group">
+          <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group z-50 overflow-visible">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
               <Tag className="w-32 h-32" />
             </div>
@@ -569,7 +569,7 @@ export default function EditAssetPage({ params }: EditAssetProps) {
 
           {/* Section 2: Technical Specifications (Compute Devices) */}
           {showHardwareSpecs && (
-            <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
+            <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group z-40 overflow-visible">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                 <Cpu className="w-4 h-4" />
                 Hardware Specification
@@ -691,7 +691,7 @@ export default function EditAssetPage({ params }: EditAssetProps) {
 
           {/* Section 2b: Device-Specific Specifications (Network/Security Devices) */}
           {showDeviceSpecific && (
-            <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group">
+            <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group z-40 overflow-visible">
               <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
               <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                 <BoxIcon className="w-4 h-4" />
@@ -745,7 +745,7 @@ export default function EditAssetPage({ params }: EditAssetProps) {
           {showNetworkSoftware && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Antivirus & Software Column */}
-              <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
+              <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group z-30 overflow-visible">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                   <Shield className="w-4 h-4" />
                   Software & Security
@@ -793,7 +793,7 @@ export default function EditAssetPage({ params }: EditAssetProps) {
               </div>
 
               {/* Network Column */}
-              <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5">
+              <div className="premium-card rounded-[32px] p-6 space-y-6 bg-card/40 border border-white/5 relative group z-30 overflow-visible">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                   <Wifi className="w-4 h-4" />
                   Connectivity Meta

@@ -42,7 +42,7 @@ const headerContent = [
   {
     matcher: (pathname: string) => pathname === "/it/assets",
     title: "Enterprise Assets",
-    subtitle: "Device Inventory Command Center",
+    subtitle: "Device Inventory Dashboard",
   },
   {
     matcher: (pathname: string) => pathname === "/it/assets/new",
@@ -97,7 +97,7 @@ const headerContent = [
   {
     matcher: (pathname: string) => pathname === "/admin/users",
     title: "Access Control",
-    subtitle: "User Roles and Governance Center",
+    subtitle: "User Roles and Governance Dashboard",
   },
 ];
 
@@ -122,7 +122,7 @@ export function UserHeader() {
   const pageHeader = useMemo(
     () =>
       headerContent.find(({ matcher }) => matcher(pathname)) ?? {
-        title: "M_AMS Workspace",
+        title: "MAMS Workspace",
         subtitle: "Operational Coordination Hub",
       },
     [pathname],

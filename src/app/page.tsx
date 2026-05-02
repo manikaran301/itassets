@@ -108,46 +108,54 @@ export default async function DashboardPage() {
     <div className="space-y-12 max-w-7xl mx-auto">
       <section className="animate-fade-in pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            title="Total Workforce"
-            value={employeeCount}
-            count={`${upcomingJoiningCount} joiners next 30d`}
-            description="Active employees and scheduled onboarding pipeline."
-            icon={Users}
-            trend={upcomingJoiningCount > 0 ? "up" : "neutral"}
-            trendValue={upcomingJoiningCount > 0 ? `+${upcomingJoiningCount}` : "Stable"}
-            className="border-l-4 border-l-primary"
-          />
-          <StatsCard
-            title="Hardware Stock"
-            value={assetCount + accessoryCount}
-            count={`${availableAssetCount} ready to deploy`}
-            description="Combined inventory of primary assets and accessories."
-            icon={Monitor}
-            trend="neutral"
-            trendValue="Live"
-            className="border-l-4 border-l-secondary"
-          />
-          <StatsCard
-            title="Provisioning"
-            value={provisioningCount}
-            count={`${pendingProvisioningCount} pending action`}
-            description="Active resource fulfillment and logistics queue."
-            icon={Truck}
-            trend={pendingProvisioningCount > 5 ? "down" : "up"}
-            trendValue={pendingProvisioningCount > 5 ? "Busy" : "Clear"}
-            className="border-l-4 border-l-accent"
-          />
-          <StatsCard
-            title="Identities"
-            value={emailCount}
-            count={`${activeEmailCount} active accounts`}
-            description="Digital identities and workspace access management."
-            icon={Mail}
-            trend="neutral"
-            trendValue="Secure"
-            className="border-l-4 border-l-muted-foreground"
-          />
+          <Link href="/hr/employees" aria-label="Open workforce employees page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+            <StatsCard
+              title="Total Workforce"
+              value={employeeCount}
+              count={`${upcomingJoiningCount} joiners next 30d`}
+              description="Active employees and scheduled onboarding pipeline."
+              icon={Users}
+              trend={upcomingJoiningCount > 0 ? "up" : "neutral"}
+              trendValue={upcomingJoiningCount > 0 ? `+${upcomingJoiningCount}` : "Stable"}
+              className="border-l-4 border-l-primary h-full cursor-pointer"
+            />
+          </Link>
+          <Link href="/it/assets" aria-label="Open hardware assets page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+            <StatsCard
+              title="Hardware Stock"
+              value={assetCount + accessoryCount}
+              count={`${availableAssetCount} ready to deploy`}
+              description="Combined inventory of primary assets and accessories."
+              icon={Monitor}
+              trend="neutral"
+              trendValue="Live"
+              className="border-l-4 border-l-secondary h-full cursor-pointer"
+            />
+          </Link>
+          <Link href="/it/provisioning" aria-label="Open provisioning page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+            <StatsCard
+              title="Provisioning"
+              value={provisioningCount}
+              count={`${pendingProvisioningCount} pending action`}
+              description="Active resource fulfillment and logistics queue."
+              icon={Truck}
+              trend={pendingProvisioningCount > 5 ? "down" : "up"}
+              trendValue={pendingProvisioningCount > 5 ? "Busy" : "Clear"}
+              className="border-l-4 border-l-accent h-full cursor-pointer"
+            />
+          </Link>
+          <Link href="/it/email" aria-label="Open identities email accounts page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+            <StatsCard
+              title="Identities"
+              value={emailCount}
+              count={`${activeEmailCount} active accounts`}
+              description="Digital identities and workspace access management."
+              icon={Mail}
+              trend="neutral"
+              trendValue="Secure"
+              className="border-l-4 border-l-muted-foreground h-full cursor-pointer"
+            />
+          </Link>
         </div>
       </section>
 

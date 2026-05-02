@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import { enforcePermission } from "@/lib/permissions";
+import { requireAdmin } from "@/lib/permissions";
 
 export async function POST(
   req: Request,
@@ -16,8 +16,8 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only admins can manage permissions
-    await enforcePermission(session.user.id, "ADMIN", "USERS", "canEdit");
+    // Permission management changes who can access the whole system, so keep it admin-only.
+    await requireAdmin(session.user.id);
 
     const { permissions } = await req.json();
 

@@ -1,0 +1,4 @@
+employeeCode,fullName,personalEmail,personalPhone,department,designation,companyName,locationJoining,deskNumber,startDate,managerCode,status
+EMP001,John Smith,john.smith@gmail.com,9876543210,Engineering,Software Engineer,Tech Solutions,Bangalore,B-101,2025-01-15,MGR001,active
+EMP002,Jane Doe,jane.doe@yahoo.com,9876543211,Product,Product Manager,Tech Solutions,Mumbai,M-202,2025-02-01,MGR001,active
+EMP003,Robert Brown,robert.b@outlook.com,9876543212,HR,HR Manager,Tech Solutions,Bangalore,B-303,2024-12-10,MGR002,active

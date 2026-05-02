@@ -1,6 +1,5 @@
 import prisma from "./prisma";
-
-export type PermissionAction = "canView" | "canCreate" | "canEdit" | "canDelete" | "canImport" | "canExport";
+import type { PermissionAction } from "./permission-config";
 
 export async function hasPermission(
   userId: string,
@@ -45,5 +44,16 @@ export async function enforcePermission(
   const allowed = await hasPermission(userId, category, subcategory, action);
   if (!allowed) {
     throw new Error(`Access Denied: You do not have ${action} permission for ${category}/${subcategory}`);
+  }
+}
+
+export async function requireAdmin(userId: string): Promise<void> {
+  const user = await prisma.systemUser.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+
+  if (user?.role !== "admin") {
+    throw new Error("Access Denied: Admin role required");
   }
 }

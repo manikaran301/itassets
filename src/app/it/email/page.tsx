@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Download,
   User,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -27,6 +28,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import type { EmailAccountListItem } from "@/lib/types";
 
@@ -460,6 +462,13 @@ function ImportPreviewModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function EmailAccountsPage() {
   const router = useRouter();
+  const { checkPermission, loading: permsLoading } = usePermissions();
+  const canViewEmails = checkPermission("IT", "EMAILS", "canView");
+  const canCreateEmails = checkPermission("IT", "EMAILS", "canCreate");
+  const canEditEmails = checkPermission("IT", "EMAILS", "canEdit");
+  const canDeleteEmails = checkPermission("IT", "EMAILS", "canDelete");
+  const canImportEmails = checkPermission("IT", "EMAILS", "canImport");
+  const canExportEmails = checkPermission("IT", "EMAILS", "canExport");
   const [emails, setEmails] = useState<EmailAccountListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -489,8 +498,10 @@ export default function EmailAccountsPage() {
   }, []);
 
   useEffect(() => {
-    fetchEmails();
-  }, []);
+    if (!permsLoading && canViewEmails) {
+      fetchEmails();
+    }
+  }, [permsLoading, canViewEmails]);
 
   // Reset visible count whenever filters/search change
   useEffect(() => {
@@ -688,6 +699,31 @@ export default function EmailAccountsPage() {
     { label: "Forwarding", value: emails.filter(e => e.forwardingEnabled).length, icon: Globe, color: "text-secondary bg-secondary/10 border-secondary/20" },
   ];
 
+  if (permsLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-xs font-black uppercase tracking-widest opacity-50">Checking email permissions...</p>
+      </div>
+    );
+  }
+
+  if (!canViewEmails) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-6 p-8 text-center animate-fade-in">
+        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center">
+          <Lock className="w-10 h-10 text-red-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-2xl font-black tracking-tight uppercase">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You do not have permission to view <span className="font-bold text-foreground">IT Email Accounts</span>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 animate-fade-in pb-20 pt-4">
       {isProvisioningFlow && provisioningTarget && (
@@ -736,44 +772,52 @@ export default function EmailAccountsPage() {
         <button onClick={fetchEmails} className="p-2.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-muted-foreground transition-all">
           <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
         </button>
-        <input
-          type="file"
-          id="csv-import"
-          accept=".csv"
-          className="hidden"
-          onChange={handleImport}
-          disabled={importing}
-        />
-        <label
-          htmlFor="csv-import"
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer",
-            importing && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          {importing ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Upload className="w-3.5 h-3.5" />
-          )}
-          Import CSV
-        </label>
-        <a
-          href="/templates/email_import_template.csv"
-          download
-          className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
-        >
-          <Download className="w-3.5 h-3.5" /> Template
-        </a>
-        <button
-          onClick={() => (window.location.href = "/api/emails/export")}
-          className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
-        >
-          <Download className="w-3.5 h-3.5" /> Export CSV
-        </button>
-        <Link href="/it/email/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-          <Plus className="w-4 h-4" /> Create Account
-        </Link>
+        {canImportEmails && (
+          <>
+            <input
+              type="file"
+              id="csv-import"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImport}
+              disabled={importing}
+            />
+            <label
+              htmlFor="csv-import"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer",
+                importing && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {importing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5" />
+              )}
+              Import CSV
+            </label>
+            <a
+              href="/templates/email_import_template.csv"
+              download
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
+            >
+              <Download className="w-3.5 h-3.5" /> Template
+            </a>
+          </>
+        )}
+        {canExportEmails && (
+          <button
+            onClick={() => (window.location.href = "/api/emails/export")}
+            className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all"
+          >
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </button>
+        )}
+        {canCreateEmails && (
+          <Link href="/it/email/new" className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+            <Plus className="w-4 h-4" /> Create Account
+          </Link>
+        )}
       </div>
 
       {/* Mini Stats Row */}
@@ -1016,6 +1060,7 @@ export default function EmailAccountsPage() {
                           </button>
                         )}
                         <div className={cn("flex items-center justify-end gap-1 transition-all", isProvisioningFlow ? "opacity-40 hover:opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          {canEditEmails && (
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1026,6 +1071,8 @@ export default function EmailAccountsPage() {
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
+                          )}
+                          {canEditEmails && (
                           <button 
                             onClick={async (e) => {
                               e.stopPropagation();
@@ -1042,6 +1089,8 @@ export default function EmailAccountsPage() {
                           >
                             {suspending === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
                           </button>
+                          )}
+                          {canDeleteEmails && (
                           <button 
                             onClick={async (e) => {
                               e.stopPropagation();
@@ -1061,6 +1110,7 @@ export default function EmailAccountsPage() {
                           >
                             {deletingId === email.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                           </button>
+                          )}
                         </div>
                       </div>
                     </td>

@@ -23,45 +23,61 @@ import {
   ChevronLeft,
   ChevronRight,
   PlaneTakeoff,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useTheme } from "@/components/ThemeProvider";
+import { usePermissions } from "@/hooks/usePermissions";
 
-const sidebarLinks = [
+interface SidebarLink {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  permission?: [string, string];
+}
+
+interface SidebarGroup {
+  group: string;
+  roles?: string[];
+  links: SidebarLink[];
+}
+
+const sidebarLinks: SidebarGroup[] = [
   {
     group: "Overview",
     links: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard },
-      { name: "Seats Registry", href: "/seats", icon: Layout },
+      { name: "Seats Registry", href: "/seats", icon: Layout, permission: ["FACILITY", "SEATS"] },
     ],
   },
   {
     group: "HR Module",
     roles: ["hr", "admin"],
     links: [
-      { name: "Upcoming Joinings", href: "/hr/upcoming", icon: PlaneTakeoff },
-      { name: "Onboarding", href: "/hr/joiners", icon: UserCheck },
-      { name: "Employees", href: "/hr/employees", icon: Users },
-      { name: "Exits", href: "/hr/exits", icon: UserX },
+      { name: "Upcoming Joinings", href: "/hr/upcoming", icon: PlaneTakeoff, permission: ["HR", "REQUIREMENTS"] },
+      { name: "Onboarding", href: "/hr/joiners", icon: UserCheck, permission: ["HR", "JOINERS"] },
+      { name: "Employees", href: "/hr/employees", icon: Users, permission: ["HR", "EMPLOYEES"] },
+      { name: "Exits", href: "/hr/exits", icon: UserX, permission: ["HR", "EXITS"] },
     ],
   },
   {
     group: "IT Module",
     roles: ["it", "admin"],
     links: [
-      { name: "Assets", href: "/it/assets", icon: Monitor },
-      { name: "Provisioning", href: "/it/provisioning", icon: Truck },
-      { name: "Assignments", href: "/it/assignments", icon: ArrowRightLeft },
-      { name: "Email Accounts", href: "/it/email", icon: Mail },
-      { name: "Accessories", href: "/it/accessories", icon: HardDrive },
+      { name: "Assets", href: "/it/assets", icon: Monitor, permission: ["IT", "ASSETS"] },
+      { name: "Provisioning", href: "/it/provisioning", icon: Truck, permission: ["IT", "PROVISIONING"] },
+      { name: "Assignments", href: "/it/assignments", icon: ArrowRightLeft, permission: ["IT", "ASSIGNMENTS"] },
+      { name: "Email Accounts", href: "/it/email", icon: Mail, permission: ["IT", "EMAILS"] },
+      { name: "Accessories", href: "/it/accessories", icon: HardDrive, permission: ["IT", "ACCESSORIES"] },
     ],
   },
   {
     group: "Management",
     roles: ["admin"],
     links: [
+      { name: "Master Data", href: "/admin/management", icon: ShieldCheck },
       { name: "Reports", href: "/admin/reports", icon: BarChart3 },
       { name: "Audit Log", href: "/admin/audit", icon: History },
       { name: "Users", href: "/admin/users", icon: Settings },
@@ -82,6 +98,7 @@ export function Sidebar() {
   const { theme } = useTheme();
   const user = session?.user as SessionUser | undefined;
   const { notifications } = useNotifications();
+  const { checkPermission, loading: permissionsLoading, isSuperAdmin } = usePermissions();
 
   const userInitial = user?.name ? user.name[0] : "U";
   const userName = user?.name || "User";
@@ -137,7 +154,20 @@ export function Sidebar() {
 
         <nav className="flex-1 px-3 pb-6 space-y-4">
           {sidebarLinks
-            .filter((group) => !group.roles || group.roles.includes(userRole))
+            .map((group) => {
+              const links = group.links.filter((link) => {
+                if (!link.permission) return true;
+                if (permissionsLoading && (!group.roles || group.roles.includes(userRole))) return true;
+                const [category, subcategory] = link.permission;
+                return isSuperAdmin || checkPermission(category, subcategory, "canView");
+              });
+
+              const roleAllowsGroup = !group.roles || group.roles.includes(userRole);
+              if (!roleAllowsGroup && links.length === 0) return null;
+
+              return { ...group, links };
+            })
+            .filter((group): group is NonNullable<typeof group> => !!group && group.links.length > 0)
             .map((group) => (
               <div key={group.group}>
                 {!isCollapsed && (

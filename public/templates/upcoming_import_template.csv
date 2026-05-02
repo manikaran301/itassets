@@ -1,0 +1,5 @@
+fullName,designation,department,companyName,reportingManager,joiningDate,experience,placeOfPosting,joiningLocation,status,statusReason
+John Doe,Senior Developer,Engineering,Tech Corp,Jane Manager,2026-06-01,5 years,Bangalore Office,Bangalore,upcoming,
+Sarah Smith,Product Manager,Product,Tech Corp,Mike Director,2026-06-15,8 years,Mumbai Office,Mumbai,upcoming,
+Raj Patel,QA Engineer,Quality,Tech Corp,Lisa Lead,2026-07-01,3 years,Bangalore Office,Bangalore,upcoming,
+Emily Chen,Business Analyst,Operations,Tech Corp,Robert Head,2026-07-10,6 years,Delhi Office,Delhi,upcoming,

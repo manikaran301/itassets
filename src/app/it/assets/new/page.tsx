@@ -506,7 +506,7 @@ export default function NewAssetPage() {
         {/* Left Column: Form (8 Cols) */}
         <div className="xl:col-span-8 space-y-6">
           {/* Section 1: Device Identity */}
-          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-50">
+          <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-50 overflow-visible">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none group-hover:scale-110 transition-transform" />
 
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-6 relative z-10">
@@ -616,7 +616,7 @@ export default function NewAssetPage() {
 
           {/* Section 2: Hardware Specifications (Only for compute devices) */}
           {showHardwareSpecs && (
-            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40">
+            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40 overflow-visible">
               <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
 
               <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-secondary mb-6 relative z-10">
@@ -754,7 +754,7 @@ export default function NewAssetPage() {
 
           {/* Section 2b: Device-Specific Specifications (for non-compute devices) */}
           {showDeviceSpecific && (
-            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40">
+            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-40 overflow-visible">
               <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" />
 
               <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-secondary mb-6 relative z-10">
@@ -916,7 +916,7 @@ export default function NewAssetPage() {
 
           {/* Section 3: Network & Software (Only for compute devices) */}
           {showNetworkSoftware && (
-            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-30">
+            <div className="premium-card p-6 rounded-[32px] border border-white/5 relative group z-30 overflow-visible">
               <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
 
               <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-6 relative z-10">
@@ -1186,7 +1186,7 @@ export default function NewAssetPage() {
             {/* Header */}
             <div className="px-10 pt-10 text-center relative z-10">
               <p className="text-[9px] font-black tracking-[0.4em] uppercase text-primary/40 mb-1">
-                M_AMS ASSET
+                MAMS ASSET
               </p>
               <div className="w-2 h-0.5 bg-primary/40 mx-auto rounded-full" />
             </div>

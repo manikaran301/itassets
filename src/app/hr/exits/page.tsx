@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface ExitEmployee {
   id: string;
@@ -55,7 +56,7 @@ export default function ExitsPage() {
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("exit_pending");
+  const [selectedStatus, setSelectedStatus] = useState("all");
 
   const [allExitsForFilters, setAllExitsForFilters] = useState<ExitEmployee[]>([]);
   const loaderRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ export default function ExitsPage() {
       }
 
       if (skip === 0) {
-        const allRes = await fetch(`/api/employees?status=exit_pending,inactive`);
+        const allRes = await fetch(`/api/employees?status=notice_period,exit_pending,inactive`);
         const allData = await allRes.json();
         setAllExitsForFilters(Array.isArray(allData) ? allData : (allData.data || []));
       }
@@ -275,24 +276,56 @@ export default function ExitsPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-          <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="notice_period">NOTICE PERIOD</option>
-            <option value="exit_pending">EXIT PENDING</option>
-            <option value="inactive">HISTORICAL EXITS</option>
-            <option value="all">ALL EXITS</option>
-          </select>
-          <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="all">COMPANIES</option>
-            {companies.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
-          </select>
-          <select value={selectedDepartment} onChange={(e) => setSelectedDepartment(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="all">DEPARTMENTS</option>
-            {departments.map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
-          </select>
-          <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]">
-            <option value="all">LOCATIONS</option>
-            {locations.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
-          </select>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL EXITS" },
+                { value: "notice_period", label: "NOTICE PERIOD" },
+                { value: "exit_pending", label: "EXIT PENDING" },
+                { value: "inactive", label: "HISTORICAL EXITS" }
+              ]}
+              value={selectedStatus}
+              onChange={(val) => setSelectedStatus(val || "all")}
+              placeholder="STATUS"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "COMPANIES" },
+                ...companies.map(c => ({ value: c, label: c.toUpperCase() }))
+              ]}
+              value={selectedCompany}
+              onChange={(val) => setSelectedCompany(val || "all")}
+              placeholder="COMPANY"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "DEPARTMENTS" },
+                ...departments.map(d => ({ value: d, label: d.toUpperCase() }))
+              ]}
+              value={selectedDepartment}
+              onChange={(val) => setSelectedDepartment(val || "all")}
+              placeholder="DEPARTMENT"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "LOCATIONS" },
+                ...locations.map(l => ({ value: l, label: l.toUpperCase() }))
+              ]}
+              value={selectedLocation}
+              onChange={(val) => setSelectedLocation(val || "all")}
+              placeholder="LOCATION"
+              compact
+            />
+          </div>
         </div>
       </div>
 

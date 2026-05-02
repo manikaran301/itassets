@@ -31,6 +31,8 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useSearch } from "@/contexts/SearchContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { SearchableSelect } from "@/components/SearchableSelect";
+import { Download, FileSpreadsheet } from "lucide-react";
 
 interface Workspace {
   id: string;
@@ -288,126 +290,151 @@ export default function WorkspacesPage() {
     );
   }
 
-  return (
-    <div className="h-[calc(100vh-120px)] flex flex-col gap-6 animate-fade-in">
-      {/* Header & Controls Section */}
-      <div className="flex flex-col gap-6 shrink-0">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50">
-              <button 
-                onClick={() => setViewMode("registry")}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                  viewMode === "registry" ? "bg-background text-primary shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Grid className="w-3.5 h-3.5" />
-                Registry
-              </button>
-              <button 
-                onClick={() => setViewMode("layout")}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                  viewMode === "layout" ? "bg-background text-primary shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Map className="w-3.5 h-3.5" />
-                Layout
-              </button>
-            </div>
-          </div>
+  const stats = [
+    { label: "Total Inventory", value: workspaces.length, icon: Grid, color: "text-foreground bg-muted/50 border-border" },
+    { label: "Active Occupancy", value: workspaces.filter(w => w.employeeId).length, icon: Users, color: "text-primary bg-primary/10 border-primary/20" },
+    { label: "Vacant Potential", value: workspaces.filter(w => !w.employeeId).length, icon: Circle, color: "text-green-500 bg-green-500/10 border-green-500/20" },
+    { label: "Floor Distribution", value: new Set(workspaces.map(w => w.floor)).size, icon: Layers, color: "text-accent bg-accent/10 border-accent/20" },
+  ];
 
-          <div className="flex items-center gap-2">
-            {viewMode === "layout" && (
-              <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50 mr-4">
-                <button 
-                  onClick={() => { 
-                    setScale(0.8); 
-                    setPanX(0); 
-                    // Center vertically based on content height
-                    setPanY(-(svgH * 0.4) + 300); 
-                  }} 
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-background rounded-lg transition-all text-[9px] font-black uppercase tracking-widest text-primary"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Reset View
-                </button>
-                <div className="w-[1px] h-4 bg-border/50 mx-1" />
-                <button onClick={() => setScale(s => Math.min(2.5, s + 0.2))} className="p-1.5 hover:bg-background rounded-lg transition-all"><ZoomIn className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setScale(s => Math.max(0.3, s - 0.2))} className="p-1.5 hover:bg-background rounded-lg transition-all"><ZoomOut className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setShowDebug(!showDebug)} className={cn("p-1.5 rounded-lg transition-all", showDebug ? "bg-primary text-primary-foreground" : "hover:bg-background text-muted-foreground")}>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              </div>
+  return (
+    <div className="h-[calc(100vh-120px)] flex flex-col gap-4 animate-fade-in">
+      {/* Header & Controls Section */}
+      <div className="flex justify-between items-center px-1 shrink-0">
+        <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50">
+          <button 
+            onClick={() => setViewMode("registry")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+              viewMode === "registry" ? "bg-background text-primary shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
             )}
-            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/50">
-              {["all", "00", "01", "02", "03", "04", "05"].map((floor) => (
-                <button
-                  key={floor}
-                  onClick={() => setActiveFloor(floor)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-[9px] font-black tracking-widest transition-all uppercase",
-                    activeFloor === floor ? "bg-background text-primary shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {floor === "all" ? "ALL" : floor === "00" ? "GR" : floor + "F"}
-                </button>
-              ))}
-            </div>
-          </div>
+          >
+            <Grid className="w-3.5 h-3.5" />
+            Registry
+          </button>
+          <button 
+            onClick={() => setViewMode("layout")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+              viewMode === "layout" ? "bg-background text-primary shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Map className="w-3.5 h-3.5" />
+            Layout
+          </button>
         </div>
 
-        <div className="bg-card/50 border border-border p-2 rounded-2xl flex flex-col lg:flex-row gap-3 items-center shrink-0">
-          {searchQuery && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20 animate-in slide-in-from-left duration-300">
-              <Search className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                Filtering for: "{searchQuery}"
-              </span>
-              <button 
-                onClick={() => setSearchQuery("")}
-                className="ml-2 hover:bg-primary/20 p-0.5 rounded-full transition-colors"
-              >
-                <RotateCcw className="w-3 h-3 text-primary" />
-              </button>
-            </div>
-          )}
-          
-          <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-            <select 
-              value={companyFilter} 
-              onChange={(e) => setCompanyFilter(e.target.value)}
-              className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]"
-            >
-              {companies.map(c => <option key={c} value={c}>{c === "all" ? "ALL COMPANIES" : formatCompany(c).toUpperCase()}</option>)}
-            </select>
-            <select 
-              value={typeFilter} 
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]"
-            >
-              {types.map(t => <option key={t} value={t}>{t === "all" ? "ALL TYPES" : t.toUpperCase()}</option>)}
-            </select>
-            <select 
-              value={occupancyFilter} 
-              onChange={(e) => setOccupancyFilter(e.target.value)}
-              className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]"
-            >
-              <option value="all">ALL OCCUPANCY</option>
-              <option value="occupied">OCCUPIED</option>
-              <option value="vacant">VACANT</option>
-            </select>
+        <div className="flex items-center gap-2">
+          <button onClick={() => fetchWorkspaces()} className="p-2.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-muted-foreground transition-all">
+            <Loader2 className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+          </button>
 
-            {checkPermission("FACILITY", "SEATS", "canCreate") && (
-              <button 
-                onClick={() => handleOpenModal()}
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-primary/20"
-              >
-                <Plus className="w-4 h-4" />
-                Add Seat
-              </button>
-            )}
+          <button 
+            onClick={() => {
+              const csv = filteredWorkspaces
+                .map(w => `${w.code},${w.company},${w.floor},${w.employee?.fullName || "VACANT"},${w.assets.length},${w.accessories.length}`)
+                .join("\n");
+              const blob = new Blob(["Code,Company,Floor,Occupant,Assets,Accessories\n" + csv], { type: "text/csv" });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `workspaces-registry-${new Date().toISOString().split("T")[0]}.csv`;
+              a.click();
+            }}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export CSV
+          </button>
+
+          {checkPermission("FACILITY", "SEATS", "canCreate") && (
+            <button 
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+            >
+              <Plus className="w-4 h-4" />
+              Add Seat
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Mini Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-card border border-border/60 p-4 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+            <div className="space-y-0.5">
+              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">{stat.label}</p>
+              <h4 className="text-xl font-black">{loading ? "..." : stat.value}</h4>
+            </div>
+            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border border-transparent transition-all", stat.color)}>
+              <stat.icon className="w-5 h-5" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Unified Multi-Filter Ribbon */}
+      <div className="bg-card/50 border border-border p-1.5 rounded-2xl flex flex-col lg:flex-row gap-2 items-center shrink-0">
+        <div className="relative flex-1 group w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            placeholder="FILTER BY SEAT CODE, EMPLOYEE, ASSET TAG..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent pl-11 pr-4 py-2.5 rounded-xl text-[10px] font-bold border border-transparent focus:bg-background outline-none transition-all placeholder:text-[8px] placeholder:font-black placeholder:tracking-widest opacity-80"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+          <div className="w-full lg:w-40">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL FLOORS" },
+                { value: "00", label: "GROUND FLOOR" },
+                { value: "01", label: "1ST FLOOR" },
+                { value: "02", label: "2ND FLOOR" },
+                { value: "03", label: "3RD FLOOR" },
+                { value: "04", label: "4TH FLOOR" },
+                { value: "05", label: "5TH FLOOR" }
+              ]}
+              value={activeFloor}
+              onChange={(val) => setActiveFloor(val || "all")}
+              placeholder="FLOOR"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-44">
+            <SearchableSelect
+              options={companies.map(c => ({ value: c, label: c === "all" ? "ALL COMPANIES" : formatCompany(c).toUpperCase() }))}
+              value={companyFilter}
+              onChange={(val) => setCompanyFilter(val || "all")}
+              placeholder="COMPANY"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-44">
+            <SearchableSelect
+              options={types.map(t => ({ value: t, label: t === "all" ? "ALL TYPES" : t.toUpperCase() }))}
+              value={typeFilter}
+              onChange={(val) => setTypeFilter(val || "all")}
+              placeholder="SEAT TYPE"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-40">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL STATUS" },
+                { value: "occupied", label: "OCCUPIED" },
+                { value: "vacant", label: "VACANT" }
+              ]}
+              value={occupancyFilter}
+              onChange={(val) => setOccupancyFilter(val || "all")}
+              placeholder="OCCUPANCY"
+              compact
+            />
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { 
   ShieldCheck, 
   Save, 
@@ -18,34 +19,44 @@ import {
   Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PERMISSION_ACTIONS, PERMISSION_GROUPS, type PermissionAction } from "@/lib/permission-config";
 
-const PERMISSION_CONFIG = [
-  {
-    category: "IT",
-    subcategories: ["ASSETS", "ACCESSORIES", "EMAILS", "PROVISIONING", "ASSIGNMENTS"]
-  },
-  {
-    category: "HR",
-    subcategories: ["EMPLOYEES", "JOINERS", "EXITS", "REQUIREMENTS"]
-  },
-  {
-    category: "FACILITY",
-    subcategories: ["SEATS"]
-  },
-  {
-    category: "ADMIN",
-    subcategories: ["USERS", "AUDIT", "REPORTS"]
-  }
-];
+interface EditablePermission {
+  category: string;
+  subcategory: string;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canImport: boolean;
+  canExport: boolean;
+}
 
-const ACTIONS = [
-  { id: "canView", label: "View", icon: Eye },
-  { id: "canCreate", label: "Create", icon: Plus },
-  { id: "canEdit", label: "Edit", icon: Edit2 },
-  { id: "canDelete", label: "Delete", icon: Trash2 },
-  { id: "canImport", label: "Import", icon: Upload },
-  { id: "canExport", label: "Export", icon: Download },
-] as const;
+interface PermissionUser {
+  fullName: string;
+  username?: string;
+}
+
+const ACTION_ICONS = {
+  canView: Eye,
+  canCreate: Plus,
+  canEdit: Edit2,
+  canDelete: Trash2,
+  canImport: Upload,
+  canExport: Download,
+};
+
+function findPermission(
+  permissions: EditablePermission[],
+  category: string,
+  subcategory: string,
+) {
+  return permissions.find(
+    (permission) =>
+      permission.category?.toUpperCase() === category.toUpperCase() &&
+      permission.subcategory?.toUpperCase() === subcategory.toUpperCase(),
+  );
+}
 
 export default function UserPermissionsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
@@ -53,8 +64,8 @@ export default function UserPermissionsPage({ params }: { params: Promise<{ id: 
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [permissions, setPermissions] = useState<any[]>([]);
+  const [user, setUser] = useState<PermissionUser | null>(null);
+  const [permissions, setPermissions] = useState<EditablePermission[]>([]);
   const [status, setStatus] = useState<{ type: "success" | "error", message: string } | null>(null);
 
   useEffect(() => {
@@ -68,53 +79,82 @@ export default function UserPermissionsPage({ params }: { params: Promise<{ id: 
         fetch(`/api/admin/users/${id}/permissions`)
       ]);
 
-      if (userRes.ok && permRes.ok) {
+      if (userRes.ok) {
         const userData = await userRes.json();
-        const permData = await permRes.json();
         setUser(userData.user);
-        setPermissions(permData.permissions || []);
+      } else {
+        setUser({ fullName: `User ${id.slice(0, 8)}` });
       }
-    } catch (error) {
+
+      if (permRes.ok) {
+        const permData = await permRes.json();
+        setPermissions(permData.permissions || []);
+      } else {
+        setStatus({ type: "error", message: "Failed to load saved permissions" });
+      }
+    } catch {
       setStatus({ type: "error", message: "Failed to load user data" });
     } finally {
       setLoading(false);
     }
   }
 
-  const togglePermission = (category: string, subcategory: string, action: string) => {
+  const togglePermission = (category: string, subcategory: string, action: PermissionAction) => {
     setStatus(null); // Clear status on change
     setPermissions(prev => {
-      const existing = prev.find(p => p.category === category && p.subcategory === subcategory);
+      const existing = findPermission(prev, category, subcategory);
       if (existing) {
         return prev.map(p => 
-          (p.category === category && p.subcategory === subcategory) 
+          (p.category.toUpperCase() === category.toUpperCase() && p.subcategory.toUpperCase() === subcategory.toUpperCase())
             ? { ...p, [action]: !p[action] }
             : p
         );
       } else {
-        return [...prev, { category, subcategory, [action]: true }];
+        return [...prev, {
+          category,
+          subcategory,
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canImport: false,
+          canExport: false,
+          [action]: true,
+        }];
       }
     });
   };
 
   const toggleAllInRow = (category: string, subcategory: string) => {
     setStatus(null);
-    const existing = permissions.find(p => p.category === category && p.subcategory === subcategory);
-    const allSet = ACTIONS.every(a => existing?.[a.id]);
+    const existing = findPermission(permissions, category, subcategory);
+    const page = PERMISSION_GROUPS.flatMap((group) => group.pages).find(
+      (item) => item.category === category && item.subcategory === subcategory,
+    );
+    const rowActions = page?.actions ?? PERMISSION_ACTIONS.map((action) => action.id);
+    const allSet = rowActions.every(action => existing?.[action]);
     
     setPermissions(prev => {
-      const otherPerms = prev.filter(p => !(p.category === category && p.subcategory === subcategory));
+      const otherPerms = prev.filter(
+        p => !(p.category.toUpperCase() === category.toUpperCase() && p.subcategory.toUpperCase() === subcategory.toUpperCase())
+      );
       const newState = !allSet;
-      return [...otherPerms, {
+      const nextPermission: EditablePermission = {
         category,
         subcategory,
-        canView: newState,
-        canCreate: newState,
-        canEdit: newState,
-        canDelete: newState,
-        canImport: newState,
-        canExport: newState
-      }];
+        canView: false,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canImport: false,
+        canExport: false
+      };
+
+      rowActions.forEach((action) => {
+        nextPermission[action] = newState;
+      });
+
+      return [...otherPerms, nextPermission];
     });
   };
 
@@ -135,8 +175,8 @@ export default function UserPermissionsPage({ params }: { params: Promise<{ id: 
         const data = await res.json();
         throw new Error(data.error);
       }
-    } catch (error: any) {
-      setStatus({ type: "error", message: error.message || "Failed to save permissions" });
+    } catch (error: unknown) {
+      setStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to save permissions" });
     } finally {
       setSaving(false);
     }
@@ -156,12 +196,14 @@ export default function UserPermissionsPage({ params }: { params: Promise<{ id: 
       {/* Integrated Compact Header */}
       <div className="flex items-center justify-between bg-card/50 border border-border px-4 py-3 rounded-2xl backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => router.back()}
+          <Link 
+            href="/admin/users"
             className="p-2 hover:bg-muted rounded-xl transition-all"
+            aria-label="Back to users"
+            title="Back to users"
           >
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-          </button>
+          </Link>
           <div className="h-6 w-[1px] bg-border mx-1" />
           <div>
             <h1 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
@@ -199,66 +241,89 @@ export default function UserPermissionsPage({ params }: { params: Promise<{ id: 
               <tr className="bg-muted/30 border-b border-border">
                 <th className="text-left px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground w-48">Resource</th>
                 <th className="px-2 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground text-center">Batch</th>
-                {ACTIONS.map(action => (
+                {PERMISSION_ACTIONS.map(action => {
+                  const ActionIcon = ACTION_ICONS[action.id];
+                  return (
                   <th key={action.id} className="px-2 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground text-center">
                     <div className="flex flex-col items-center gap-1">
-                      <action.icon className="w-3.5 h-3.5 text-primary/60" />
-                      {action.label}
+                      <ActionIcon className="w-3.5 h-3.5 text-primary/60" />
+                      {action.shortLabel}
                     </div>
                   </th>
-                ))}
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {PERMISSION_CONFIG.map((group) => (
-                group.subcategories.map((sub, idx) => {
-                  const currentPerm = permissions.find(p => p.category === group.category && p.subcategory === sub);
-                  const isAllSet = ACTIONS.every(a => currentPerm?.[a.id]);
+              {PERMISSION_GROUPS.map((group) => (
+                group.pages.map((page) => {
+                  const currentPerm = findPermission(permissions, group.category, page.subcategory);
+                  const rowActions = page.actions ?? PERMISSION_ACTIONS.map((action) => action.id);
+                  const isAllSet = rowActions.every(action => currentPerm?.[action]);
+                  const PageIcon = page.icon;
 
                   return (
-                    <tr key={`${group.category}-${sub}`} className="hover:bg-muted/5 transition-colors group">
+                    <tr key={`${group.category}-${page.subcategory}`} className="hover:bg-muted/5 transition-colors group">
                       <td className="px-6 py-3">
-                        <div className="flex flex-col">
-                          <span className="text-[8px] font-black uppercase tracking-widest text-primary/50">
-                            {group.category}
-                          </span>
-                          <span className="text-xs font-bold tracking-tight">
-                            {sub.replace(/_/g, " ")}
-                          </span>
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <PageIcon className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-primary/50">
+                              {group.label}
+                            </span>
+                            <span className="text-xs font-bold tracking-tight">
+                              {page.label}
+                            </span>
+                            <span className="text-[9px] font-mono text-muted-foreground/60 truncate">
+                              {page.href}
+                            </span>
+                          </div>
                         </div>
                       </td>
                       
                       <td className="px-2 py-3 text-center">
                         <button 
-                          onClick={() => toggleAllInRow(group.category, sub)}
+                          onClick={() => toggleAllInRow(group.category, page.subcategory)}
                           className={cn(
                             "p-1.5 rounded-lg transition-all border",
                             isAllSet ? "bg-primary/10 border-primary/20 text-primary" : "bg-muted/50 border-transparent text-muted-foreground/40 hover:border-border"
                           )}
+                          title={isAllSet ? `Remove all permissions for ${page.label}` : `Grant all permissions for ${page.label}`}
                         >
                           {isAllSet ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
                         </button>
                       </td>
 
-                      {ACTIONS.map(action => (
+                      {PERMISSION_ACTIONS.map(action => {
+                        const isAvailable = rowActions.includes(action.id);
+                        const isChecked = !!currentPerm?.[action.id];
+
+                        return (
                         <td key={action.id} className="px-2 py-3 text-center">
                           <button
-                            onClick={() => togglePermission(group.category, sub, action.id)}
+                            onClick={() => isAvailable && togglePermission(group.category, page.subcategory, action.id)}
+                            disabled={!isAvailable}
                             className={cn(
                               "p-2 rounded-lg transition-all border",
-                              currentPerm?.[action.id] 
-                                ? "bg-primary/5 border-primary/20 text-primary" 
+                              !isAvailable
+                                ? "bg-muted/20 border-transparent text-muted-foreground/10 cursor-not-allowed"
+                                : isChecked
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
                                 : "bg-transparent border-transparent text-muted-foreground/20 hover:border-border/30 hover:text-muted-foreground/50"
                             )}
+                            title={`${action.label}: ${page.label}`}
                           >
-                            {currentPerm?.[action.id] ? (
-                              <CheckSquare className="w-4 h-4" />
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 stroke-[3]" />
                             ) : (
                               <Square className="w-4 h-4" />
                             )}
                           </button>
                         </td>
-                      ))}
+                        );
+                      })}
                     </tr>
                   );
                 })

@@ -1,25 +1,27 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check, X } from "lucide-react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Search, ChevronDown, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface Option {
+  value: string;
+  label: string;
+  image?: string;
+  initials?: string;
+}
+
 interface SearchableSelectProps {
-  options: { 
-    value: string; 
-    label: string; 
-    image?: string | null; 
-    initials?: string 
-  }[];
+  options: Option[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  icon?: React.ReactNode;
   label?: string;
+  icon?: React.ReactNode;
   allowCustom?: boolean;
+  showAvatars?: boolean;
   limit?: number;
   compact?: boolean;
-  showAvatars?: boolean;
 }
 
 export function SearchableSelect({
@@ -27,23 +29,24 @@ export function SearchableSelect({
   value,
   onChange,
   placeholder = "Select...",
-  icon,
   label,
+  icon,
   allowCustom = false,
+  showAvatars = false,
   limit,
   compact = false,
-  showAvatars = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Find the selected option
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value),
+    [options, value]
+  );
 
-  // Sync search display with selected value whenever value or options change
-  // This handles: initial mount, value changes from parent/API, options loading, and dropdown closing
+  // Synchronize search text with selection, but only when dropdown is closed
   useEffect(() => {
     if (!isOpen) {
       const displayValue = selectedOption?.label ?? (value || "");
@@ -51,18 +54,47 @@ export function SearchableSelect({
     }
   }, [value, selectedOption, isOpen, options]);
 
-  // Filter options based on search (only filter when user is actively searching)
-  let filtered = options.filter((opt) =>
-    opt.label.toLowerCase().includes(search.toLowerCase()),
-  );
+  // ADVANCED SEARCH & RELEVANCE LOGIC
+  const searchLower = search.toLowerCase();
+  
+  const sorted = useMemo(() => {
+    // If we have a selected option and the search text matches it exactly, 
+    // we want to show all options but keep the selection at the top.
+    const isExactMatch = selectedOption && searchLower === selectedOption.label.toLowerCase();
+    
+    let baseList = isExactMatch ? [...options] : options.filter(opt => 
+      opt.label.toLowerCase().includes(searchLower)
+    );
 
-  // If a limit is provided and no specific search term matches more explicitly, limit the display
-  if (limit && !search) {
-    filtered = filtered.slice(0, limit);
-  } else if (limit) {
-    // Optionally still cap search results to keep UI clean, or let it show all matches up to say 20.
-    filtered = filtered.slice(0, 50); // cap max rendering to prevent DOM bloat
-  }
+    return baseList.sort((a, b) => {
+      const aLabel = a.label.toLowerCase();
+      const bLabel = b.label.toLowerCase();
+      
+      // 1. Exact matches first
+      const aExact = aLabel === searchLower;
+      const bExact = bLabel === searchLower;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+      
+      // 2. Starts with search term
+      const aStarts = aLabel.startsWith(searchLower);
+      const bStarts = bLabel.startsWith(searchLower);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      
+      // 3. Prioritize currently selected value if showing all
+      if (isExactMatch) {
+        if (a.value === value) return -1;
+        if (b.value === value) return 1;
+      }
+
+      return 0;
+    });
+  }, [options, searchLower, selectedOption, value]);
+
+  // Cap rendering to prevent DOM bloat
+  const displayLimit = limit ? Math.max(limit, 50) : 50;
+  const filtered = sorted.slice(0, displayLimit);
 
   // Close on outside click
   useEffect(() => {
@@ -129,21 +161,24 @@ export function SearchableSelect({
             type="text"
             className={cn(
               "flex-1 min-w-0 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/70",
-              compact ? "text-[9px] font-black uppercase tracking-widest placeholder:font-black" : "text-xs font-black placeholder:font-semibold"
+              compact ? "text-[11px] font-bold" : "text-xs font-bold"
             )}
             placeholder={placeholder}
             value={search}
+            onFocus={() => {
+              setIsOpen(true);
+              inputRef.current?.select();
+            }}
             onChange={(e) => {
               setSearch(e.target.value);
               if (!isOpen) setIsOpen(true);
             }}
-            onFocus={() => setIsOpen(true)}
           />
           {search && (
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 hover:bg-primary/10 rounded-lg transition-colors text-primary/40 hover:text-primary shrink-0"
+              className="p-1 hover:bg-white/10 rounded-full transition-colors text-muted-foreground/40 hover:text-foreground"
             >
               <X className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
             </button>

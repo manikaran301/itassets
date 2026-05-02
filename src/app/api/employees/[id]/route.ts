@@ -32,6 +32,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         currentAssets: true,
         emailAccounts: true,
         workspace: true,
+        currentAccessories: true,
+        assignmentHistory: {
+          orderBy: { assignedDate: 'desc' },
+          take: 20,
+        },
       }
     });
 
@@ -39,7 +44,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
-    return NextResponse.json(employee);
+    return NextResponse.json({
+      ...employee,
+      assets: employee.currentAssets, // Map for frontend compatibility
+    });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch employee' }, { status: 500 });
   }

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { enforcePermission } from '@/lib/permissions';
 
 // GET /api/emails/[id]/forwarding — list forwarding addresses
 export async function GET(
@@ -8,6 +10,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await enforcePermission(userId, 'IT', 'EMAILS', 'canView');
+
     const { id } = await params;
 
     const forwarding = await prisma.emailForwarding.findMany({
@@ -28,10 +37,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'IT', 'EMAILS', 'canEdit');
 
     const { id } = await params;
     const body = await request.json();
@@ -83,10 +94,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'IT', 'EMAILS', 'canEdit');
 
     const { id } = await params;
     const body = await request.json();

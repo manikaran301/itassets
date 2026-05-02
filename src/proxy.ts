@@ -1,14 +1,11 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
-// Role-based route permissions
+// Coarse route permissions. Page/module permissions are enforced by the
+// page components and API handlers so users can be granted cross-module access.
 const roleRoutes: Record<string, string[]> = {
-  "/hr": ["hr", "admin"],
-  "/it": ["it", "admin"],
   "/admin": ["admin"],
-  "/api/assets": ["it", "admin"],
-  "/api/employees": ["hr", "it", "admin"],
-  "/api/emails": ["it", "admin"],
+  "/api/admin": ["admin"],
 };
 
 // Next.js 16: 'middleware' is renamed to 'proxy'

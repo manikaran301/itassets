@@ -15,9 +15,11 @@ import {
   Loader2,
   Play,
   MapPin,
+  Lock,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface ProvisioningRequest {
   id: string;
@@ -49,6 +51,9 @@ interface ProvisioningRequest {
 
 export default function ProvisioningPage() {
   const { data: session } = useSession();
+  const { checkPermission, loading: permsLoading } = usePermissions();
+  const canViewProvisioning = checkPermission("IT", "PROVISIONING", "canView");
+  const canEditProvisioning = checkPermission("IT", "PROVISIONING", "canEdit");
   const [requests, setRequests] = useState<ProvisioningRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -56,8 +61,10 @@ export default function ProvisioningPage() {
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    if (!permsLoading && canViewProvisioning) {
+      fetchRequests();
+    }
+  }, [permsLoading, canViewProvisioning]);
 
   const fetchRequests = async () => {
     try {
@@ -131,10 +138,26 @@ export default function ProvisioningPage() {
     fulfilled: requests.filter((r) => r.status === "fulfilled").length,
   };
 
-  if (loading) {
+  if (permsLoading || (canViewProvisioning && loading)) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!canViewProvisioning) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-6 p-8 text-center animate-fade-in">
+        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center">
+          <Lock className="w-10 h-10 text-red-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-2xl font-black tracking-tight uppercase">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You do not have permission to view <span className="font-bold text-foreground">IT Provisioning</span>.
+          </p>
+        </div>
       </div>
     );
   }
@@ -317,7 +340,7 @@ export default function ProvisioningPage() {
 
                   {/* Action Buttons - Compact */}
                   <div className="p-3 pt-0 flex gap-2">
-                    {req.status === "pending" && (
+                    {req.status === "pending" && canEditProvisioning && (
                       <button
                         onClick={() => updateStatus(req.id, "in_progress")}
                         disabled={isUpdating}

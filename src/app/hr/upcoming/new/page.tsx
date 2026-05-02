@@ -198,7 +198,7 @@ export default function NewUpcomingJoiningPage() {
       )}
 
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="premium-card p-8 rounded-[32px] border border-white/5 bg-card/40 relative group">
+        <div className="premium-card p-8 rounded-[32px] border border-white/5 bg-card/40 relative group z-20 overflow-visible">
           <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-8">
             <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
             Candidate Information
@@ -336,7 +336,7 @@ export default function NewUpcomingJoiningPage() {
         </div>
 
         {/* Contact Information */}
-        <div className="premium-card p-8 rounded-[32px] border border-white/5 bg-card/40 relative group">
+        <div className="premium-card p-8 rounded-[32px] border border-white/5 bg-card/40 relative group z-10 overflow-visible">
           <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-8">
             <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
             Contact Information

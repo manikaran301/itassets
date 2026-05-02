@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { enforcePermission } from '@/lib/permissions';
 
 export async function GET() {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'IT', 'PROVISIONING', 'canView');
 
     const requests = await prisma.provisioningRequest.findMany({
       orderBy: { createdAt: 'desc' },
@@ -67,10 +71,12 @@ async function generateRequestCode(): Promise<string> {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'IT', 'PROVISIONING', 'canCreate');
 
     const body = await request.json();
     const { employeeId, requestedBy, deviceTypeNeeded, specialRequirements, priority, dueDate } = body;
