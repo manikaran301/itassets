@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
+import { authOptions } from '../../auth/[...nextauth]/route';
+import { enforcePermission } from '@/lib/permissions';
 
 async function generateLogCode(): Promise<string> {
   const today = new Date();
@@ -22,6 +25,13 @@ async function generateLogCode(): Promise<string> {
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canView');
+
     const { id } = await context.params;
     const employee = await prisma.employee.findUnique({
       where: { id },
@@ -56,6 +66,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 // Updated: 2026-04-22T18:24
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canEdit');
+
     const { id } = await context.params;
     const data = await request.json();
     
@@ -198,6 +215,13 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 }
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canEdit');
+
     const { id } = await context.params;
     const data = await request.json();
     
@@ -318,6 +342,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canDelete');
+
     const { id } = await context.params;
 
     // Check if employee exists

@@ -22,7 +22,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 const THEME_STORAGE_KEY = "mams-theme";
 
 function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   const storedTheme = window.localStorage.getItem(
     THEME_STORAGE_KEY,
   ) as Theme | null;
@@ -41,7 +41,7 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     const initialTheme = (getCookie(THEME_STORAGE_KEY) as Theme) || 
-                         (document.documentElement.classList.contains("dark") ? "dark" : "light");
+                         (document.documentElement.classList.contains("light") ? "light" : "dark");
     
     setTheme(initialTheme);
     setMounted(true);

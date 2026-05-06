@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
+import { authOptions } from '../../auth/[...nextauth]/route';
+import { enforcePermission } from '@/lib/permissions';
 
 export async function GET(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await enforcePermission(userId, 'HR', 'REQUIREMENTS', 'canView');
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -43,10 +52,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'HR', 'REQUIREMENTS', 'canCreate');
 
     const body = await request.json();
     const { 
@@ -88,10 +99,12 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'HR', 'REQUIREMENTS', 'canEdit');
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -142,10 +155,12 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'HR', 'REQUIREMENTS', 'canDelete');
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

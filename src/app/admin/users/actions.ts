@@ -12,7 +12,9 @@ export async function createUser(formData: FormData) {
   const email = formData.get("email") as string;
   const role = formData.get("role") as SystemRole;
   const password = formData.get("password") as string;
+  const companyId = formData.get("companyId") as string;
   const companyName = formData.get("companyName") as string;
+  const locationIds = formData.getAll("locationIds") as string[];
   const isActive = formData.get("isActive") === "on";
   const permissionsJson = formData.get("permissions") as string;
 
@@ -29,8 +31,12 @@ export async function createUser(formData: FormData) {
       email,
       role,
       passwordHash,
+      companyId: companyId || null,
       companyName: companyName || null,
       isActive,
+      managedLocations: {
+        connect: locationIds.map(id => ({ id }))
+      }
     },
   });
 
@@ -68,7 +74,9 @@ export async function updateUser(id: string, formData: FormData) {
   const email = formData.get("email") as string;
   const role = formData.get("role") as SystemRole;
   const password = formData.get("password") as string;
+  const companyId = formData.get("companyId") as string;
   const companyName = formData.get("companyName") as string;
+  const locationIds = formData.getAll("locationIds") as string[];
   const isActive = formData.get("isActive") === "on";
 
   if (!fullName || !username || !email || !role) {
@@ -80,18 +88,26 @@ export async function updateUser(id: string, formData: FormData) {
     username: string;
     email: string;
     role: SystemRole;
+    companyId: string | null;
     companyName: string | null;
     isActive: boolean;
     updatedAt: Date;
+    managedLocations?: {
+      set: { id: string }[];
+    };
     passwordHash?: string;
   } = {
     fullName,
     username,
     email,
     role,
+    companyId: companyId || null,
     companyName: companyName || null,
     isActive,
     updatedAt: new Date(),
+    managedLocations: {
+      set: locationIds.map(id => ({ id }))
+    }
   };
 
   if (password) {

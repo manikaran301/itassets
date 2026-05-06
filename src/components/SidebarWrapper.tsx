@@ -4,9 +4,16 @@ import { Sidebar } from "@/components/Sidebar";
 import { UserHeader } from "@/components/UserHeader";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebar();
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/login";
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   return (
     <>

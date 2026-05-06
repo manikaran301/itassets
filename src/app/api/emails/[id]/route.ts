@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { enforcePermission } from '@/lib/permissions';
+import { enforcePermission, hasPermission } from '@/lib/permissions';
 
 export async function GET(
   request: Request,
@@ -41,6 +41,12 @@ export async function GET(
 
     if (!email) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+    }
+
+    // SANITIZATION: Only show password if user can EDIT or is ADMIN
+    const canSeePassword = await hasPermission(userId, 'IT', 'EMAILS', 'canEdit');
+    if (!canSeePassword) {
+      email.password = "********"; // Mask password for non-admins/non-editors
     }
 
     return NextResponse.json(email);

@@ -1,16 +1,29 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getDataScope } from '@/lib/scoping';
+import { enforcePermission } from '@/lib/permissions';
 
 export async function GET() {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'IT', 'WORKSPACES', 'canView');
+
+    const scope = await getDataScope();
+    
+    // Map scope for Workspace (which uses Enum 'company' and 'locationId')
+    const workspaceScope: any = {};
+    if (scope.locationId) workspaceScope.locationId = scope.locationId;
+    if (scope.companyId) workspaceScope.company = scope.companyId as any; // Map ID to Enum
 
     // Fetch workspaces with employee, assets, and accessories
     const workspaces = await prisma.workspace.findMany({
+      where: workspaceScope,
       include: {
         employee: {
           select: {
@@ -43,6 +56,7 @@ export async function GET() {
     // Fetch all employees with desk numbers for occupancy fallback (regardless of status)
     const allEmployees = await prisma.employee.findMany({
       where: { 
+        ...scope,
         deskNumber: { not: null }
       },
       select: {
@@ -57,7 +71,10 @@ export async function GET() {
     // Fetch ALL assigned hardware (both employee-linked and workspace-linked)
     const [allAssets, allAccessories] = await Promise.all([
       prisma.asset.findMany({
-        where: { OR: [{ currentEmployeeId: { not: null } }, { workspaceId: { not: null } }] },
+        where: { 
+          workspace: workspaceScope,
+          OR: [{ currentEmployeeId: { not: null } }, { workspaceId: { not: null } }] 
+        },
         select: { id: true, assetTag: true, type: true, currentEmployeeId: true, workspaceId: true }
       }),
       prisma.accessory.findMany({
@@ -104,10 +121,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'IT', 'WORKSPACES', 'canCreate');
 
     const body = await request.json();
     const { code, company, type, floor, capacity } = body;

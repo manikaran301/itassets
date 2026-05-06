@@ -54,7 +54,7 @@ const sidebarLinks: SidebarGroup[] = [
   },
   {
     group: "HR Module",
-    roles: ["hr", "admin"],
+    roles: ["hr", "admin", "readonly"],
     links: [
       { name: "Upcoming Joinings", href: "/hr/upcoming", icon: PlaneTakeoff, permission: ["HR", "REQUIREMENTS"] },
       { name: "Onboarding", href: "/hr/joiners", icon: UserCheck, permission: ["HR", "JOINERS"] },
@@ -64,7 +64,7 @@ const sidebarLinks: SidebarGroup[] = [
   },
   {
     group: "IT Module",
-    roles: ["it", "admin"],
+    roles: ["it", "admin", "readonly"],
     links: [
       { name: "Assets", href: "/it/assets", icon: Monitor, permission: ["IT", "ASSETS"] },
       { name: "Provisioning", href: "/it/provisioning", icon: Truck, permission: ["IT", "PROVISIONING"] },
@@ -77,10 +77,10 @@ const sidebarLinks: SidebarGroup[] = [
     group: "Management",
     roles: ["admin"],
     links: [
-      { name: "Master Data", href: "/admin/management", icon: ShieldCheck },
-      { name: "Reports", href: "/admin/reports", icon: BarChart3 },
-      { name: "Audit Log", href: "/admin/audit", icon: History },
-      { name: "Users", href: "/admin/users", icon: Settings },
+      { name: "Master Data", href: "/admin/management", icon: ShieldCheck, permission: ["ADMIN", "MANAGEMENT"] },
+      { name: "Reports", href: "/admin/reports", icon: BarChart3, permission: ["ADMIN", "REPORTS"] },
+      { name: "Audit Log", href: "/admin/audit", icon: History, permission: ["ADMIN", "AUDIT"] },
+      { name: "Users", href: "/admin/users", icon: Settings, permission: ["ADMIN", "USERS"] },
     ],
   },
 ];
@@ -163,7 +163,8 @@ export function Sidebar() {
               });
 
               const roleAllowsGroup = !group.roles || group.roles.includes(userRole);
-              if (!roleAllowsGroup && links.length === 0) return null;
+              if (!roleAllowsGroup) return null;
+              if (links.length === 0) return null;
 
               return { ...group, links };
             })

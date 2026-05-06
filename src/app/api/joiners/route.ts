@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
+import { authOptions } from '../auth/[...nextauth]/route';
 
 const DAYS_THRESHOLD = 120;
 
 export async function GET() {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const { enforcePermission } = require('@/lib/permissions');
+    await enforcePermission(userId, 'HR', 'JOINERS', 'canView');
 
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - DAYS_THRESHOLD);

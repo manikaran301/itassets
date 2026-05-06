@@ -84,11 +84,16 @@ export async function PATCH(
     if (updateData.purchaseDate) updateData.purchaseDate = new Date(updateData.purchaseDate);
     if (updateData.warrantyExpiry) updateData.warrantyExpiry = new Date(updateData.warrantyExpiry);
 
+    // Perform the update
     const updatedAsset = await prisma.asset.update({
       where: { id },
       data: {
         ...updateData,
-        currentEmployeeId: updateData.currentEmployeeId || null,
+        // Only update currentEmployeeId if it was explicitly passed in the request
+        // This prevents accidental unassignment when editing other asset fields
+        ...(body.hasOwnProperty('currentEmployeeId') ? { 
+          currentEmployeeId: body.currentEmployeeId || null 
+        } : {}),
       },
       include: {
         currentEmployee: true,
@@ -256,8 +261,18 @@ export async function PATCH(
     }
 
     return NextResponse.json(updatedAsset);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update error:', error);
+    
+    // Handle Prisma unique constraint error
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      const target = (error.meta?.target as string[]) || [];
+      const field = target.join(', ');
+      return NextResponse.json({ 
+        error: `Unique constraint failed: An asset with this ${field || 'tag/serial/MAC'} already exists.` 
+      }, { status: 409 });
+    }
+
     return NextResponse.json({ error: 'Failed to update asset' }, { status: 500 });
   }
 }

@@ -7,9 +7,12 @@ import { format } from 'date-fns';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const { enforcePermission } = require('@/lib/permissions');
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canExport');
 
     const data = await prisma.employee.findMany({
       include: {

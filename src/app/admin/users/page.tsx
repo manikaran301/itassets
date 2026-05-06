@@ -4,7 +4,8 @@ import {
   ShieldCheck,
   Unlock,
   Users,
-  Edit2, // Added Edit icon
+  Edit2,
+  Globe,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import prisma from "@/lib/prisma";
@@ -33,20 +34,30 @@ const roleConfig = {
 } as const;
 
 export default async function UsersPage() {
-  const users = await prisma.systemUser.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      fullName: true,
-      username: true,
-      email: true,
-      role: true,
-      isActive: true,
-      companyName: true,
-      createdAt: true,
-      lastLogin: true,
-    },
-  });
+  let users: any[] = [];
+  try {
+    users = await prisma.systemUser.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        fullName: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true,
+        companyName: true,
+        createdAt: true,
+        lastLogin: true,
+        managedLocations: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+  } catch (err: any) {
+    console.error("Prisma Validation Error Details:", err.message);
+    // Return empty list to prevent crash
+    users = [];
+  }
 
   const roleSummary = Object.entries(
     users.reduce<Record<string, number>>((accumulator, user) => {
@@ -125,6 +136,9 @@ export default async function UsersPage() {
                   Company
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
+                  Site Scope
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
                   Last login
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground/70">
@@ -137,7 +151,8 @@ export default async function UsersPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {users.map((user) => {
-                const config = roleConfig[user.role];
+                const role = user.role as keyof typeof roleConfig;
+                const config = roleConfig[role] || roleConfig.readonly;
                 const RoleIcon = config.icon;
 
                 return (
@@ -197,6 +212,27 @@ export default async function UsersPage() {
 
                     <td className="px-6 py-5 text-sm font-semibold text-muted-foreground">
                       {user.companyName || "Unassigned"}
+                    </td>
+
+                    <td className="px-6 py-5">
+                      {user.role === "admin" ? (
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 px-2 py-1 rounded-md border border-primary/10">
+                          <Globe className="w-3 h-3" />
+                          Global
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {user.managedLocations?.length > 0 ? (
+                            user.managedLocations.map((loc: any) => (
+                              <span key={loc.id} className="text-[9px] font-bold bg-muted px-1.5 py-0.5 rounded border border-border">
+                                {loc.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-[9px] font-bold text-muted-foreground/50 italic">No Site Assigned</span>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-6 py-5">

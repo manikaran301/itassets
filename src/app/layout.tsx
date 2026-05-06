@@ -32,7 +32,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const theme = cookieStore.get("mams-theme")?.value || "light";
+  const theme = cookieStore.get("mams-theme")?.value || "dark";
 
   return (
     <html lang="en" className={theme} suppressHydrationWarning>

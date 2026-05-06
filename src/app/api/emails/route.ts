@@ -37,7 +37,15 @@ export async function GET() {
     await enforcePermission(userId, 'IT', 'EMAILS', 'canView');
 
     const emails = await prisma.emailAccount.findMany({
-      include: {
+      select: {
+        id: true,
+        emailAddress: true,
+        displayName: true,
+        status: true,
+        accountType: true,
+        platform: true,
+        employeeId: true,
+        forwardingEnabled: true,
         employee: {
           select: {
             id: true,

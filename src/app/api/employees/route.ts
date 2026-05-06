@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
+import { getDataScope } from '@/lib/scoping';
+import { authOptions } from '../auth/[...nextauth]/route';
+import { enforcePermission } from '@/lib/permissions';
 
 // Validation schema for employee creation
 const EmployeeSchema = z.object({
@@ -27,10 +30,14 @@ const EmployeeSchema = z.object({
 export async function GET(request: Request) {
   try {
     // Session check (defense in depth - middleware also checks)
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canView');
+
+    const scope = await getDataScope();
 
     const { searchParams } = new URL(request.url);
     const skip = parseInt(searchParams.get('skip') || '0');
@@ -40,9 +47,12 @@ export async function GET(request: Request) {
 
     const [employees, total] = await Promise.all([
       prisma.employee.findMany({
-        where: statuses && statuses.length > 0 ? {
-          status: { in: statuses as any[] }
-        } : {},
+        where: {
+          ...scope,
+          ...(statuses && statuses.length > 0 ? {
+            status: { in: statuses as any[] }
+          } : {}),
+        },
         include: {
           manager: {
             select: {
@@ -73,9 +83,12 @@ export async function GET(request: Request) {
         ...(take > 0 ? { skip, take } : {}),
       }),
       prisma.employee.count({
-        where: statuses && statuses.length > 0 ? {
-          status: { in: statuses as any[] }
-        } : {},
+        where: {
+          ...scope,
+          ...(statuses && statuses.length > 0 ? {
+            status: { in: statuses as any[] }
+          } : {}),
+        },
       }),
     ]);
 
@@ -97,11 +110,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    // Session check (defense in depth - middleware also checks)
-    const session = await getServerSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canCreate');
 
     const rawData = await request.json();
 

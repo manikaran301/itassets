@@ -179,6 +179,8 @@ model SystemUser {
   updatedAt    DateTime   @updatedAt @db.Timestamp
 
   company               Company?                   @relation(fields: [companyId], references: [id])
+  defaultLocationId     String?                    @db.Uuid
+  managedLocations      Location[]                 @relation("UserLocations")
 
   employeesCreated      Employee[]                 @relation("CreatedBy")
   fulfilledRequirements EmployeeAssetRequirement[] @relation("FulfilledBy")
@@ -319,6 +321,8 @@ model Location {
   updatedAt DateTime @updatedAt @db.Timestamp
 
   employees Employee[]
+  workspaces Workspace[]
+  authorizedUsers SystemUser[] @relation("UserLocations")
 
   @@map("master_locations")
 }
@@ -568,6 +572,9 @@ model Workspace {
 
   assets      Asset[]
   accessories Accessory[]
+
+  locationId String?   @db.Uuid
+  location   Location? @relation(fields: [locationId], references: [id])
 
   createdAt DateTime @default(now()) @db.Timestamp
   updatedAt DateTime @updatedAt @db.Timestamp

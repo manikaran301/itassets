@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { enforcePermission } from '@/lib/permissions';
+import { getDataScope } from '@/lib/scoping';
 
 export async function GET() {
   try {
@@ -14,7 +15,15 @@ export async function GET() {
     }
     await enforcePermission(userId, 'IT', 'ASSETS', 'canView');
 
+    const scope = await getDataScope();
+    
+    // Map the scope for Asset (which filters via Workspace)
+    const assetScope: any = {};
+    if (scope.companyId) assetScope.workspace = { ...assetScope.workspace, company: scope.companyId as any };
+    if (scope.locationId) assetScope.workspace = { ...assetScope.workspace, locationId: scope.locationId };
+
     const assets = await prisma.asset.findMany({
+      where: assetScope,
       include: {
         currentEmployee: {
           select: {

@@ -25,6 +25,11 @@ export const authOptions = {
                 { email: identifier },
                 { username: identifier }
               ]
+            },
+            include: {
+              managedLocations: {
+                select: { id: true, name: true }
+              }
             }
           });
 
@@ -52,6 +57,9 @@ export const authOptions = {
             email: user.email,
             name: user.fullName,
             role: user.role,
+            companyId: user.companyId,
+            defaultLocationId: user.defaultLocationId,
+            authorizedLocations: user.managedLocations.map(loc => ({ id: loc.id, name: loc.name })),
           };
         } catch {
           return null;
@@ -62,15 +70,21 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
-        token.role = (user as any).role;
-        token.id = (user as any).id;
+        token.role = user.role;
+        token.id = user.id;
+        token.companyId = user.companyId;
+        token.defaultLocationId = user.defaultLocationId;
+        token.authorizedLocations = user.authorizedLocations;
       }
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
       if (session?.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).id = token.id;
+        session.user.role = token.role;
+        session.user.id = token.id;
+        session.user.companyId = token.companyId;
+        session.user.defaultLocationId = token.defaultLocationId;
+        session.user.authorizedLocations = token.authorizedLocations;
       }
       return session;
     }

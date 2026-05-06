@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useSearch } from "@/contexts/SearchContext";
 import { LogOut, User, Settings, ChevronDown, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScopeSelector } from "@/components/ScopeSelector";
 
 const headerContent = [
   {
@@ -160,6 +161,10 @@ export function UserHeader() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-muted px-4 py-1.5 rounded-full text-sm border border-transparent focus:border-primary/30 outline-none transition-all w-48 lg:w-64 focus:w-80"
           />
+        </div>
+        
+        <div className="flex items-center gap-3 mr-2">
+          <ScopeSelector />
         </div>
         
         <div className="flex items-center gap-1">

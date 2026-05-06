@@ -10,10 +10,16 @@ import {
   Activity,
   ArrowLeft,
   Loader2,
+  Globe,
+  CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
+import { useEffect } from "react";
 import Link from "next/link";
 
+import { cn } from "@/lib/utils";
 import { PermissionMatrixModal } from "./PermissionMatrixModal";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface SystemUserData {
   id?: string;
@@ -21,8 +27,10 @@ interface SystemUserData {
   username?: string;
   email?: string;
   role?: string;
+  companyId?: string | null;
   companyName?: string | null;
   isActive?: boolean;
+  managedLocations?: { id: string; name: string }[];
 }
 
 interface UserFormProps {
@@ -34,6 +42,35 @@ export function UserForm({ initialData, action }: UserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPermsModal, setShowPermsModal] = useState(false);
   const [permissions, setPermissions] = useState<any[]>([]);
+  const [masterCompanies, setMasterCompanies] = useState<any[]>([]);
+  const [masterLocations, setMasterLocations] = useState<any[]>([]);
+  const [role, setRole] = useState(initialData?.role || "readonly");
+  const [companyId, setCompanyId] = useState(initialData?.companyId || "");
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(
+    initialData?.managedLocations?.map((l) => l.id) || []
+  );
+
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [companiesRes, locationsRes] = await Promise.all([
+          fetch("/api/admin/master-data/companies"),
+          fetch("/api/admin/master-data/locations"),
+        ]);
+        if (companiesRes.ok) setMasterCompanies(await companiesRes.json());
+        if (locationsRes.ok) setMasterLocations(await locationsRes.json());
+      } catch (error) {
+        console.error("Failed to fetch master data:", error);
+      }
+    };
+    fetchMasterData();
+  }, []);
+
+  const toggleLocation = (id: string) => {
+    setSelectedLocations((prev) =>
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,6 +79,16 @@ export function UserForm({ initialData, action }: UserFormProps) {
       const formData = new FormData(e.currentTarget);
       // Ensure permissions are included as JSON string
       formData.set("permissions", JSON.stringify(permissions));
+      
+      // Clear previous locationIds and set new ones
+      formData.delete("locationIds");
+      selectedLocations.forEach(id => formData.append("locationIds", id));
+
+      // Get selected company name for convenience
+      const companyId = formData.get("companyId");
+      const company = masterCompanies.find(c => c.id === companyId);
+      if (company) formData.set("companyName", company.name);
+
       await action(formData);
     } catch (error) {
       console.error(error);
@@ -131,32 +178,38 @@ export function UserForm({ initialData, action }: UserFormProps) {
                   <ShieldCheck className="w-3.5 h-3.5" /> System Role{" "}
                   <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <select
-                    name="role"
-                    required
-                    defaultValue={initialData?.role || "readonly"}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="admin">Administrator (Full Access)</option>
-                    <option value="hr">HR Manager</option>
-                    <option value="it">IT Manager</option>
-                    <option value="readonly">Read Only Access</option>
-                  </select>
-                </div>
+                <SearchableSelect
+                  options={[
+                    { value: "admin", label: "ADMINISTRATOR (FULL ACCESS)" },
+                    { value: "hr", label: "HR MANAGER" },
+                    { value: "it", label: "IT MANAGER" },
+                    { value: "readonly", label: "READ ONLY ACCESS" },
+                  ]}
+                  value={role}
+                  onChange={setRole}
+                  placeholder="SELECT SYSTEM ROLE"
+                  icon={<ShieldCheck className="w-3.5 h-3.5" />}
+                  compact
+                />
+                <input type="hidden" name="role" value={role} />
               </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                   <Briefcase className="w-3.5 h-3.5" /> Company / Division
                 </label>
-                <input
-                  type="text"
-                  name="companyName"
-                  defaultValue={initialData?.companyName || ""}
-                  className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  placeholder="e.g. HQ"
+                <SearchableSelect
+                  options={[
+                    { value: "", label: "UNASSIGNED" },
+                    ...masterCompanies.map(c => ({ value: c.id, label: c.name.toUpperCase() }))
+                  ]}
+                  value={companyId}
+                  onChange={setCompanyId}
+                  placeholder="SELECT COMPANY"
+                  icon={<Briefcase className="w-3.5 h-3.5" />}
+                  compact
                 />
+                <input type="hidden" name="companyId" value={companyId} />
               </div>
 
               <div className="space-y-2">
@@ -177,6 +230,55 @@ export function UserForm({ initialData, action }: UserFormProps) {
                   }
                 />
               </div>
+            </div>
+          </div>
+
+          {/* New Managed Locations Section */}
+          <div className="pt-8 border-t border-border space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5" /> Site Authorization Scope
+                </label>
+                <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
+                  Select physical locations this user is authorized to manage
+                </p>
+              </div>
+              <div className="text-[10px] font-black text-primary bg-primary/5 px-2 py-1 rounded border border-primary/10">
+                {selectedLocations.length} SITES SELECTED
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {masterLocations.map((loc) => {
+                const isSelected = selectedLocations.includes(loc.id);
+                return (
+                  <button
+                    key={loc.id}
+                    type="button"
+                    onClick={() => toggleLocation(loc.id)}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-xl border transition-all text-left group",
+                      isSelected
+                        ? "bg-primary/5 border-primary/40 shadow-sm"
+                        : "bg-muted/10 border-border hover:border-primary/30"
+                    )}
+                  >
+                    <div className="flex flex-col">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-tight",
+                        isSelected ? "text-primary" : "text-muted-foreground"
+                      )}>
+                        {loc.name}
+                      </span>
+                      <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">
+                        Physical Site
+                      </span>
+                    </div>
+                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary animate-in zoom-in duration-300" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

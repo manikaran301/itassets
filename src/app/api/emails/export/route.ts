@@ -40,7 +40,6 @@ export async function GET() {
     const headers = [
       "Email Address",
       "Display Name",
-      "Password",
       "Account Type",
       "Platform",
       "Status",
@@ -57,7 +56,6 @@ export async function GET() {
       return [
         email.emailAddress,
         email.displayName,
-        email.password || "-",
         email.accountType.toUpperCase(),
         email.platform.toUpperCase(),
         email.status.toUpperCase(),

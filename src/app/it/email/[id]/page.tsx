@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const PLATFORM_OPTIONS = [
   { value: "google_workspace", label: "Google Workspace" },
@@ -64,6 +65,10 @@ export default function EmailDetailPage() {
   const router = useRouter();
   const params = useParams();
   const emailId = params.id as string;
+
+  const { checkPermission, role, loading: permsLoading } = usePermissions();
+  const canEdit = checkPermission("IT", "EMAILS", "canEdit");
+  const canView = checkPermission("IT", "EMAILS", "canView");
 
   const [email, setEmail] = useState<EmailDetail | null>(null);
   const [employees, setEmployees] = useState<{ value: string; label: string }[]>([]);
@@ -173,13 +178,29 @@ export default function EmailDetailPage() {
     if (error) setError("");
   };
 
-  if (loading) {
+  if (loading || permsLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-40 gap-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 animate-pulse">
-          Synchronizing Identity...
+          {permsLoading ? "Verifying Authorization..." : "Synchronizing Identity..."}
         </p>
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-6 animate-fade-in">
+        <div className="w-24 h-24 rounded-[40px] bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-2xl shadow-red-500/10">
+          <Lock className="w-12 h-12 text-red-500" />
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-2xl font-black uppercase tracking-tight">Access Denied</h3>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-60">
+            You do not have clearance to view this identity.
+          </p>
+        </div>
       </div>
     );
   }
@@ -383,16 +404,23 @@ export default function EmailDetailPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={formData.password}
+                      disabled={!canEdit}
                       onChange={(e) => updateField("password", e.target.value)}
-                      className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 rounded-2xl pl-12 pr-12 py-3.5 text-xs outline-none transition-all font-mono"
+                      className="w-full bg-muted/10 border border-border/40 focus:border-primary/40 rounded-2xl pl-12 pr-12 py-3.5 text-xs outline-none transition-all font-mono disabled:opacity-50"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    ) : (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500/30" title="Restricted Access">
+                        <Lock className="w-3.5 h-3.5" />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
