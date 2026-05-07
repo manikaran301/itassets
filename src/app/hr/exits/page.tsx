@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ExitEmployee {
   id: string;
@@ -45,6 +46,7 @@ interface ExitEmployee {
 export default function ExitsPage() {
   const PAGE_SIZE = 50;
   const router = useRouter();
+  const { showToast } = useToast();
   const [exits, setExits] = useState<ExitEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -178,6 +180,7 @@ export default function ExitsPage() {
         }),
       });
       if (res.ok) {
+        showToast(`Exit process initiated for ${selectedEmp.fullName}`, "success");
         setShowRegisterModal(false);
         fetchExits(0);
         setSelectedEmp(null);
@@ -185,7 +188,7 @@ export default function ExitsPage() {
         setExitDate("");
         setExitReason("");
       } else {
-        alert("Failed to register exit");
+        showToast("Failed to register exit", "error");
       }
     } catch (err) {
       console.error(err);

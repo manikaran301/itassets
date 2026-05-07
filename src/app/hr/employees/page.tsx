@@ -32,10 +32,12 @@ import type { EmployeeListItem } from "@/lib/types";
 import Link from "next/link";
 import { format } from "date-fns";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function EmployeesPage() {
   const PAGE_SIZE = 50;
   const router = useRouter();
+  const { showToast } = useToast();
   const { checkPermission, loading: permsLoading } = usePermissions();
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ export default function EmployeesPage() {
       setImportRecords(data.results);
     } catch (err) {
       console.error("Validation error:", err);
-      alert("Failed to validate import data");
+      showToast("Failed to validate import data", "error");
     } finally {
       setValidatingImport(false);
     }
@@ -184,18 +186,18 @@ export default function EmployeesPage() {
       } else if (response.status === 409) {
         // Conflict - cannot delete due to dependencies
         const message = data.details
-          ? `Cannot delete employee:\n\n${data.details.join("\n")}`
+          ? `Cannot delete employee: ${data.details.join(", ")}`
           : data.error || "Cannot delete this employee.";
-        alert(message);
+        showToast(message, "error");
       } else {
         const message = data.details
-          ? `${data.error}\n\n${data.details}`
+          ? `${data.error}: ${data.details}`
           : data.error || "Failed to delete employee.";
-        alert(message);
+        showToast(message, "error");
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Something went wrong. Please try again.");
+      showToast("Something went wrong. Please try again.", "error");
     }
   };
 
@@ -215,7 +217,7 @@ export default function EmployeesPage() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Export error:', err);
-      alert('Failed to export data');
+      showToast('Failed to export data', "error");
     }
   };
 
@@ -255,12 +257,12 @@ export default function EmployeesPage() {
 
       if (!res.ok) throw new Error("Import failed");
 
-      alert(`Successfully imported ${validRecords.length} employees!`);
+      showToast(`Successfully imported ${validRecords.length} employees!`, "success");
       setShowImportModal(false);
       fetchEmployees(0);
     } catch (err) {
       console.error("Import error:", err);
-      alert("Failed to complete import process");
+      showToast("Failed to complete import process", "error");
     } finally {
       setImportingBatch(false);
     }

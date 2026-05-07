@@ -8,55 +8,79 @@ import { enforcePermission } from '@/lib/permissions';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const user = session?.user as { id?: string; role?: string } | undefined;
+    const userId = user?.id;
+    const userRole = user?.role;
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await enforcePermission(userId, 'IT', 'WORKSPACES', 'canView');
+    await enforcePermission(userId, 'IT', 'WORKSPACES', 'canView', userRole);
 
     const scope = await getDataScope();
     
     // Map scope for Workspace (which uses Enum 'company' and 'locationId')
     const workspaceScope: any = {};
     if (scope.locationId) workspaceScope.locationId = scope.locationId;
-    if (scope.companyId) workspaceScope.company = scope.companyId as any; // Map ID to Enum
+    if (scope.companyId) {
+      // Map company string/ID to Prisma Enum member name
+      const cId = scope.companyId;
+      if (cId === "50Hertz Limited" || cId === "50-Hertz" || cId === "FIFTY_HERTZ" || cId === "50Hertz") {
+        workspaceScope.company = "FIFTY_HERTZ";
+      } else {
+        workspaceScope.company = cId as any;
+      }
+    }
 
     // Fetch workspaces with employee, assets, and accessories
-    const workspaces = await prisma.workspace.findMany({
-      where: workspaceScope,
-      include: {
-        employee: {
-          select: {
-            id: true,
-            fullName: true,
-            employeeCode: true,
-            photoPath: true
+    let safeWorkspaces;
+    try {
+      const workspaces = await prisma.workspace.findMany({
+        where: workspaceScope,
+        include: {
+          employee: {
+            select: { id: true, fullName: true, employeeCode: true, photoPath: true }
+          },
+          assets: {
+            select: { id: true, assetTag: true, type: true }
+          },
+          accessories: {
+            select: { id: true, assetTag: true, type: true }
           }
         },
-        assets: {
-          select: {
-            id: true,
-            assetTag: true,
-            type: true
-          }
-        },
-        accessories: {
-          select: {
-            id: true,
-            assetTag: true,
-            type: true
-          }
-        }
-      },
-      orderBy: {
-        code: 'asc'
+        orderBy: { code: 'asc' }
+      });
+      safeWorkspaces = workspaces;
+    } catch (e: any) {
+      if (e.message.includes("not found in enum 'CompanyBranch'")) {
+        console.warn("Prisma Enum mapping lag detected, falling back to raw query");
+        // Fallback to raw query if enum mapping is failing
+        const rawWorkspaces: any[] = await prisma.$queryRawUnsafe(`
+          SELECT w.*, 
+            e.id as "empId", e."fullName", e."employeeCode", e."photoPath"
+          FROM workspaces w
+          LEFT JOIN employees e ON w."employeeId" = e.id
+          ORDER BY w.code ASC
+        `);
+        safeWorkspaces = rawWorkspaces.map(w => ({
+          ...w,
+          employee: w.empId ? {
+            id: w.empId,
+            fullName: w.fullName,
+            employeeCode: w.employeeCode,
+            photoPath: w.photoPath
+          } : null,
+          assets: [], // Hardware will be fetched by the aggregation logic below
+          accessories: []
+        }));
+      } else {
+        throw e;
       }
-    });
+    }
 
     // Fetch all employees with desk numbers for occupancy fallback (regardless of status)
     const allEmployees = await prisma.employee.findMany({
       where: { 
-        ...scope,
         deskNumber: { not: null }
       },
       select: {
@@ -64,26 +88,22 @@ export async function GET() {
         fullName: true,
         employeeCode: true,
         photoPath: true,
-        deskNumber: true
+        deskNumber: true,
+        companyId: true
       }
     });
 
     // Fetch ALL assigned hardware (both employee-linked and workspace-linked)
     const [allAssets, allAccessories] = await Promise.all([
       prisma.asset.findMany({
-        where: { 
-          workspace: workspaceScope,
-          OR: [{ currentEmployeeId: { not: null } }, { workspaceId: { not: null } }] 
-        },
         select: { id: true, assetTag: true, type: true, currentEmployeeId: true, workspaceId: true }
       }),
       prisma.accessory.findMany({
-        where: { OR: [{ currentEmployeeId: { not: null } }, { workspaceId: { not: null } }] },
         select: { id: true, assetTag: true, type: true, currentEmployeeId: true, workspaceId: true }
       })
     ]);
 
-    const safeWorkspaces = workspaces.map((ws: any) => {
+    const resultWorkspaces = safeWorkspaces.map((ws: any) => {
       let occupant = ws.employee;
       
       // Fallback: Check if any employee has this seat code in their deskNumber
@@ -112,7 +132,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(safeWorkspaces);
+    return NextResponse.json(resultWorkspaces);
   } catch (error: any) {
     console.error("API Error [GET /api/workspaces]:", error);
     return NextResponse.json({ error: 'Failed to fetch workspaces' }, { status: 500 });
@@ -122,17 +142,20 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const user = session?.user as { id?: string; role?: string } | undefined;
+    const userId = user?.id;
+    const userRole = user?.role;
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await enforcePermission(userId, 'IT', 'WORKSPACES', 'canCreate');
+    await enforcePermission(userId, 'IT', 'WORKSPACES', 'canCreate', userRole);
 
     const body = await request.json();
-    const { code, company, type, floor, capacity } = body;
+    const { code, company, type, floor, capacity, locationId } = body;
 
     if (!code) {
-      return NextResponse.json({ error: 'Seat code is required' }, { status: 400 });
+      return NextResponse.json({ error: "Seat code is required" }, { status: 400 });
     }
 
     // Check if code already exists
@@ -144,16 +167,58 @@ export async function POST(request: Request) {
     const workspace = await prisma.workspace.create({
       data: {
         code,
-        company: company || 'MPL',
-        type: type || 'workstation',
-        floor: floor || '03',
+        company: company || "MPL",
+        type: type || "workstation",
+        floor: floor || "03",
         capacity: capacity || 1,
-      }
+        locationId: locationId || null,
+      },
     });
 
     return NextResponse.json(workspace, { status: 201 });
   } catch (error: any) {
     console.error("API Error [POST /api/workspaces]:", error);
-    return NextResponse.json({ error: 'Failed to create workspace' }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create workspace" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user as { id?: string; role?: string } | undefined;
+    const userId = user?.id;
+    const userRole = user?.role;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await enforcePermission(userId, "IT", "WORKSPACES", "canEdit", userRole);
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const { code, company, type, floor, capacity, locationId } = body;
+
+    const workspace = await prisma.workspace.update({
+      where: { id },
+      data: {
+        code,
+        company,
+        type,
+        floor,
+        capacity,
+        locationId: locationId || null,
+      },
+    });
+
+    return NextResponse.json(workspace);
+  } catch (error: any) {
+    console.error("API Error [PUT /api/workspaces]:", error);
+    return NextResponse.json({ error: "Failed to update workspace" }, { status: 500 });
   }
 }

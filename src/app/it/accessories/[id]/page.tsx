@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { useToast } from "@/contexts/ToastContext";
 
 interface AccessoryDetail {
   id: string;
@@ -61,6 +62,7 @@ const STATUS_OPTIONS = [
 export default function AccessoryDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { showToast } = useToast();
   const accessoryId = params.id as string;
 
   const [accessory, setAccessory] = useState<AccessoryDetail | null>(null);
@@ -129,9 +131,9 @@ export default function AccessoryDetailPage() {
       const updated = await res.json();
       setAccessory(updated);
       setEditing(false);
-      alert("Accessory updated successfully!");
+      showToast("Accessory updated successfully!", "success");
     } catch (error) {
-      alert("Failed to save changes");
+      showToast("Failed to save changes", "error");
     } finally {
       setSaving(false);
     }
@@ -143,10 +145,10 @@ export default function AccessoryDetailPage() {
     try {
       const res = await fetch(`/api/accessories/${accessoryId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
-      alert("Accessory deleted successfully!");
+      showToast("Accessory deleted successfully!", "success");
       router.push("/it/accessories");
     } catch (error) {
-      alert("Failed to delete accessory");
+      showToast("Failed to delete accessory", "error");
     } finally {
       setDeleting(false);
     }

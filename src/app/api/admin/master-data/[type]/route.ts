@@ -86,16 +86,28 @@ export async function PUT(
     let result;
     switch (type) {
       case "companies":
-        result = await prisma.company.update({ where: { id }, data });
+        result = await prisma.company.update({ 
+          where: { id }, 
+          data: { name: body.name, code: body.code, isActive: body.isActive } 
+        });
         break;
       case "departments":
-        result = await prisma.department.update({ where: { id }, data });
+        result = await prisma.department.update({ 
+          where: { id }, 
+          data: { name: body.name, isActive: body.isActive } 
+        });
         break;
       case "designations":
-        result = await prisma.designation.update({ where: { id }, data });
+        result = await prisma.designation.update({ 
+          where: { id }, 
+          data: { name: body.name, isActive: body.isActive } 
+        });
         break;
       case "locations":
-        result = await prisma.location.update({ where: { id }, data });
+        result = await prisma.location.update({ 
+          where: { id }, 
+          data: { name: body.name, address: body.address, isActive: body.isActive } 
+        });
         break;
       default:
         return NextResponse.json({ error: "Invalid type" }, { status: 400 });

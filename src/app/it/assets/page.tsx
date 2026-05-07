@@ -37,6 +37,7 @@ import type { AssetListItem } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useToast } from "@/contexts/ToastContext";
 
 import { SearchableSelect } from "@/components/SearchableSelect";
 
@@ -76,6 +77,7 @@ function AssetImportPreviewModal({
   const [records, setRecords] = useState<AssetImportRecord[]>(data);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const { showToast } = useToast();
 
   const validateRecords = async (recordsToValidate: AssetImportRecord[]) => {
     setIsValidating(true);
@@ -113,7 +115,7 @@ function AssetImportPreviewModal({
   const handleFinalImport = async () => {
     const validRecords = records.filter((r) => r.isValid);
     if (validRecords.length === 0) {
-      alert("No valid records to import");
+      showToast("No valid records to import", "error");
       return;
     }
     setIsSubmitting(true);
@@ -329,6 +331,7 @@ function AssetImportPreviewModal({
 export default function AssetsPage() {
   const router = useRouter();
   const { checkPermission, loading: permsLoading } = usePermissions();
+  const { showToast } = useToast();
   const [assets, setAssets] = useState<AssetListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -463,7 +466,7 @@ export default function AssetsPage() {
       const text = event.target?.result as string;
       const lines = text.split("\n").filter((l) => l.trim());
       if (lines.length < 2) {
-        alert("Empty or invalid CSV");
+        showToast("Empty or invalid CSV", "error");
         setImporting(false);
         return;
       }
@@ -538,7 +541,7 @@ export default function AssetsPage() {
 
       if (data.success) {
         if (data.summary.errors > 0 || data.summary.skipped > 0) {
-          alert(`Registry partially updated.\nImported: ${data.summary.imported}\nErrors/Skipped: ${data.summary.errors + data.summary.skipped}\n\nPlease check the marked rows.`);
+          showToast(`Registry partially updated. ${data.summary.imported} imported, ${data.summary.errors + data.summary.skipped} failed.`, "warning");
           
           // Update preview data to show what failed
           setPreviewData(prev => {
@@ -558,16 +561,16 @@ export default function AssetsPage() {
               });
           });
         } else {
-          alert(`Registry Updated! ${data.summary.imported} assets registered.`);
+          showToast(`Registry Updated! ${data.summary.imported} assets registered.`, "success");
           setPreviewData(null);
           window.location.reload();
         }
       } else {
-        alert(`Import Failed: ${data.error}`);
+        showToast(`Import Failed: ${data.error}`, "error");
       }
     } catch (error) {
       console.error("Import error:", error);
-      alert("Failed to register assets.");
+      showToast("Failed to register assets.", "error");
     }
   };
 
@@ -917,13 +920,14 @@ export default function AssetsPage() {
                                     });
                                     
                                     if (res.ok) {
+                                      showToast("Asset assigned successfully!", "success");
                                       router.push(`/it/email?assignTo=${provisioningTarget}&flow=provisioning`);
                                     } else {
                                       const err = await res.json();
-                                      alert(err.error || "Assignment failed");
+                                      showToast(err.error || "Assignment failed", "error");
                                     }
                                   } catch (error) {
-                                    alert("Failed to assign asset");
+                                    showToast("Failed to assign asset", "error");
                                   }
                                 }}
                                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"

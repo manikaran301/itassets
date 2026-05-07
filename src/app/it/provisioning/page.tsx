@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ProvisioningRequest {
   id: string;
@@ -51,6 +52,7 @@ interface ProvisioningRequest {
 
 export default function ProvisioningPage() {
   const { data: session } = useSession();
+  const { showToast } = useToast();
   const { checkPermission, loading: permsLoading } = usePermissions();
   const canViewProvisioning = checkPermission("IT", "PROVISIONING", "canView");
   const canEditProvisioning = checkPermission("IT", "PROVISIONING", "canEdit");
@@ -407,13 +409,14 @@ export default function ProvisioningPage() {
                               },
                             );
                             if (!res.ok) {
-                              alert("Failed to delete");
+                              showToast("Failed to delete", "error");
                               setUpdating(null);
                               return;
                             }
                             await fetchRequests();
+                            showToast("Request deleted successfully", "success");
                           } catch {
-                            alert("Something went wrong");
+                            showToast("Something went wrong", "error");
                             setUpdating(null);
                           }
                         }

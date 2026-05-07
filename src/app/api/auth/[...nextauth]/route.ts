@@ -61,7 +61,8 @@ export const authOptions = {
             defaultLocationId: user.defaultLocationId,
             authorizedLocations: user.managedLocations.map(loc => ({ id: loc.id, name: loc.name })),
           };
-        } catch {
+        } catch (error) {
+          console.error("NextAuth Authorize Error:", error);
           return null;
         }
       }

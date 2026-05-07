@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Papa from "papaparse";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { useToast } from "@/contexts/ToastContext";
 
 interface UpcomingJoining {
   id: string;
@@ -102,6 +103,7 @@ interface UpcomingImportRecord {
 export default function UpcomingJoiningPage() {
   const PAGE_SIZE = 50;
   const router = useRouter();
+  const { showToast } = useToast();
   const [data, setData] = useState<UpcomingJoining[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -145,7 +147,7 @@ export default function UpcomingJoiningPage() {
       setImportRecords(data.results);
     } catch (err) {
       console.error("Validation error:", err);
-      alert("Failed to validate import data");
+      showToast("Failed to validate import data", "error");
     } finally {
       setValidatingImport(false);
     }
@@ -426,7 +428,7 @@ export default function UpcomingJoiningPage() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Export error:', err);
-      alert('Failed to export data');
+      showToast('Failed to export data', 'error');
     }
   };
 
@@ -466,14 +468,13 @@ export default function UpcomingJoiningPage() {
       });
 
       if (!res.ok) throw new Error("Import failed");
-
-      alert(`Successfully imported ${validRecords.length} joiners!`);
+      showToast(`Successfully imported ${validRecords.length} joiners!`, "success");
       setShowImportModal(false);
       fetchData(0);
       fetchFilterOptions();
     } catch (err) {
       console.error("Import error:", err);
-      alert("Failed to complete import process");
+      showToast("Failed to complete import process", "error");
     } finally {
       setImportingBatch(false);
     }

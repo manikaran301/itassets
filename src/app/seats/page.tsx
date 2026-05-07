@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { useSearch } from "@/contexts/SearchContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { useToast } from "@/contexts/ToastContext";
 import { Download, FileSpreadsheet } from "lucide-react";
 
 interface Workspace {
@@ -59,7 +60,7 @@ interface Workspace {
 }
 
 const formatCompany = (company: string) => {
-  if (company === "FIFTY_HERTZ") return "50Hertz";
+  if (company === "FIFTY_HERTZ") return "50Hertz Limited";
   return company;
 };
 
@@ -73,6 +74,7 @@ const SVG_W = GRID_COLS * TABLE_BLOCK_W + 100;
 export default function WorkspacesPage() {
   const { searchQuery, setSearchQuery } = useSearch();
   const { checkPermission, loading: permsLoading } = usePermissions();
+  const { showToast } = useToast();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -97,20 +99,46 @@ export default function WorkspacesPage() {
     company: "MPL",
     type: "workstation",
     floor: "00",
-    capacity: 1
+    capacity: 1,
+    locationId: ""
   });
+
+  const [masterCompanies, setMasterCompanies] = useState<any[]>([]);
+  const [masterLocations, setMasterLocations] = useState<any[]>([]);
 
   useEffect(() => {
     fetchWorkspaces();
+    fetchMasterData();
   }, []);
+
+  const fetchMasterData = async () => {
+    try {
+      const [compRes, locRes] = await Promise.all([
+        fetch("/api/admin/master-data/companies"),
+        fetch("/api/admin/master-data/locations")
+      ]);
+      if (compRes.ok) {
+        const data = await compRes.json();
+        setMasterCompanies(Array.isArray(data) ? data : []);
+      }
+      if (locRes.ok) {
+        const data = await locRes.json();
+        setMasterLocations(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch master data:", err);
+    }
+  };
 
   const fetchWorkspaces = async () => {
     try {
       const res = await fetch("/api/workspaces");
+      if (!res.ok) throw new Error("Failed to load workspaces");
       const data = await res.json();
-      setWorkspaces(data);
+      setWorkspaces(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch workspaces:", error);
+      setWorkspaces([]);
     } finally {
       setLoading(false);
     }
@@ -123,8 +151,9 @@ export default function WorkspacesPage() {
         code: ws.code,
         company: ws.company,
         type: ws.type,
-        floor: ws.floor,
-        capacity: ws.capacity
+        floor: ws.floor || "",
+        capacity: ws.capacity,
+        locationId: (ws as any).locationId || ""
       });
     } else {
       setEditingWorkspace(null);
@@ -133,7 +162,8 @@ export default function WorkspacesPage() {
         company: "MPL",
         type: "workstation",
         floor: activeFloor === "all" ? "00" : activeFloor,
-        capacity: 1
+        capacity: 1,
+        locationId: ""
       });
     }
     setShowModal(true);
@@ -167,6 +197,7 @@ export default function WorkspacesPage() {
       handleCloseModal();
     } catch (error: any) {
       console.error(error.message);
+      showToast(error.message || "Failed to save seat", "error");
     } finally {
       setIsSaving(false);
     }
@@ -191,6 +222,7 @@ export default function WorkspacesPage() {
       handleCloseModal();
     } catch (error: any) {
       console.error(error.message);
+      showToast(error.message || "Failed to delete seat", "error");
     } finally {
       setIsSaving(false);
     }
@@ -241,8 +273,8 @@ export default function WorkspacesPage() {
 
     const matchesFloor = 
       activeFloor === "all" ||
-      ws.floor === activeFloor || 
-      String(parseInt(ws.floor)) === String(parseInt(activeFloor));
+      (ws as any).locationId === activeFloor ||
+      ws.floor === activeFloor;
 
     return matchesSearch && matchesCompany && matchesType && matchesOccupancy && matchesFloor;
   });
@@ -388,26 +420,12 @@ export default function WorkspacesPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-          <div className="w-full lg:w-40">
-            <SearchableSelect
-              options={[
-                { value: "all", label: "ALL FLOORS" },
-                { value: "00", label: "GROUND FLOOR" },
-                { value: "01", label: "1ST FLOOR" },
-                { value: "02", label: "2ND FLOOR" },
-                { value: "03", label: "3RD FLOOR" },
-                { value: "04", label: "4TH FLOOR" },
-                { value: "05", label: "5TH FLOOR" }
-              ]}
-              value={activeFloor}
-              onChange={(val) => setActiveFloor(val || "all")}
-              placeholder="FLOOR"
-              compact
-            />
-          </div>
           <div className="w-full lg:w-44">
             <SearchableSelect
-              options={companies.map(c => ({ value: c, label: c === "all" ? "ALL COMPANIES" : formatCompany(c).toUpperCase() }))}
+              options={[
+                { value: "all", label: "ALL COMPANIES" },
+                ...masterCompanies.map(c => ({ value: c.name, label: c.name.toUpperCase() }))
+              ]}
               value={companyFilter}
               onChange={(val) => setCompanyFilter(val || "all")}
               placeholder="COMPANY"
@@ -416,10 +434,29 @@ export default function WorkspacesPage() {
           </div>
           <div className="w-full lg:w-44">
             <SearchableSelect
-              options={types.map(t => ({ value: t, label: t === "all" ? "ALL TYPES" : t.toUpperCase() }))}
+              options={[
+                { value: "all", label: "ALL TYPES" },
+                { value: "workstation", label: "WORKSTATION" },
+                { value: "cabin", label: "CABIN" },
+                { value: "meeting_room", label: "MEETING ROOM" },
+                { value: "executive", label: "EXECUTIVE" },
+                { value: "other", label: "OTHER" }
+              ]}
               value={typeFilter}
               onChange={(val) => setTypeFilter(val || "all")}
               placeholder="SEAT TYPE"
+              compact
+            />
+          </div>
+          <div className="w-full lg:w-40">
+            <SearchableSelect
+              options={[
+                { value: "all", label: "ALL LOCATIONS" },
+                ...masterLocations.map(l => ({ value: l.id, label: l.name.toUpperCase() }))
+              ]}
+              value={activeFloor}
+              onChange={(val) => setActiveFloor(val || "all")}
+              placeholder="LOCATION"
               compact
             />
           </div>
@@ -468,7 +505,7 @@ export default function WorkspacesPage() {
                       "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
                       ws.company === 'MPL' ? "bg-blue-500/10 text-blue-500" :
                       ws.company === 'MAL' ? "bg-purple-500/10 text-purple-500" :
-                      (ws.company === 'FIFTY_HERTZ' || ws.company === '50Hertz') ? "bg-purple-500/10 text-purple-500" :
+                      (ws.company === 'FIFTY_HERTZ' || ws.company === '50Hertz Limited') ? "bg-purple-500/10 text-purple-500" :
                       "bg-orange-500/10 text-orange-500"
                     )}>
                       {formatCompany(ws.company)}
@@ -605,7 +642,7 @@ export default function WorkspacesPage() {
       {/* Initialize/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-card border border-border w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="bg-card border border-border w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="bg-muted/30 px-8 py-6 border-b border-border flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-black tracking-tight uppercase">
@@ -638,48 +675,61 @@ export default function WorkspacesPage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <Building2 className="w-3 h-3" /> Company
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={masterCompanies.map(c => ({ value: c.name, label: c.name.toUpperCase() }))}
                     value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 text-sm font-bold focus:bg-background outline-none transition-all cursor-pointer"
-                  >
-                    <option value="MPL">MPL</option>
-                    <option value="MAL">MAL</option>
-                    <option value="FIFTY_HERTZ">50Hertz</option>
-                    <option value="OTHER">OTHER</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, company: val || "" })}
+                    placeholder="SELECT COMPANY"
+                    compact
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <Layout className="w-3 h-3" /> Type
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={[
+                      { value: "workstation", label: "WORKSTATION (WS)" },
+                      { value: "cabin", label: "PRIVATE CABIN" },
+                      { value: "meeting_room", label: "MEETING ROOM" },
+                      { value: "executive", label: "EXECUTIVE" },
+                      { value: "other", label: "OTHER" }
+                    ]}
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 text-sm font-bold focus:bg-background outline-none transition-all cursor-pointer"
-                  >
-                    <option value="workstation">WORKSTATION (WS)</option>
-                    <option value="cabin">PRIVATE CABIN</option>
-                    <option value="meeting_room">MEETING ROOM</option>
-                    <option value="other">OTHER</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, type: val || "workstation" })}
+                    placeholder="SELECT TYPE"
+                    compact
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Layers className="w-3 h-3" /> Floor
+                    <Map className="w-3 h-3" /> Location / Floor
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={masterLocations.map(l => ({ value: l.id, label: l.name.toUpperCase() }))}
+                    value={formData.locationId}
+                    onChange={(val) => {
+                      const loc = masterLocations.find(l => l.id === val);
+                      setFormData({ 
+                        ...formData, 
+                        locationId: val || "",
+                        floor: loc ? loc.name : formData.floor // Set floor to location name as fallback/sync
+                      });
+                    }}
+                    placeholder="SELECT LOCATION"
+                    compact
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <Layers className="w-3 h-3" /> Floor Reference
+                  </label>
+                  <input
                     value={formData.floor}
-                    onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-                    className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 text-sm font-bold focus:bg-background outline-none transition-all cursor-pointer"
-                  >
-                    <option value="00">GROUND FLOOR</option>
-                    <option value="01">1ST FLOOR</option>
-                    <option value="02">2ND FLOOR</option>
-                    <option value="03">3RD FLOOR</option>
-                    <option value="04">4TH FLOOR</option>
-                    <option value="05">5TH FLOOR</option>
-                  </select>
+                    onChange={(e) => setFormData({ ...formData, floor: e.target.value.toUpperCase() })}
+                    placeholder="E.G. GROUND FLOOR"
+                    className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 text-sm font-bold focus:bg-background outline-none transition-all"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">

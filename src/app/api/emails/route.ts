@@ -30,11 +30,14 @@ export async function GET() {
   try {
     // Session check (defense in depth - middleware also checks)
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const user = session?.user as { id?: string; role?: string } | undefined;
+    const userId = user?.id;
+    const userRole = user?.role;
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await enforcePermission(userId, 'IT', 'EMAILS', 'canView');
+    await enforcePermission(userId, 'IT', 'EMAILS', 'canView', userRole);
 
     const emails = await prisma.emailAccount.findMany({
       select: {

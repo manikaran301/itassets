@@ -50,11 +50,20 @@ export function usePermissions() {
     subcategory: string,
     action: PermissionAction
   ): boolean => {
-    // Super-admins bypass all checks
+    // Super-admin bypass
     if (role === "admin") return true;
 
+    // IT role refined bypass
+    if (role === "it") {
+      if (category.toUpperCase() === "IT" || category.toUpperCase() === "FACILITY") return true;
+      if (category.toUpperCase() === "HR") {
+        return subcategory.toUpperCase() === "EMPLOYEES" && action === "canView";
+      }
+      if (action === "canView") return true;
+    }
+
     // Safety check for permissions array
-    if (!Array.isArray(permissions)) return role === "admin";
+    if (!Array.isArray(permissions)) return false;
 
     const perm = permissions.find(
       (p) => 
@@ -70,6 +79,6 @@ export function usePermissions() {
     role,
     loading,
     checkPermission,
-    isSuperAdmin: role === "admin"
+    isSuperAdmin: role === "admin" || role === "it"
   };
 }

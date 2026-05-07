@@ -31,11 +31,14 @@ export async function GET(request: Request) {
   try {
     // Session check (defense in depth - middleware also checks)
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const user = session?.user as { id?: string; role?: string } | undefined;
+    const userId = user?.id;
+    const userRole = user?.role;
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canView');
+    await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canView', userRole);
 
     const scope = await getDataScope();
 

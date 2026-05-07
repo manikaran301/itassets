@@ -29,6 +29,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useToast } from "@/contexts/ToastContext";
 
 import type { EmailAccountListItem } from "@/lib/types";
 
@@ -273,6 +274,7 @@ function ImportPreviewModal({
   onImport: (finalData: any[]) => Promise<void>;
 }) {
   const [records, setRecords] = useState<ImportRecord[]>(data);
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
 
@@ -315,7 +317,7 @@ function ImportPreviewModal({
   const handleFinalImport = async () => {
     const validRecords = records.filter((r) => r.isValid);
     if (validRecords.length === 0) {
-      alert("No valid records to import");
+      showToast("No valid records to import", "error");
       return;
     }
     setIsSubmitting(true);
@@ -462,6 +464,7 @@ function ImportPreviewModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function EmailAccountsPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const { checkPermission, loading: permsLoading } = usePermissions();
   const canViewEmails = checkPermission("IT", "EMAILS", "canView");
   const canCreateEmails = checkPermission("IT", "EMAILS", "canCreate");
@@ -574,7 +577,7 @@ export default function EmailAccountsPage() {
       const text = event.target?.result as string;
       const lines = text.split("\n").filter((l) => l.trim());
       if (lines.length < 2) {
-        alert("Empty or invalid CSV");
+        showToast("Empty or invalid CSV", "error");
         setImporting(false);
         return;
       }
@@ -645,17 +648,15 @@ export default function EmailAccountsPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert(
-          `Import Complete!\nImported: ${data.summary.imported}\nSkipped: ${data.summary.skipped}\nErrors: ${data.summary.errors}`
-        );
+        showToast(`Import Complete! Imported: ${data.summary.imported}, Skipped: ${data.summary.skipped}, Errors: ${data.summary.errors}`, data.summary.errors > 0 ? "warning" : "success");
         setPreviewData(null);
         fetchEmails();
       } else {
-        alert(`Import Failed: ${data.error}`);
+        showToast(`Import Failed: ${data.error}`, "error");
       }
     } catch (error) {
       console.error("Import error:", error);
-      alert("Failed to import emails.");
+      showToast("Failed to import emails.", "error");
     }
   };
 
@@ -1045,13 +1046,14 @@ export default function EmailAccountsPage() {
                                 
                                 if (res.ok) {
                                   // Flow Complete! Back to joiners.
+                                  showToast("Email assigned successfully", "success");
                                   router.push(`/hr/joiners?status=onboarded&id=${provisioningTarget}`);
                                 } else {
                                   const err = await res.json();
-                                  alert(err.error || "Assignment failed");
+                                  showToast(err.error || "Assignment failed", "error");
                                 }
                               } catch (error) {
-                                alert("Failed to assign email");
+                                showToast("Failed to assign email", "error");
                               }
                             }}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -1098,8 +1100,11 @@ export default function EmailAccountsPage() {
                               setDeletingId(email.id);
                               try {
                                 const res = await fetch(`/api/emails/${email.id}`, { method: 'DELETE' });
-                                if (res.ok) fetchEmails();
-                                else alert("Failed to delete account");
+                                if (res.ok) {
+                                  showToast("Account deleted successfully", "success");
+                                  fetchEmails();
+                                }
+                                else showToast("Failed to delete account", "error");
                               } finally {
                                 setDeletingId(null);
                               }

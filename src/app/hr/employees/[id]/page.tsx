@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useToast } from "@/contexts/ToastContext";
 import { format } from "date-fns";
 
 interface PageProps {
@@ -41,6 +42,7 @@ interface PageProps {
 export default function EmployeeDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { showToast } = useToast();
   const { data: session } = useSession();
   const [employee, setEmployee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -722,11 +724,13 @@ export default function EmployeeDetailPage({ params }: PageProps) {
                       }),
                     });
                     if (res.ok) {
+                      showToast(`Exit process initiated for ${employee.fullName}`, "success");
                       window.location.reload();
                     } else {
-                      alert("Failed to initiate exit");
+                      showToast("Failed to initiate exit", "error");
                     }
                   } catch (err) {
+                    showToast("Something went wrong", "error");
                     console.error(err);
                   } finally {
                     setIsUpdating(false);

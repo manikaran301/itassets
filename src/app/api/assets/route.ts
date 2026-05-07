@@ -9,11 +9,14 @@ export async function GET() {
   try {
     // Session check (defense in depth - middleware also checks)
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const user = session?.user as { id?: string; role?: string } | undefined;
+    const userId = user?.id;
+    const userRole = user?.role;
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await enforcePermission(userId, 'IT', 'ASSETS', 'canView');
+    await enforcePermission(userId, 'IT', 'ASSETS', 'canView', userRole);
 
     const scope = await getDataScope();
     
@@ -119,11 +122,14 @@ export async function POST(request: Request) {
   try {
     // Session check (defense in depth - middleware also checks)
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id?: string } | undefined)?.id;
+    const user = session?.user as { id?: string; role?: string } | undefined;
+    const userId = user?.id;
+    const userRole = user?.role;
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await enforcePermission(userId, 'IT', 'ASSETS', 'canCreate');
+    await enforcePermission(userId, 'IT', 'ASSETS', 'canCreate', userRole);
 
     const rawData = await request.json();
 

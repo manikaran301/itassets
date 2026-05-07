@@ -20,6 +20,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { PermissionMatrixModal } from "./PermissionMatrixModal";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { useToast } from "@/contexts/ToastContext";
 
 interface SystemUserData {
   id?: string;
@@ -49,6 +50,7 @@ export function UserForm({ initialData, action }: UserFormProps) {
   const [selectedLocations, setSelectedLocations] = useState<string[]>(
     initialData?.managedLocations?.map((l) => l.id) || []
   );
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fetchMasterData = async () => {
@@ -90,8 +92,9 @@ export function UserForm({ initialData, action }: UserFormProps) {
       if (company) formData.set("companyName", company.name);
 
       await action(formData);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      showToast(error.message || "Failed to save user", "error");
       setIsSubmitting(false);
     }
   };

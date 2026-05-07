@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useToast } from "@/contexts/ToastContext";
 import Papa from "papaparse";
 import { format } from "date-fns";
 
@@ -63,6 +64,7 @@ interface Joiner {
 
 export default function JoinersPage() {
   const { data: session } = useSession();
+  const { showToast } = useToast();
   const [joiners, setJoiners] = useState<Joiner[]>([]);
   const [loading, setLoading] = useState(true);
   const [raising, setRaising] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export default function JoinersPage() {
       setImportRecords(data.results);
     } catch (err) {
       console.error("Validation error:", err);
-      alert("Failed to validate import data");
+      showToast("Failed to validate import data", "error");
     } finally {
       setValidatingImport(false);
     }
@@ -179,7 +181,7 @@ export default function JoinersPage() {
   ) => {
     const userId = (session?.user as { id?: string })?.id;
     if (!userId) {
-      alert("Session error. Please log in again.");
+      showToast("Session error. Please log in again.", "error");
       return;
     }
 
@@ -205,13 +207,14 @@ export default function JoinersPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || "Failed to raise request");
+        showToast(err.error || "Failed to raise request", "error");
         return;
       }
 
       await fetchJoiners();
+      showToast("Provisioning request raised successfully", "success");
     } catch {
-      alert("Something went wrong");
+      showToast("Something went wrong", "error");
     } finally {
       setRaising(null);
     }
@@ -256,7 +259,7 @@ export default function JoinersPage() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Export error:', err);
-      alert('Failed to export data');
+      showToast('Failed to export data', "error");
     }
   };
 
@@ -296,12 +299,12 @@ export default function JoinersPage() {
 
       if (!res.ok) throw new Error("Import failed");
 
-      alert(`Successfully imported ${validRecords.length} employees!`);
+      showToast(`Successfully imported ${validRecords.length} employees!`, "success");
       setShowImportModal(false);
       fetchJoiners();
     } catch (err) {
       console.error("Import error:", err);
-      alert("Failed to complete import process");
+      showToast("Failed to complete import process", "error");
     } finally {
       setImportingBatch(false);
     }

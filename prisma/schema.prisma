@@ -141,7 +141,7 @@ enum WorkspaceType {
 enum CompanyBranch {
   MPL
   MAL
-  FIFTY_HERTZ @map("50-Hertz")
+  FIFTY_HERTZ @map("50Hertz Limited")
   OTHER
 }
 

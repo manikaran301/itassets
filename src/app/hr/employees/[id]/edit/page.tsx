@@ -33,6 +33,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { SeatSelectorModal } from "@/components/SeatSelectorModal";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ManagerOption {
   value: string;
@@ -42,6 +43,7 @@ interface ManagerOption {
 export default function EditEmployeePage() {
   const router = useRouter();
   const params = useParams();
+  const { showToast } = useToast();
   const employeeId = params.id as string;
   const { data: session } = useSession();
 
@@ -257,7 +259,7 @@ export default function EditEmployeePage() {
       await fetchInfrastructure();
     } catch (err) {
       console.error('Recall error:', err);
-      alert('Failed to recall. Please try again.');
+      showToast('Failed to recall request', 'error');
     }
   };
 

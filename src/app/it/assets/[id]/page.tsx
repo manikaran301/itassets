@@ -26,6 +26,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useToast } from "@/contexts/ToastContext";
 
 interface AssetDetailProps {
   params: Promise<{ id: string }>;
@@ -34,6 +35,7 @@ interface AssetDetailProps {
 export default function AssetDetailPage({ params }: AssetDetailProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { showToast } = useToast();
   const { data: session } = useSession();
   const [asset, setAsset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -92,7 +94,7 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
         // We'd ideally re-fetch the asset to get the included employee object
         const refreshRes = await fetch(`/api/assets/${id}`);
         setAsset(await refreshRes.json());
-        alert("Assignment updated successfully!");
+        showToast("Assignment updated successfully!", "success");
       }
     } catch (error) {
       console.error("Reassign error:", error);
@@ -115,14 +117,14 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
       });
 
       if (response.ok) {
-        alert("Asset retired successfully.");
+        showToast("Asset retired successfully.", "success");
         router.push("/it/assets");
       } else {
-        alert("Failed to retire asset.");
+        showToast("Failed to retire asset.", "error");
       }
     } catch (error) {
       console.error("Retire error:", error);
-      alert("Something went wrong.");
+      showToast("Something went wrong.", "error");
     }
   };
 
@@ -321,8 +323,8 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                       )}
                     >
                       {new Date(asset.warrantyExpiry) > new Date()
-                        ? "🛡️ In Warranty"
-                        : "⚠️ Expired"}
+                        ? "🛡️ Warranty: Active"
+                        : "⚠️ Warranty Expiry: Expired"}
                     </span>
                   )}
                   {asset.cost && (

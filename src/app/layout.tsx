@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { SearchProvider } from "@/contexts/SearchContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import { cookies } from "next/headers";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -42,13 +43,15 @@ export default async function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <SidebarProvider>
-              <NotificationProvider>
-                <SearchProvider>
-                  <SidebarWrapper>
-                    {children}
-                  </SidebarWrapper>
-                </SearchProvider>
-              </NotificationProvider>
+              <ToastProvider>
+                <NotificationProvider>
+                  <SearchProvider>
+                    <SidebarWrapper>
+                      {children}
+                    </SidebarWrapper>
+                  </SearchProvider>
+                </NotificationProvider>
+              </ToastProvider>
             </SidebarProvider>
           </AuthProvider>
         </ThemeProvider>

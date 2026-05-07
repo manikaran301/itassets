@@ -33,6 +33,7 @@ import { createPortal } from "react-dom";
 import Papa from "papaparse";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useToast } from "@/contexts/ToastContext";
 
 interface Accessory {
   id: string;
@@ -84,6 +85,7 @@ interface AccessoryImportRecord {
 
 export default function AccessoriesPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const { checkPermission, loading: permsLoading } = usePermissions();
   const canViewAccessories = checkPermission("IT", "ACCESSORIES", "canView");
   const canCreateAccessories = checkPermission("IT", "ACCESSORIES", "canCreate");
@@ -139,7 +141,7 @@ export default function AccessoriesPage() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Export error:', err);
-      alert('Failed to export accessories');
+      showToast('Failed to export accessories', "error");
     }
   };
 
@@ -165,7 +167,7 @@ export default function AccessoriesPage() {
           setImportRecords(data.items);
         } catch (err) {
           console.error("Validation error:", err);
-          alert("Failed to validate import data");
+          showToast("Failed to validate import data", "error");
         } finally {
           setValidatingImport(false);
         }
@@ -188,12 +190,12 @@ export default function AccessoriesPage() {
 
       if (!res.ok) throw new Error("Import failed");
 
-      alert(`Successfully imported ${validRecords.length} accessories!`);
+      showToast(`Successfully imported ${validRecords.length} accessories!`, "success");
       setShowImportModal(false);
       fetchAccessories();
     } catch (err) {
       console.error("Import error:", err);
-      alert("Failed to complete import process");
+      showToast("Failed to complete import process", "error");
     } finally {
       setImporting(false);
     }
@@ -211,9 +213,9 @@ export default function AccessoriesPage() {
       });
       if (!res.ok) throw new Error("Failed to delete");
       setAccessories(accessories.filter((acc) => acc.id !== id));
-      alert("Accessory deleted successfully!");
+      showToast("Accessory deleted successfully!", "success");
     } catch (error) {
-      alert("Failed to delete accessory");
+      showToast("Failed to delete accessory", "error");
     } finally {
       setDeleting(null);
     }

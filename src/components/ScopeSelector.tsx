@@ -47,8 +47,8 @@ export function ScopeSelector() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Don't show if there's nothing to select (except for admins who can see everything)
-  if (locations.length === 0 && user?.role !== "admin") return null;
+  // Don't show if there's nothing to select (except for admins and IT who can see everything)
+  if (locations.length === 0 && user?.role !== "admin" && user?.role !== "it") return null;
 
   const activeLocation = locations.find((l: any) => l.id === activeLocationId);
 

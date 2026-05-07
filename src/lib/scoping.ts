@@ -17,8 +17,8 @@ export async function getDataScope(): Promise<DataScope> {
 
   const user = session.user as any;
   
-  // Global Admins see everything unless they explicitly filter
-  const isGlobalAdmin = user.role === "admin";
+  // Global Admins and IT see everything unless they explicitly filter
+  const isGlobalAdmin = user.role === "admin" || user.role === "it";
 
   const scope: DataScope = {};
 

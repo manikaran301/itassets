@@ -16,6 +16,7 @@ import {
   Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/contexts/ToastContext";
 
 type DataType = "companies" | "departments" | "designations" | "locations";
 
@@ -36,6 +37,7 @@ const TABS = [
 
 export default function ManagementPage() {
   const [activeTab, setActiveTab] = useState<DataType>("companies");
+  const { showToast } = useToast();
   const [items, setItems] = useState<MasterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,7 +45,7 @@ export default function ManagementPage() {
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<MasterItem | null>(null);
-  const [formData, setFormData] = useState({ name: "", code: "", address: "" });
+  const [formData, setFormData] = useState({ name: "", code: "", address: "", isActive: true });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -69,11 +71,12 @@ export default function ManagementPage() {
       setFormData({ 
         name: item.name, 
         code: item.code || "", 
-        address: item.address || "" 
+        address: item.address || "",
+        isActive: item.isActive
       });
     } else {
       setEditingItem(null);
-      setFormData({ name: "", code: "", address: "" });
+      setFormData({ name: "", code: "", address: "", isActive: true });
     }
     setShowModal(true);
   };
@@ -92,14 +95,15 @@ export default function ManagementPage() {
       });
 
       if (res.ok) {
+        showToast(`${editingItem ? "Updated" : "Created"} successfully`, "success");
         setShowModal(false);
         fetchItems();
       } else {
         const err = await res.json();
-        alert(err.error || "Operation failed");
+        showToast(err.error || "Operation failed", "error");
       }
     } catch (error) {
-      alert("Something went wrong");
+      showToast("Something went wrong", "error");
     } finally {
       setSubmitting(false);
     }
@@ -111,13 +115,15 @@ export default function ManagementPage() {
       const res = await fetch(`/api/admin/master-data/${activeTab}?id=${id}`, {
         method: "DELETE",
       });
-      if (res.ok) fetchItems();
-      else {
+      if (res.ok) {
+        showToast("Deleted successfully", "success");
+        fetchItems();
+      } else {
         const err = await res.json();
-        alert(err.error || "Delete failed");
+        showToast(err.error || "Delete failed", "error");
       }
     } catch (error) {
-      alert("Delete failed");
+      showToast("Delete failed", "error");
     }
   };
 
@@ -305,6 +311,28 @@ export default function ManagementPage() {
                   />
                 </div>
               )}
+
+              <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-border/50">
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Operational Status</label>
+                  <p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Enable or disable this record</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
+                    formData.isActive ? "bg-primary" : "bg-muted"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                      formData.isActive ? "translate-x-6" : "translate-x-1"
+                    )}
+                  />
+                </button>
+              </div>
 
               <div className="pt-4 flex gap-3">
                 <button
