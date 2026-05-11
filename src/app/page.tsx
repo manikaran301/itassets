@@ -40,6 +40,9 @@ export default async function DashboardPage() {
     upcomingJoiners,
     upcomingExits,
     recentAssignments,
+    immediateJoinersCount,
+    overdueJoinersCount,
+    totalUpcomingJoinings,
   ] = await Promise.all([
     prisma.employee.count(),
     prisma.employee.count({ where: { status: "active" } }),
@@ -81,6 +84,28 @@ export default async function DashboardPage() {
         accessory: { select: { assetTag: true } },
       },
     }),
+    prisma.upcomingJoining.count({ 
+      where: { 
+        status: "upcoming",
+        joiningDate: {
+          gte: new Date(),
+          lte: new Date(new Date().setDate(new Date().getDate() + 7))
+        }
+      } 
+    }),
+    prisma.upcomingJoining.count({ 
+      where: { 
+        status: "upcoming",
+        joiningDate: {
+          lt: new Date(new Date().setHours(0,0,0,0))
+        }
+      } 
+    }),
+    prisma.upcomingJoining.count({ 
+      where: { 
+        status: "upcoming",
+      } 
+    }),
   ]);
 
   const alertCards = [
@@ -104,10 +129,40 @@ export default async function DashboardPage() {
     },
   ];
 
+  if (immediateJoinersCount > 0) {
+    alertCards.unshift({
+      title: "Immediate Joinings",
+      desc: `${immediateJoinersCount} joiners arriving in the next 7 days.`,
+      type: "warning" as const,
+      icon: UserPlus,
+    });
+  }
+
+  if (overdueJoinersCount > 0) {
+    alertCards.unshift({
+      title: "Overdue Onboarding",
+      desc: `${overdueJoinersCount} joiners past their start date pending activation.`,
+      type: "danger" as const,
+      icon: AlertCircle,
+    });
+  }
+
   return (
     <div className="space-y-12 max-w-7xl mx-auto">
       <section className="animate-fade-in pt-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <Link href="/hr/upcoming" aria-label="Open upcoming joinings page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+            <StatsCard
+              title="Upcoming Joinings"
+              value={totalUpcomingJoinings}
+              count={`${immediateJoinersCount} joining this week`}
+              description="Scheduled onboarding requiring IT preparation."
+              icon={Calendar}
+              trend={immediateJoinersCount > 0 ? "up" : "neutral"}
+              trendValue={immediateJoinersCount > 0 ? `${immediateJoinersCount} soon` : "Clear"}
+              className="border-l-4 border-l-green-500 h-full cursor-pointer"
+            />
+          </Link>
           <Link href="/hr/employees" aria-label="Open workforce employees page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <StatsCard
               title="Total Workforce"
@@ -146,10 +201,10 @@ export default async function DashboardPage() {
           </Link>
           <Link href="/it/email" aria-label="Open identities email accounts page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <StatsCard
-              title="Identities"
+              title="Identities(Email)"
               value={emailCount}
               count={`${activeEmailCount} active accounts`}
-              description="Digital identities and workspace access management."
+              description="Digital Email Accounts & Workspace access management."
               icon={Mail}
               trend="neutral"
               trendValue="Secure"
@@ -231,21 +286,29 @@ export default async function DashboardPage() {
         </div>
 
         {/* COLUMN 3: ALERTS */}
-        <div className="flex flex-col gap-4">
-          {alertCards.map((alert, i) => (
-            <div key={i} className="p-4 rounded-2xl bg-card border border-border premium-card flex items-center gap-4 group flex-1" style={{ minHeight: '80px' }}>
-              <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                alert.type === "warning" ? "bg-accent/10 text-accent" : alert.type === "danger" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary",
-              )}>
-                <alert.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              Action Required
+            </h3>
+          </div>
+          <div className="flex flex-col gap-3">
+            {alertCards.map((alert, i) => (
+              <div key={i} className="p-4 rounded-2xl bg-card border border-border/50 premium-card flex items-center gap-4 group flex-1 shadow-sm" style={{ minHeight: '80px' }}>
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                  alert.type === "warning" ? "bg-accent/10 text-accent" : alert.type === "danger" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary",
+                )}>
+                  <alert.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{alert.title}</h4>
+                  <p className="text-xs font-bold leading-tight">{alert.desc}</p>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{alert.title}</h4>
-                <p className="text-xs font-bold leading-tight">{alert.desc}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
