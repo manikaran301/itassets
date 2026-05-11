@@ -31,7 +31,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { AssetListItem } from "@/lib/types";
 import Link from "next/link";
@@ -346,10 +346,15 @@ export default function AssetsPage() {
     const params = new URLSearchParams(window.location.search);
     const target = params.get("assignTo");
     const flow = params.get("flow");
+    const deviceTypeParam = params.get("deviceType");
+
     if (target) setProvisioningTarget(target);
     if (flow === "provisioning") {
       setIsProvisioningFlow(true);
       setStatusFilter("available");
+    }
+    if (deviceTypeParam) {
+      setTypeFilter(deviceTypeParam);
     }
   }, []);
 
@@ -427,6 +432,33 @@ export default function AssetsPage() {
 
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  const typeOptions = useMemo(() => {
+    const baseOptions = [
+      { value: "all", label: "ALL TYPES" },
+      { value: "laptop", label: "LAPTOPS" },
+      { value: "desktop", label: "DESKTOPS" },
+      { value: "n_computing", label: "N-COMPUTING" },
+      { value: "nuc", label: "NUC" },
+      { value: "server", label: "SERVERS" },
+      { value: "other", label: "OTHER" }
+    ];
+    
+    const existingValues = new Set(baseOptions.map(o => o.value));
+    const dynamicOptions = [...baseOptions];
+    
+    assets.forEach(a => {
+      if (a.type && !existingValues.has(a.type)) {
+        existingValues.add(a.type);
+        dynamicOptions.push({
+          value: a.type,
+          label: a.type.replace(/_/g, " ").toUpperCase()
+        });
+      }
+    });
+    
+    return dynamicOptions;
+  }, [assets]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).catch(() => {
@@ -726,15 +758,7 @@ export default function AssetsPage() {
         <div className="flex gap-2 w-full lg:w-auto">
           <div className="w-full lg:w-48">
             <SearchableSelect
-              options={[
-                { value: "all", label: "ALL TYPES" },
-                { value: "laptop", label: "LAPTOPS" },
-                { value: "desktop", label: "DESKTOPS" },
-                { value: "n_computing", label: "N-COMPUTING" },
-                { value: "nuc", label: "NUC" },
-                { value: "server", label: "SERVERS" },
-                { value: "other", label: "OTHER" }
-              ]}
+              options={typeOptions}
               value={typeFilter}
               onChange={(val) => setTypeFilter(val || "all")}
               placeholder="ALL TYPES"

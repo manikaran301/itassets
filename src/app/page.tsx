@@ -160,42 +160,7 @@ export default async function DashboardPage() {
       </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-fade-in delay-100">
-        {/* COLUMN 1: ASSET MOVEMENTS */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              Recent Movements
-            </h3>
-            <Link href="/it/assignments" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
-          </div>
-          <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
-            <div className="divide-y divide-border/50">
-              {recentAssignments.map((row) => (
-                <div key={row.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold truncate max-w-[150px]">{row.employee.fullName}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded border border-border">{row.logCode}</span>
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase">{row.asset?.assetTag ?? row.accessory?.assetTag ?? "-"}</span>
-                    </div>
-                  </div>
-                  <span className={cn(
-                    "text-[8px] font-black uppercase px-2 py-1 rounded-full",
-                    row.actionType === "new_assignment" ? "bg-primary/10 text-primary" : "bg-secondary/10 text-secondary"
-                  )}>
-                    {row.actionType.split('_')[0]}
-                  </span>
-                </div>
-              ))}
-              {recentAssignments.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No recent movements</div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* COLUMN 2: UPCOMING JOINERS */}
+        {/* COLUMN 1: UPCOMING JOINERS */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
@@ -225,7 +190,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* COLUMN 3: UPCOMING EXITS */}
+        {/* COLUMN 2: UPCOMING EXITS */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
@@ -264,24 +229,24 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* FOOTER ALERTS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in delay-200">
-        {alertCards.map((alert, i) => (
-          <div key={i} className="p-4 rounded-2xl bg-card border border-border premium-card flex items-center gap-4 group">
-            <div className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-              alert.type === "warning" ? "bg-accent/10 text-accent" : alert.type === "danger" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary",
-            )}>
-              <alert.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+        {/* COLUMN 3: ALERTS */}
+        <div className="flex flex-col gap-4">
+          {alertCards.map((alert, i) => (
+            <div key={i} className="p-4 rounded-2xl bg-card border border-border premium-card flex items-center gap-4 group flex-1" style={{ minHeight: '80px' }}>
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                alert.type === "warning" ? "bg-accent/10 text-accent" : alert.type === "danger" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary",
+              )}>
+                <alert.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{alert.title}</h4>
+                <p className="text-xs font-bold leading-tight">{alert.desc}</p>
+              </div>
             </div>
-            <div className="space-y-0.5">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{alert.title}</h4>
-              <p className="text-xs font-bold leading-tight">{alert.desc}</p>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

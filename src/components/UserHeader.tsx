@@ -12,12 +12,12 @@ import { ScopeSelector } from "@/components/ScopeSelector";
 const headerContent = [
   {
     matcher: (pathname: string) => pathname === "/",
-    title: "Operations Dashboard",
-    subtitle: "Live Asset Intelligence Center",
+    title: "Dashboard",
+    subtitle: "Live Asset",
   },
   {
     matcher: (pathname: string) => pathname === "/hr/employees",
-    title: "Employee Registry",
+    title: "Employee Directory",
     subtitle: "Workforce Identity Directory",
   },
   {
@@ -27,8 +27,8 @@ const headerContent = [
   },
   {
     matcher: (pathname: string) => pathname === "/hr/joiners",
-    title: "Joiner Pipeline",
-    subtitle: "Upcoming Workforce Activations",
+    title: "Joiner Onboarding",
+    subtitle: "List of Pending Joiners (Assets, Emails & Training)",
   },
   {
     matcher: (pathname: string) => pathname === "/hr/exits",
@@ -42,7 +42,7 @@ const headerContent = [
   },
   {
     matcher: (pathname: string) => pathname === "/it/assets",
-    title: "Enterprise Assets",
+    title: "Hardware Assets",
     subtitle: "Device Inventory Dashboard",
   },
   {
@@ -123,8 +123,8 @@ export function UserHeader() {
   const pageHeader = useMemo(
     () =>
       headerContent.find(({ matcher }) => matcher(pathname)) ?? {
-        title: "MAMS Workspace",
-        subtitle: "Operational Coordination Hub",
+        title: "Upcoming Joinings",
+        subtitle: "List of Upcoming Joinings",
       },
     [pathname],
   );
@@ -169,10 +169,10 @@ export function UserHeader() {
         
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors relative">
+          {/* <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors relative">
             <Bell className="w-5 h-5" />
             <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-card" />
-          </button>
+          </button> */}
         </div>
 
         {/* User Profile Dropdown */}

@@ -4,6 +4,7 @@ import React, { useMemo, useEffect, useState } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import { useTheme } from "@/components/ThemeProvider";
+import { useRouter } from "next/navigation";
 
 // IMPORTANT: We use a robust initialization pattern to handle both ESM and CJS 
 // environments (Turbopack/Webpack) which Highcharts modules often struggle with.
@@ -37,6 +38,7 @@ export function ReportCharts({
   deviceMix,
   departmentSpread,
 }: ReportChartsProps) {
+  const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -142,8 +144,20 @@ export function ReportCharts({
         name: "Units",
         color: secondaryColor,
         borderRadius: 6,
-        data: deviceMix.map(([, count]) => count),
+        data: deviceMix.map(([type, count]) => ({
+          y: count,
+          custom: { type }
+        })),
         showInLegend: false,
+        cursor: 'pointer',
+        events: {
+          click: function (event) {
+            const point = event.point as any;
+            if (point.custom?.type) {
+              router.push(`/it/assets?deviceType=${point.custom.type}`);
+            }
+          }
+        }
       },
     ],
   };

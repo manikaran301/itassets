@@ -96,7 +96,7 @@ export default function WorkspacesPage() {
 
   const [formData, setFormData] = useState({
     code: "",
-    company: "MPL",
+    company: "",
     type: "workstation",
     floor: "00",
     capacity: 1,
@@ -159,7 +159,7 @@ export default function WorkspacesPage() {
       setEditingWorkspace(null);
       setFormData({
         code: "",
-        company: "MPL",
+        company: "",
         type: "workstation",
         floor: activeFloor === "all" ? "00" : activeFloor,
         capacity: 1,
@@ -424,7 +424,10 @@ export default function WorkspacesPage() {
             <SearchableSelect
               options={[
                 { value: "all", label: "ALL COMPANIES" },
-                ...masterCompanies.map(c => ({ value: c.name, label: c.name.toUpperCase() }))
+                ...masterCompanies.map(c => ({ value: c.name, label: formatCompany(c.name).toUpperCase() })),
+                ...(companyFilter !== "all" && !masterCompanies.some(c => c.name === companyFilter)
+                    ? [{ value: companyFilter, label: formatCompany(companyFilter).toUpperCase() }]
+                    : [])
               ]}
               value={companyFilter}
               onChange={(val) => setCompanyFilter(val || "all")}
@@ -676,7 +679,12 @@ export default function WorkspacesPage() {
                     <Building2 className="w-3 h-3" /> Company
                   </label>
                   <SearchableSelect
-                    options={masterCompanies.map(c => ({ value: c.name, label: c.name.toUpperCase() }))}
+                    options={[
+                      ...masterCompanies.map(c => ({ value: c.name, label: formatCompany(c.name).toUpperCase() })),
+                      ...(formData.company && !masterCompanies.some(c => c.name === formData.company) 
+                          ? [{ value: formData.company, label: formatCompany(formData.company).toUpperCase() }] 
+                          : [])
+                    ]}
                     value={formData.company}
                     onChange={(val) => setFormData({ ...formData, company: val || "" })}
                     placeholder="SELECT COMPANY"
