@@ -32,6 +32,7 @@ interface SystemUserData {
   companyName?: string | null;
   isActive?: boolean;
   managedLocations?: { id: string; name: string }[];
+  accessibleCompanies?: string[];
 }
 
 interface UserFormProps {
@@ -48,7 +49,10 @@ export function UserForm({ initialData, action }: UserFormProps) {
   const [role, setRole] = useState(initialData?.role || "readonly");
   const [companyId, setCompanyId] = useState(initialData?.companyId || "");
   const [selectedLocations, setSelectedLocations] = useState<string[]>(
-    initialData?.managedLocations?.map((l) => l.id) || []
+    initialData?.managedLocations?.map((l) => l.id) || [],
+  );
+  const [accessibleCompanies, setAccessibleCompanies] = useState<string[]>(
+    initialData?.accessibleCompanies || [],
   );
   const { showToast } = useToast();
 
@@ -70,7 +74,15 @@ export function UserForm({ initialData, action }: UserFormProps) {
 
   const toggleLocation = (id: string) => {
     setSelectedLocations((prev) =>
-      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id],
+    );
+  };
+
+  const toggleCompanyAccess = (companyId: string) => {
+    setAccessibleCompanies((prev) =>
+      prev.includes(companyId)
+        ? prev.filter((c) => c !== companyId)
+        : [...prev, companyId],
     );
   };
 
@@ -81,14 +93,20 @@ export function UserForm({ initialData, action }: UserFormProps) {
       const formData = new FormData(e.currentTarget);
       // Ensure permissions are included as JSON string
       formData.set("permissions", JSON.stringify(permissions));
-      
+
       // Clear previous locationIds and set new ones
       formData.delete("locationIds");
-      selectedLocations.forEach(id => formData.append("locationIds", id));
+      selectedLocations.forEach((id) => formData.append("locationIds", id));
+
+      // Add accessible companies
+      formData.delete("accessibleCompanies");
+      accessibleCompanies.forEach((id) =>
+        formData.append("accessibleCompanies", id),
+      );
 
       // Get selected company name for convenience
       const companyId = formData.get("companyId");
-      const company = masterCompanies.find(c => c.id === companyId);
+      const company = masterCompanies.find((c) => c.id === companyId);
       if (company) formData.set("companyName", company.name);
 
       await action(formData);
@@ -204,7 +222,10 @@ export function UserForm({ initialData, action }: UserFormProps) {
                 <SearchableSelect
                   options={[
                     { value: "", label: "UNASSIGNED" },
-                    ...masterCompanies.map(c => ({ value: c.id, label: c.name.toUpperCase() }))
+                    ...masterCompanies.map((c) => ({
+                      value: c.id,
+                      label: c.name.toUpperCase(),
+                    })),
                   ]}
                   value={companyId}
                   onChange={setCompanyId}
@@ -264,21 +285,80 @@ export function UserForm({ initialData, action }: UserFormProps) {
                       "flex items-center justify-between p-3 rounded-xl border transition-all text-left group",
                       isSelected
                         ? "bg-primary/5 border-primary/40 shadow-sm"
-                        : "bg-muted/10 border-border hover:border-primary/30"
+                        : "bg-muted/10 border-border hover:border-primary/30",
                     )}
                   >
                     <div className="flex flex-col">
-                      <span className={cn(
-                        "text-[10px] font-black uppercase tracking-tight",
-                        isSelected ? "text-primary" : "text-muted-foreground"
-                      )}>
+                      <span
+                        className={cn(
+                          "text-[10px] font-black uppercase tracking-tight",
+                          isSelected ? "text-primary" : "text-muted-foreground",
+                        )}
+                      >
                         {loc.name}
                       </span>
                       <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">
                         Physical Site
                       </span>
                     </div>
-                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary animate-in zoom-in duration-300" />}
+                    {isSelected && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary animate-in zoom-in duration-300" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Company Access for HR Users */}
+          <div className="pt-8 border-t border-border space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Briefcase className="w-3.5 h-3.5" /> Division Access (HR
+                  Scope)
+                </label>
+                <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest mt-1">
+                  Select divisions this user can manage (seats, upcoming
+                  joiners, employees, exits)
+                </p>
+              </div>
+              <div className="text-[10px] font-black text-primary bg-primary/5 px-2 py-1 rounded border border-primary/10">
+                {accessibleCompanies.length} DIVISIONS SELECTED
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {masterCompanies.map((comp) => {
+                const isSelected = accessibleCompanies.includes(comp.id);
+                return (
+                  <button
+                    key={comp.id}
+                    type="button"
+                    onClick={() => toggleCompanyAccess(comp.id)}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border transition-all text-left",
+                      isSelected
+                        ? "bg-primary/5 border-primary/40 shadow-sm"
+                        : "bg-muted/10 border-border hover:border-primary/30",
+                    )}
+                  >
+                    <div className="flex flex-col">
+                      <span
+                        className={cn(
+                          "text-xs font-black uppercase tracking-tight",
+                          isSelected ? "text-primary" : "text-muted-foreground",
+                        )}
+                      >
+                        {comp.name}
+                      </span>
+                      <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">
+                        Division / Company
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <CheckCircle2 className="w-4 h-4 text-primary animate-in zoom-in duration-300" />
+                    )}
                   </button>
                 );
               })}
@@ -293,9 +373,13 @@ export function UserForm({ initialData, action }: UserFormProps) {
                     <ShieldCheck className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black uppercase tracking-tight">Security Matrix</h4>
+                    <h4 className="text-sm font-black uppercase tracking-tight">
+                      Security Matrix
+                    </h4>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {permissions.length === 0 ? "Default permissions will be applied" : `${permissions.length} granular rules configured`}
+                      {permissions.length === 0
+                        ? "Default permissions will be applied"
+                        : `${permissions.length} granular rules configured`}
                     </p>
                   </div>
                 </div>

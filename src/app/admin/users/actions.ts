@@ -15,6 +15,7 @@ export async function createUser(formData: FormData) {
   const companyId = formData.get("companyId") as string;
   const companyName = formData.get("companyName") as string;
   const locationIds = formData.getAll("locationIds") as string[];
+  const accessibleCompanyIds = formData.getAll("accessibleCompanies") as string[];
   const isActive = formData.get("isActive") === "on";
   const permissionsJson = formData.get("permissions") as string;
 
@@ -39,6 +40,20 @@ export async function createUser(formData: FormData) {
       }
     },
   });
+
+  // Handle Company Access
+  if (accessibleCompanyIds.length > 0) {
+    try {
+      await prisma.userCompanyAccess.createMany({
+        data: accessibleCompanyIds.map(companyId => ({
+          userId: user.id,
+          companyId,
+        }))
+      });
+    } catch (error) {
+      console.error("Failed to create company access:", error);
+    }
+  }
 
   // Handle Permissions
   if (permissionsJson) {
@@ -77,6 +92,7 @@ export async function updateUser(id: string, formData: FormData) {
   const companyId = formData.get("companyId") as string;
   const companyName = formData.get("companyName") as string;
   const locationIds = formData.getAll("locationIds") as string[];
+  const accessibleCompanyIds = formData.getAll("accessibleCompanies") as string[];
   const isActive = formData.get("isActive") === "on";
 
   if (!fullName || !username || !email || !role) {
@@ -118,6 +134,26 @@ export async function updateUser(id: string, formData: FormData) {
     where: { id },
     data: updateData,
   });
+
+  // Update Company Access
+  // First, delete existing accesses
+  await prisma.userCompanyAccess.deleteMany({
+    where: { userId: id }
+  });
+  
+  // Then create new accesses
+  if (accessibleCompanyIds.length > 0) {
+    try {
+      await prisma.userCompanyAccess.createMany({
+        data: accessibleCompanyIds.map(companyId => ({
+          userId: id,
+          companyId,
+        }))
+      });
+    } catch (error) {
+      console.error("Failed to update company access:", error);
+    }
+  }
 
   revalidatePath("/admin/users");
   redirect("/admin/users");

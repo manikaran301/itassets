@@ -1,6 +1,37 @@
 import prisma from "./prisma";
 import type { PermissionAction } from "./permission-config";
 
+/**
+ * Get all company IDs accessible to a user (including primary company and accessible companies)
+ */
+export async function getUserAccessibleCompanies(userId: string): Promise<string[]> {
+  const user = await prisma.systemUser.findUnique({
+    where: { id: userId },
+    select: {
+      companyId: true,
+      accessibleCompanies: {
+        select: { companyId: true }
+      }
+    }
+  });
+
+  if (!user) return [];
+
+  const companies = new Set<string>();
+  
+  // Add primary company if set
+  if (user.companyId) {
+    companies.add(user.companyId);
+  }
+  
+  // Add all accessible companies
+  user.accessibleCompanies.forEach(access => {
+    companies.add(access.companyId);
+  });
+
+  return Array.from(companies);
+}
+
 export async function hasPermission(
   userId: string,
   category: string,
@@ -31,7 +62,22 @@ export async function hasPermission(
     if (action === "canView" && category !== "ADMIN") return true;
   }
 
-  // 3. Check granular permissions from database
+  // 3. HR Role refined access
+  if (role === "hr") {
+    // HR has full control over Facility/Seats (for seat mapping to employees)
+    if (category === "FACILITY" && subcategory === "SEATS") return true;
+    
+    // HR has full control over HR module
+    if (category === "HR") return true;
+
+    // HR can view workspaces (needed for seat mapping)
+    if (category === "IT" && subcategory === "WORKSPACES" && action === "canView") return true;
+
+    // HR can view Dashboard
+    if (action === "canView" && category === "DASHBOARD") return true;
+  }
+
+  // 4. Check granular permissions from database
   const permission = await prisma.userPermission.findUnique({
     where: {
       userId_category_subcategory: {

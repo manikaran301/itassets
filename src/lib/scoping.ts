@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { headers, cookies } from "next/headers";
+import prisma from "./prisma";
 
 export interface DataScope {
   companyId?: string;
@@ -28,8 +29,30 @@ export async function getDataScope(): Promise<DataScope> {
   const activeLocationId = cookieStore.get("x-mams-scope-location")?.value || headerList.get("x-mams-scope-location");
 
   if (!isGlobalAdmin) {
-    // 1. Company Scope
-    if (user.companyId) {
+    // 1. Company Scope - for HR, check accessible companies
+    if (user.role === "hr" && user.id) {
+      // Get all accessible companies for HR user
+      const accessibleCompanies = await prisma.userCompanyAccess.findMany({
+        where: { userId: user.id },
+        select: { companyId: true }
+      });
+
+      if (accessibleCompanies.length > 0) {
+        // If user selected a specific company via active filter, use that
+        if (activeLocationId) {
+          // Try to get company from active location or company filter
+          scope.companyId = activeLocationId;
+        } else {
+          // Default: Show data from ALL accessible companies
+          // For now, if multiple companies, we'll need to handle this in the query
+          // This is a limitation of Prisma's simple where clause
+          // The API should filter by accessible companies
+        }
+      } else if (user.companyId) {
+        // Fallback to primary company
+        scope.companyId = user.companyId;
+      }
+    } else if (user.companyId) {
       scope.companyId = user.companyId;
     }
 

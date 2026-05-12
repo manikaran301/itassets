@@ -47,22 +47,47 @@ export function SeatSelectorModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
   const [occupancyFilter, setOccupancyFilter] = useState("all");
+  const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (isOpen) {
-      const fetchWorkspaces = async () => {
+      const fetchData = async () => {
         setLoading(true);
         try {
+          // Fetch workspaces
           const res = await fetch("/api/workspaces");
           const data = await res.json();
           if (Array.isArray(data)) setWorkspaces(data);
+
+          // Fetch company names mapping
+          const companiesRes = await fetch("/api/admin/master-data/companies");
+          if (companiesRes.ok) {
+            const companies = await companiesRes.json();
+            const nameMap: Record<string, string> = {};
+            companies.forEach((company: any) => {
+              const companyName = company.name.trim();
+              // Map each company by its normalized name
+              nameMap[companyName] = companyName;
+
+              // Also add enum variant mappings
+              if (companyName.includes("50") || companyName.includes("Hertz")) {
+                nameMap["FIFTY_HERTZ"] = companyName;
+              } else if (companyName === "MPL") {
+                nameMap["MPL"] = companyName;
+              } else if (companyName === "MAL") {
+                nameMap["MAL"] = companyName;
+              }
+            });
+            console.log("Company name mapping:", nameMap); // Debug log
+            setCompanyNames(nameMap);
+          }
         } catch (error) {
-          console.error("Failed to fetch workspaces:", error);
+          console.error("Failed to fetch data:", error);
         } finally {
           setLoading(false);
         }
       };
-      fetchWorkspaces();
+      fetchData();
     }
   }, [isOpen]);
 
@@ -70,8 +95,12 @@ export function SeatSelectorModal({
 
   const filteredWorkspaces = workspaces.filter((ws) => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch = searchQuery === "" || ws.code.toLowerCase().includes(q) || ws.employee?.fullName?.toLowerCase().includes(q);
-    const matchesCompany = companyFilter === "all" || ws.company === companyFilter;
+    const matchesSearch =
+      searchQuery === "" ||
+      ws.code.toLowerCase().includes(q) ||
+      ws.employee?.fullName?.toLowerCase().includes(q);
+    const matchesCompany =
+      companyFilter === "all" || ws.company === companyFilter;
     let matchesOccupancy = true;
     if (occupancyFilter === "vacant") matchesOccupancy = !ws.employee;
     if (occupancyFilter === "occupied") matchesOccupancy = !!ws.employee;
@@ -83,9 +112,11 @@ export function SeatSelectorModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative z-10 w-full max-w-6xl h-[85vh] bg-card border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-        
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/5">
           <div>
@@ -97,7 +128,10 @@ export function SeatSelectorModal({
               Select an available seat on Floor 03 for assignment.
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-all text-muted-foreground">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/5 rounded-xl transition-all text-muted-foreground"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -114,15 +148,35 @@ export function SeatSelectorModal({
               className="w-full bg-background/50 pl-10 pr-4 py-2 rounded-xl text-[10px] font-bold border border-border/50 focus:border-primary/30 outline-none transition-all"
             />
           </div>
-          <select 
-            value={companyFilter} 
+          <select
+            value={companyFilter}
             onChange={(e) => setCompanyFilter(e.target.value)}
             className="bg-background/50 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border/50 focus:border-primary/30 outline-none cursor-pointer"
           >
-            {companies.map(c => <option key={c} value={c}>{c === "all" ? "ALL COMPANIES" : c}</option>)}
+            <option value="all">ALL COMPANIES</option>
+            {Array.from(new Set(workspaces.map((ws) => ws.company)))
+              .sort()
+              .map((c) => {
+                let displayName = companyNames[c];
+
+                // Fallback formatting if mapping not available
+                if (!displayName) {
+                  if (c === "FIFTY_HERTZ") {
+                    displayName = "50Hertz Limited";
+                  } else {
+                    displayName = c;
+                  }
+                }
+
+                return (
+                  <option key={c} value={c}>
+                    {displayName}
+                  </option>
+                );
+              })}
           </select>
-          <select 
-            value={occupancyFilter} 
+          <select
+            value={occupancyFilter}
             onChange={(e) => setOccupancyFilter(e.target.value)}
             className="bg-background/50 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border/50 focus:border-primary/30 outline-none cursor-pointer"
           >
@@ -137,12 +191,16 @@ export function SeatSelectorModal({
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 opacity-50">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Loading floor plan...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">
+                Loading floor plan...
+              </p>
             </div>
           ) : filteredWorkspaces.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 opacity-20 text-center">
               <Users className="w-10 h-10 mx-auto" />
-              <p className="text-[11px] font-black uppercase tracking-widest">No matching seats found</p>
+              <p className="text-[11px] font-black uppercase tracking-widest">
+                No matching seats found
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
@@ -154,23 +212,42 @@ export function SeatSelectorModal({
                     onClick={() => onSelect(ws)}
                     className={cn(
                       "relative group p-3 rounded-2xl border transition-all flex flex-col items-center text-center gap-2",
-                      isSelected ? "bg-primary border-primary text-primary-foreground shadow-lg scale-105" : 
-                      ws.employee ? "bg-muted/30 border-border/40 opacity-60 hover:opacity-100 hover:border-border" :
-                      "bg-card border-border/60 hover:border-primary/50 hover:shadow-md"
+                      isSelected
+                        ? "bg-primary border-primary text-primary-foreground shadow-lg scale-105"
+                        : ws.employee
+                          ? "bg-muted/30 border-border/40 opacity-60 hover:opacity-100 hover:border-border"
+                          : "bg-card border-border/60 hover:border-primary/50 hover:shadow-md",
                     )}
                   >
-                    <div className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-all",
-                      isSelected ? "bg-white/20" : "bg-primary/5 group-hover:bg-primary/10"
-                    )}>
-                      <Layout className={cn("w-4 h-4", isSelected ? "text-white" : "text-primary")} />
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-all",
+                        isSelected
+                          ? "bg-white/20"
+                          : "bg-primary/5 group-hover:bg-primary/10",
+                      )}
+                    >
+                      <Layout
+                        className={cn(
+                          "w-4 h-4",
+                          isSelected ? "text-white" : "text-primary",
+                        )}
+                      />
                     </div>
-                    <span className="text-[10px] font-black tracking-tight uppercase leading-none">{ws.code}</span>
+                    <span className="text-[10px] font-black tracking-tight uppercase leading-none">
+                      {ws.code}
+                    </span>
                     <div className="flex items-center gap-1">
-                      <span className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        isSelected ? "bg-white" : ws.employee ? "bg-red-500" : "bg-green-500"
-                      )} />
+                      <span
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          isSelected
+                            ? "bg-white"
+                            : ws.employee
+                              ? "bg-red-500"
+                              : "bg-green-500",
+                        )}
+                      />
                       <span className="text-[7px] font-black uppercase tracking-widest opacity-60">
                         {ws.employee ? "Occupied" : "Vacant"}
                       </span>
@@ -194,7 +271,7 @@ export function SeatSelectorModal({
 
         {/* Footer */}
         <div className="p-4 bg-muted/30 border-t border-white/5 flex justify-end">
-          <button 
+          <button
             onClick={onClose}
             className="px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition-all"
           >

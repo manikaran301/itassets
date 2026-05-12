@@ -181,6 +181,7 @@ model SystemUser {
   company               Company?                   @relation(fields: [companyId], references: [id])
   defaultLocationId     String?                    @db.Uuid
   managedLocations      Location[]                 @relation("UserLocations")
+  accessibleCompanies   UserCompanyAccess[]        @relation("UserToCompanies")
 
   employeesCreated      Employee[]                 @relation("CreatedBy")
   fulfilledRequirements EmployeeAssetRequirement[] @relation("FulfilledBy")
@@ -218,6 +219,19 @@ model UserPermission {
 
   @@unique([userId, category, subcategory])
   @@map("user_permissions")
+}
+
+model UserCompanyAccess {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  companyId String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamp
+
+  user      SystemUser @relation("UserToCompanies", fields: [userId], references: [id], onDelete: Cascade)
+  company   Company    @relation("UserCompanyAccess", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@map("user_company_access")
 }
 
 model Employee {
@@ -282,8 +296,9 @@ model Company {
   createdAt DateTime @default(now()) @db.Timestamp
   updatedAt DateTime @updatedAt @db.Timestamp
 
-  employees Employee[]
-  users     SystemUser[]
+  employees       Employee[]
+  users           SystemUser[]
+  userAccess      UserCompanyAccess[] @relation("UserCompanyAccess")
 
   @@map("master_companies")
 }

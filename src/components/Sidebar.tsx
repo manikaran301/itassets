@@ -47,40 +47,111 @@ interface SidebarGroup {
 const sidebarLinks: SidebarGroup[] = [
   {
     group: "Overview",
+    roles: ["hr", "it", "admin", "readonly"],
     links: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard },
-      { name: "Seats Registry", href: "/seats", icon: Layout, permission: ["FACILITY", "SEATS"] },
+      {
+        name: "Seats Registry",
+        href: "/seats",
+        icon: Layout,
+        permission: ["FACILITY", "SEATS"],
+      },
     ],
   },
   {
     group: "HR Module",
     roles: ["hr", "admin", "readonly"],
     links: [
-      { name: "Upcoming Joinings", href: "/hr/upcoming", icon: PlaneTakeoff, permission: ["HR", "REQUIREMENTS"] },
-      { name: "Onboarding", href: "/hr/joiners", icon: UserCheck, permission: ["HR", "JOINERS"] },
-      { name: "Employees", href: "/hr/employees", icon: Users, permission: ["HR", "EMPLOYEES"] },
-      { name: "Exits", href: "/hr/exits", icon: UserX, permission: ["HR", "EXITS"] },
+      {
+        name: "Upcoming Joinings",
+        href: "/hr/upcoming",
+        icon: PlaneTakeoff,
+        permission: ["HR", "REQUIREMENTS"],
+      },
+      {
+        name: "Onboarding",
+        href: "/hr/joiners",
+        icon: UserCheck,
+        permission: ["HR", "JOINERS"],
+      },
+      {
+        name: "Employees",
+        href: "/hr/employees",
+        icon: Users,
+        permission: ["HR", "EMPLOYEES"],
+      },
+      {
+        name: "Exits",
+        href: "/hr/exits",
+        icon: UserX,
+        permission: ["HR", "EXITS"],
+      },
     ],
   },
   {
     group: "IT Module",
     roles: ["it", "admin", "readonly"],
     links: [
-      { name: "Assets", href: "/it/assets", icon: Monitor, permission: ["IT", "ASSETS"] },
-      { name: "Provisioning", href: "/it/provisioning", icon: Truck, permission: ["IT", "PROVISIONING"] },
-      { name: "Assignments", href: "/it/assignments", icon: ArrowRightLeft, permission: ["IT", "ASSIGNMENTS"] },
-      { name: "Email Accounts", href: "/it/email", icon: Mail, permission: ["IT", "EMAILS"] },
-      { name: "Accessories", href: "/it/accessories", icon: HardDrive, permission: ["IT", "ACCESSORIES"] },
+      {
+        name: "Assets",
+        href: "/it/assets",
+        icon: Monitor,
+        permission: ["IT", "ASSETS"],
+      },
+      {
+        name: "Provisioning",
+        href: "/it/provisioning",
+        icon: Truck,
+        permission: ["IT", "PROVISIONING"],
+      },
+      {
+        name: "Assignments",
+        href: "/it/assignments",
+        icon: ArrowRightLeft,
+        permission: ["IT", "ASSIGNMENTS"],
+      },
+      {
+        name: "Email Accounts",
+        href: "/it/email",
+        icon: Mail,
+        permission: ["IT", "EMAILS"],
+      },
+      {
+        name: "Accessories",
+        href: "/it/accessories",
+        icon: HardDrive,
+        permission: ["IT", "ACCESSORIES"],
+      },
     ],
   },
   {
     group: "Management",
     roles: ["admin"],
     links: [
-      { name: "Master Data", href: "/admin/management", icon: ShieldCheck, permission: ["ADMIN", "MANAGEMENT"] },
-      { name: "Reports", href: "/admin/reports", icon: BarChart3, permission: ["ADMIN", "REPORTS"] },
-      { name: "Audit Log", href: "/admin/audit", icon: History, permission: ["ADMIN", "AUDIT"] },
-      { name: "Users", href: "/admin/users", icon: Settings, permission: ["ADMIN", "USERS"] },
+      {
+        name: "Master Data",
+        href: "/admin/management",
+        icon: ShieldCheck,
+        permission: ["ADMIN", "MANAGEMENT"],
+      },
+      {
+        name: "Reports",
+        href: "/admin/reports",
+        icon: BarChart3,
+        permission: ["ADMIN", "REPORTS"],
+      },
+      {
+        name: "Audit Log",
+        href: "/admin/audit",
+        icon: History,
+        permission: ["ADMIN", "AUDIT"],
+      },
+      {
+        name: "Users",
+        href: "/admin/users",
+        icon: Settings,
+        permission: ["ADMIN", "USERS"],
+      },
     ],
   },
 ];
@@ -98,7 +169,11 @@ export function Sidebar() {
   const { theme } = useTheme();
   const user = session?.user as SessionUser | undefined;
   const { notifications } = useNotifications();
-  const { checkPermission, loading: permissionsLoading, isSuperAdmin } = usePermissions();
+  const {
+    checkPermission,
+    loading: permissionsLoading,
+    isSuperAdmin,
+  } = usePermissions();
 
   const userInitial = user?.name ? user.name[0] : "U";
   const userName = user?.name || "User";
@@ -108,7 +183,7 @@ export function Sidebar() {
     <aside
       className={cn(
         "h-screen border-r border-border bg-card flex flex-col glass fixed left-0 top-0 transition-all duration-300 ease-in-out z-50 overflow-visible",
-        isCollapsed ? "w-20" : "w-64"
+        isCollapsed ? "w-20" : "w-64",
       )}
     >
       {/* Enhanced Overlay Collapse Toggle Button */}
@@ -116,7 +191,7 @@ export function Sidebar() {
         onClick={toggleSidebar}
         className={cn(
           "absolute top-6 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:scale-110 active:scale-95 transition-all z-[100] border-2 border-background",
-          isCollapsed ? "-right-4" : "-right-4"
+          isCollapsed ? "-right-4" : "-right-4",
         )}
         title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
       >
@@ -129,14 +204,18 @@ export function Sidebar() {
 
       {/* Scrollable Content Wrapper */}
       <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
-        <div className={cn(
-          "p-4 flex flex-col items-center transition-all duration-300",
-          isCollapsed ? "px-2 pt-20" : "px-4 pt-8"
-        )}>
-          <div className={cn(
-            "relative mb-4 group flex items-center justify-center transition-all duration-500 ease-in-out",
-            isCollapsed ? "w-12 h-12" : "w-32 h-16"
-          )}>
+        <div
+          className={cn(
+            "p-4 flex flex-col items-center transition-all duration-300",
+            isCollapsed ? "px-2 pt-20" : "px-4 pt-8",
+          )}
+        >
+          <div
+            className={cn(
+              "relative mb-4 group flex items-center justify-center transition-all duration-500 ease-in-out",
+              isCollapsed ? "w-12 h-12" : "w-32 h-16",
+            )}
+          >
             <img
               src={theme === "dark" ? "/MPLWhite.png" : "/mrllogo.png"}
               alt="MRL Logo"
@@ -157,18 +236,29 @@ export function Sidebar() {
             .map((group) => {
               const links = group.links.filter((link) => {
                 if (!link.permission) return true;
-                if (permissionsLoading && (!group.roles || group.roles.includes(userRole))) return true;
+                if (
+                  permissionsLoading &&
+                  (!group.roles || group.roles.includes(userRole))
+                )
+                  return true;
                 const [category, subcategory] = link.permission;
-                return isSuperAdmin || checkPermission(category, subcategory, "canView");
+                return (
+                  isSuperAdmin ||
+                  checkPermission(category, subcategory, "canView")
+                );
               });
 
-              const roleAllowsGroup = !group.roles || group.roles.includes(userRole);
+              const roleAllowsGroup =
+                !group.roles || group.roles.includes(userRole);
               if (!roleAllowsGroup) return null;
               if (links.length === 0) return null;
 
               return { ...group, links };
             })
-            .filter((group): group is NonNullable<typeof group> => !!group && group.links.length > 0)
+            .filter(
+              (group): group is NonNullable<typeof group> =>
+                !!group && group.links.length > 0,
+            )
             .map((group) => (
               <div key={group.group}>
                 {!isCollapsed && (
@@ -204,7 +294,7 @@ export function Sidebar() {
                           isActive
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted",
-                          isCollapsed && "justify-center px-0"
+                          isCollapsed && "justify-center px-0",
                         )}
                         title={isCollapsed ? link.name : ""}
                       >
@@ -216,16 +306,20 @@ export function Sidebar() {
                               : "group-hover:scale-110 transition-transform",
                           )}
                         />
-                        {!isCollapsed && <span className="flex-1 truncate">{link.name}</span>}
+                        {!isCollapsed && (
+                          <span className="flex-1 truncate">{link.name}</span>
+                        )}
 
                         {/* Notification Badge */}
                         {notificationCount > 0 && (
-                          <span className={cn(
-                            "flex items-center justify-center text-[10px] font-black rounded-full bg-red-500 text-white ring-2 ring-red-500/30 animate-pulse",
-                            isCollapsed 
-                              ? "absolute top-1 right-1 w-4 h-4" 
-                              : "w-5 h-5"
-                          )}>
+                          <span
+                            className={cn(
+                              "flex items-center justify-center text-[10px] font-black rounded-full bg-red-500 text-white ring-2 ring-red-500/30 animate-pulse",
+                              isCollapsed
+                                ? "absolute top-1 right-1 w-4 h-4"
+                                : "w-5 h-5",
+                            )}
+                          >
                             {notificationCount > 99 ? "99+" : notificationCount}
                           </span>
                         )}
@@ -241,11 +335,18 @@ export function Sidebar() {
             ))}
         </nav>
 
-        <div className={cn("p-4 border-t border-border mt-auto space-y-3", isCollapsed && "px-2")}>
-          <div className={cn(
-            "bg-muted p-2 rounded-lg flex items-center gap-3",
-            isCollapsed && "justify-center p-1"
-          )}>
+        <div
+          className={cn(
+            "p-4 border-t border-border mt-auto space-y-3",
+            isCollapsed && "px-2",
+          )}
+        >
+          <div
+            className={cn(
+              "bg-muted p-2 rounded-lg flex items-center gap-3",
+              isCollapsed && "justify-center p-1",
+            )}
+          >
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs ring-2 ring-primary/10 shrink-0">
               {userInitial}
             </div>
@@ -263,7 +364,7 @@ export function Sidebar() {
             onClick={() => signOut({ callbackUrl: "/login" })}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all",
-              isCollapsed && "justify-center px-0"
+              isCollapsed && "justify-center px-0",
             )}
             title={isCollapsed ? "Log Out" : ""}
           >

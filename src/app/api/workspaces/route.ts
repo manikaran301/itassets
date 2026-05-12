@@ -23,12 +23,23 @@ export async function GET() {
     const workspaceScope: any = {};
     if (scope.locationId) workspaceScope.locationId = scope.locationId;
     if (scope.companyId) {
-      // Map company string/ID to Prisma Enum member name
-      const cId = scope.companyId;
-      if (cId === "50Hertz Limited" || cId === "50-Hertz" || cId === "FIFTY_HERTZ" || cId === "50Hertz") {
-        workspaceScope.company = "FIFTY_HERTZ";
-      } else {
-        workspaceScope.company = cId as any;
+      // Look up the company by ID to get its name, then map to CompanyBranch enum
+      const company = await prisma.company.findUnique({
+        where: { id: scope.companyId },
+        select: { name: true }
+      });
+      
+      if (company) {
+        // Map company name to CompanyBranch enum value
+        if (company.name === "50Hertz Limited" || company.name === "50-Hertz" || company.name === "50Hertz") {
+          workspaceScope.company = "FIFTY_HERTZ";
+        } else if (company.name === "MPL") {
+          workspaceScope.company = "MPL";
+        } else if (company.name === "MAL") {
+          workspaceScope.company = "MAL";
+        } else {
+          workspaceScope.company = "OTHER";
+        }
       }
     }
 
