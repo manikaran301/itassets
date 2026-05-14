@@ -1,7 +1,28 @@
 "use client";
 
 import { usePermissions } from "@/hooks/usePermissions";
-import { ShieldAlert } from "lucide-react";
+import { 
+  ShieldAlert, 
+  Loader2, 
+  CheckCircle2, 
+  ArrowLeft, 
+  Save, 
+  Shield, 
+  Scan, 
+  User, 
+  Hash, 
+  Mail, 
+  Smartphone, 
+  Globe, 
+  MapPin, 
+  Calendar, 
+  Briefcase, 
+  LayoutGrid, 
+  Laptop, 
+  Monitor, 
+  PhoneCall as SimIcon, 
+  Activity 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";

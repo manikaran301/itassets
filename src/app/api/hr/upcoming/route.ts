@@ -26,13 +26,60 @@ export async function GET(request: Request) {
 
     const skip = parseInt(searchParams.get('skip') || '0');
     const take = parseInt(searchParams.get('take') || '0');
+    const search = searchParams.get('search')?.toLowerCase();
+    const company = searchParams.get('company');
+    const location = searchParams.get('location');
+    const status = searchParams.get('status') || 'active_pipeline';
+    const period = searchParams.get('period');
+
+    let where: any = {};
+    
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { designation: { contains: search, mode: 'insensitive' } },
+        { department: { contains: search, mode: 'insensitive' } },
+        { reportingManager: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (company && company !== 'all') {
+      where.companyName = company;
+    }
+
+    if (location && location !== 'all') {
+      where.placeOfPosting = location;
+    }
+
+    if (status === 'active_pipeline') {
+      where.status = { not: 'joined' };
+    } else if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    if (period === 'week') {
+      const now = new Date();
+      const first = now.getDate() - now.getDay() + 1; // Monday
+      const last = first + 6;
+      const start = new Date(now.setDate(first));
+      start.setHours(0,0,0,0);
+      const end = new Date(now.setDate(last));
+      end.setHours(23,59,59,999);
+      where.joiningDate = { gte: start, lte: end };
+    } else if (period === 'month') {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      where.joiningDate = { gte: start, lte: end };
+    }
 
     const [upcoming, total] = await Promise.all([
       prisma.upcomingJoining.findMany({
+        where,
         orderBy: { joiningDate: 'asc' },
         ...(take > 0 ? { skip, take } : {}),
       }),
-      prisma.upcomingJoining.count(),
+      prisma.upcomingJoining.count({ where }),
     ]);
 
     if (take > 0) {

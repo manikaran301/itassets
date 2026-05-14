@@ -148,7 +148,7 @@ export default async function DashboardPage() {
     alertCards.push({
       title: "Notice Period",
       desc: `${noticePeriodCount} employees exiting. Prepare recovery.`,
-      type: "info" as const,
+      type: "warning" as const,
       icon: ShieldCheck,
     });
   }

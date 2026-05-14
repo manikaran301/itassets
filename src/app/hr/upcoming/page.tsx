@@ -115,7 +115,7 @@ export default function UpcomingJoiningPage() {
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [selectedPeriod, setSelectedPeriod] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("active_pipeline");
   const [managerPhotos, setManagerPhotos] = useState<Record<string, string>>(
     {},
   );
@@ -192,8 +192,18 @@ export default function UpcomingJoiningPage() {
       if (skip === 0) setLoading(true);
       else setLoadingMore(true);
 
+      const params = new URLSearchParams({
+        skip: skip.toString(),
+        take: PAGE_SIZE.toString(),
+        status: selectedStatus,
+        company: selectedCompany,
+        location: selectedLocation,
+        search: searchQuery,
+        period: selectedPeriod
+      });
+
       const res = await fetch(
-        `/api/hr/upcoming?skip=${skip}&take=${PAGE_SIZE}`,
+        `/api/hr/upcoming?${params.toString()}`,
       );
       if (!res.ok) throw new Error("Failed to fetch data");
       const result = await res.json();
@@ -215,6 +225,11 @@ export default function UpcomingJoiningPage() {
       setLoadingMore(false);
     }
   };
+
+  // Refetch when filters change
+  useEffect(() => {
+    fetchData(0);
+  }, [searchQuery, selectedCompany, selectedLocation, selectedStatus, selectedPeriod]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -341,51 +356,7 @@ export default function UpcomingJoiningPage() {
   ).size;
 
   // Filtering
-  const filteredData = data.filter((item) => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      searchQuery === "" ||
-      item.fullName?.toLowerCase().includes(q) ||
-      item.designation?.toLowerCase().includes(q) ||
-      item.department?.toLowerCase().includes(q) ||
-      item.companyName?.toLowerCase().includes(q) ||
-      item.reportingManager?.toLowerCase().includes(q) ||
-      item.placeOfPosting?.toLowerCase().includes(q) ||
-      item.joiningLocation?.toLowerCase().includes(q);
-
-    const matchesCompany =
-      selectedCompany === "all" || item.companyName === selectedCompany;
-    const matchesLocation =
-      selectedLocation === "all" || item.placeOfPosting === selectedLocation;
-
-    let matchesPeriod = true;
-    if (selectedPeriod === "week") {
-      try {
-        matchesPeriod = isThisWeek(new Date(item.joiningDate), {
-          weekStartsOn: 1,
-        });
-      } catch {
-        matchesPeriod = false;
-      }
-    } else if (selectedPeriod === "month") {
-      try {
-        matchesPeriod = isThisMonth(new Date(item.joiningDate));
-      } catch {
-        matchesPeriod = false;
-      }
-    }
-
-    const matchesStatus =
-      selectedStatus === "all" || item.status === selectedStatus;
-
-    return (
-      matchesSearch &&
-      matchesCompany &&
-      matchesLocation &&
-      matchesPeriod &&
-      matchesStatus
-    );
-  });
+  const filteredData = data;
 
   const stats = [
     {
@@ -630,11 +601,12 @@ export default function UpcomingJoiningPage() {
           <div className="w-full lg:w-48">
             <SearchableSelect
               options={[
-                { value: "all", label: "ALL STATUSES" },
+                { value: "active_pipeline", label: "ACTIVE PIPELINE" },
+                { value: "all", label: "ALL STATUSES (INCL. JOINED)" },
                 ...Object.keys(STATUS_CONFIG).map(s => ({ value: s, label: STATUS_CONFIG[s].label.toUpperCase() }))
               ]}
               value={selectedStatus}
-              onChange={(val) => setSelectedStatus(val || "all")}
+              onChange={(val) => setSelectedStatus(val || "active_pipeline")}
               placeholder="STATUS"
               compact
             />
