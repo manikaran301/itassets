@@ -1,29 +1,7 @@
 "use client";
 
-import {
-  ArrowLeft,
-  Shield,
-  Save,
-  User,
-  Smartphone,
-  PhoneCall as SimIcon,
-  Monitor,
-  CheckCircle2,
-  Loader2,
-  LayoutGrid,
-  Hash,
-  Scan,
-  QrCode,
-  Mail,
-  Laptop,
-  Building2,
-  Plus,
-  Activity,
-  Globe,
-  MapPin,
-  Calendar,
-  Briefcase,
-} from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -41,6 +19,7 @@ export default function NewEmployeePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const { checkPermission, loading: permsLoading } = usePermissions();
   const [managers, setManagers] = useState<ManagerOption[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -218,6 +197,40 @@ export default function NewEmployeePage() {
       setTimeout(() => router.push("/hr/employees"), 1500);
     } catch (err: any) { setError(err.message); } finally { setSubmitting(false); }
   };
+
+  // Permission Check
+  const canCreate = checkPermission("HR", "EMPLOYEES", "canCreate");
+
+  if (permsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-4 animate-fade-in">
+        <Loader2 className="w-12 h-12 text-primary animate-spin opacity-50" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Verifying security clearances...</p>
+      </div>
+    );
+  }
+
+  if (!canCreate) {
+    return (
+      <div className="h-[70vh] flex flex-col items-center justify-center gap-6 animate-fade-in">
+        <div className="w-24 h-24 rounded-[40px] bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-2xl shadow-red-500/10 text-red-500">
+          <ShieldAlert className="w-12 h-12" />
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-2xl font-black uppercase tracking-tight text-foreground">Access Restricted</h3>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-60 max-w-sm mx-auto leading-relaxed">
+            Your current security profile does not have authorization to enroll new associates into the registry.
+          </p>
+        </div>
+        <button
+          onClick={() => router.back()}
+          className="px-8 py-3 bg-card border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-muted transition-all"
+        >
+          Return to Previous Page
+        </button>
+      </div>
+    );
+  }
 
   if (submitSuccess) {
     return (

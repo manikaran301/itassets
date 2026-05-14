@@ -61,7 +61,18 @@ interface Workspace {
 
 const formatCompany = (company: string) => {
   if (company === "FIFTY_HERTZ") return "50Hertz Limited";
+  if (company === "MPL") return "Manikaran Power Limited";
+  if (company === "MAL") return "Manikaran Analytics Limited";
   return company;
+};
+
+const normalizeCompanyName = (name: string) => {
+  if (!name) return "";
+  const n = name.toUpperCase();
+  if (n.includes("50HERTZ") || n.includes("50-HERTZ")) return "FIFTY_HERTZ";
+  if (n === "MANIKARAN POWER LIMITED" || n === "MPL") return "MPL";
+  if (n === "MANIKARAN ANALYTICS LIMITED" || n === "MAL") return "MAL";
+  return name;
 };
 
 // Layout constants
@@ -264,7 +275,9 @@ export default function WorkspacesPage() {
       ws.assets.some((a) => (a.assetTag || "").toLowerCase().includes(query)) ||
       ws.accessories.some((a) => (a.assetTag || "").toLowerCase().includes(query));
 
-    const matchesCompany = companyFilter === "all" || ws.company === companyFilter;
+    const matchesCompany = companyFilter === "all" || 
+      ws.company === companyFilter || 
+      normalizeCompanyName(ws.company) === normalizeCompanyName(companyFilter);
     const matchesType = typeFilter === "all" || ws.type === typeFilter;
     
     let matchesOccupancy = true;
@@ -424,8 +437,8 @@ export default function WorkspacesPage() {
             <SearchableSelect
               options={[
                 { value: "all", label: "ALL COMPANIES" },
-                ...masterCompanies.map(c => ({ value: c.name, label: formatCompany(c.name).toUpperCase() })),
-                ...(companyFilter !== "all" && !masterCompanies.some(c => c.name === companyFilter)
+                ...masterCompanies.map(c => ({ value: c.code || c.name, label: formatCompany(c.name).toUpperCase() })),
+                ...(companyFilter !== "all" && !masterCompanies.some(c => (c.code || c.name) === companyFilter)
                     ? [{ value: companyFilter, label: formatCompany(companyFilter).toUpperCase() }]
                     : [])
               ]}
@@ -680,8 +693,8 @@ export default function WorkspacesPage() {
                   </label>
                   <SearchableSelect
                     options={[
-                      ...masterCompanies.map(c => ({ value: c.name, label: formatCompany(c.name).toUpperCase() })),
-                      ...(formData.company && !masterCompanies.some(c => c.name === formData.company) 
+                      ...masterCompanies.map(c => ({ value: c.code || c.name, label: formatCompany(c.name).toUpperCase() })),
+                      ...(formData.company && !masterCompanies.some(c => (c.code || c.name) === formData.company) 
                           ? [{ value: formData.company, label: formatCompany(formData.company).toUpperCase() }] 
                           : [])
                     ]}

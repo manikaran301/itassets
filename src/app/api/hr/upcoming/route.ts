@@ -90,6 +90,21 @@ export async function POST(request: Request) {
       },
     });
 
+    // Audit Log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          entityType: 'upcoming_joining',
+          entityId: record.id,
+          action: 'created',
+          changedBy: userId,
+          newValue: JSON.parse(JSON.stringify(record))
+        }
+      });
+    } catch (e) {
+      console.error('Audit log failed:', e);
+    }
+
     return NextResponse.json(record, { status: 201 });
   } catch (error) {
     console.error('Create upcoming error:', error);
@@ -127,6 +142,9 @@ export async function PUT(request: Request) {
       statusReason
     } = body;
 
+    const existing = await prisma.upcomingJoining.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
     const record = await prisma.upcomingJoining.update({
       where: { id },
       data: {
@@ -145,6 +163,22 @@ export async function PUT(request: Request) {
         statusReason
       },
     });
+
+    // Audit Log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          entityType: 'upcoming_joining',
+          entityId: record.id,
+          action: status !== existing.status ? 'status_changed' : 'updated',
+          changedBy: userId,
+          oldValue: JSON.parse(JSON.stringify(existing)),
+          newValue: JSON.parse(JSON.stringify(record))
+        }
+      });
+    } catch (e) {
+      console.error('Audit log failed:', e);
+    }
 
     return NextResponse.json(record);
   } catch (error) {
@@ -166,7 +200,26 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
 
+    const existing = await prisma.upcomingJoining.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
     await prisma.upcomingJoining.delete({ where: { id } });
+
+    // Audit Log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          entityType: 'upcoming_joining',
+          entityId: id,
+          action: 'deleted',
+          changedBy: userId,
+          oldValue: JSON.parse(JSON.stringify(existing))
+        }
+      });
+    } catch (e) {
+      console.error('Audit log failed:', e);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete upcoming error:', error);

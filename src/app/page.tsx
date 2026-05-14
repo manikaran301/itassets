@@ -19,11 +19,32 @@ import { StatsCard } from "@/components/StatsCard";
 import { cn } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "./api/auth/[...nextauth]/route";
+import { hasPermission } from "@/lib/permissions";
 
 // Force dynamic rendering - don't pre-render at build time
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id;
+
+  if (!userId) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <p className="text-muted-foreground uppercase tracking-widest font-black text-xs">Authentication Required</p>
+      </div>
+    );
+  }
+
+  // Check Permissions
+  const [canViewHRRequirements, canViewHREmployees, canViewHRExits] = await Promise.all([
+    hasPermission(userId, "HR", "REQUIREMENTS", "canView"),
+    hasPermission(userId, "HR", "EMPLOYEES", "canView"),
+    hasPermission(userId, "HR", "EXITS", "canView"),
+  ]);
+
   const [
     employeeCount,
     activeEmployeeCount,
@@ -121,15 +142,18 @@ export default async function DashboardPage() {
       type: "danger" as const,
       icon: Cpu,
     },
-    {
+  ];
+
+  if (canViewHRExits) {
+    alertCards.push({
       title: "Notice Period",
       desc: `${noticePeriodCount} employees exiting. Prepare recovery.`,
       type: "info" as const,
       icon: ShieldCheck,
-    },
-  ];
+    });
+  }
 
-  if (immediateJoinersCount > 0) {
+  if (canViewHRRequirements && immediateJoinersCount > 0) {
     alertCards.unshift({
       title: "Immediate Joinings",
       desc: `${immediateJoinersCount} joiners arriving in the next 7 days.`,
@@ -138,7 +162,7 @@ export default async function DashboardPage() {
     });
   }
 
-  if (overdueJoinersCount > 0) {
+  if (canViewHRRequirements && overdueJoinersCount > 0) {
     alertCards.unshift({
       title: "Overdue Onboarding",
       desc: `${overdueJoinersCount} joiners past their start date pending activation.`,
@@ -151,30 +175,34 @@ export default async function DashboardPage() {
     <div className="space-y-12 max-w-7xl mx-auto">
       <section className="animate-fade-in pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <Link href="/hr/upcoming" aria-label="Open upcoming joinings page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-            <StatsCard
-              title="Upcoming Joinings"
-              value={totalUpcomingJoinings}
-              count={`${immediateJoinersCount} joining this week`}
-              description="Scheduled onboarding requiring IT preparation."
-              icon={Calendar}
-              trend={immediateJoinersCount > 0 ? "up" : "neutral"}
-              trendValue={immediateJoinersCount > 0 ? `${immediateJoinersCount} soon` : "Clear"}
-              className="border-l-4 border-l-green-500 h-full cursor-pointer"
-            />
-          </Link>
-          <Link href="/hr/employees" aria-label="Open workforce employees page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-            <StatsCard
-              title="Total Workforce"
-              value={employeeCount}
-              count={`${upcomingJoiningCount} joiners next 30d`}
-              description="Active employees and scheduled onboarding pipeline."
-              icon={Users}
-              trend={upcomingJoiningCount > 0 ? "up" : "neutral"}
-              trendValue={upcomingJoiningCount > 0 ? `+${upcomingJoiningCount}` : "Stable"}
-              className="border-l-4 border-l-primary h-full cursor-pointer"
-            />
-          </Link>
+          {canViewHRRequirements && (
+            <Link href="/hr/upcoming" aria-label="Open upcoming joinings page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+              <StatsCard
+                title="Upcoming Joinings"
+                value={totalUpcomingJoinings}
+                count={`${immediateJoinersCount} joining this week`}
+                description="Scheduled onboarding requiring IT preparation."
+                icon={Calendar}
+                trend={immediateJoinersCount > 0 ? "up" : "neutral"}
+                trendValue={immediateJoinersCount > 0 ? `${immediateJoinersCount} soon` : "Clear"}
+                className="border-l-4 border-l-green-500 h-full cursor-pointer"
+              />
+            </Link>
+          )}
+          {canViewHREmployees && (
+            <Link href="/hr/employees" aria-label="Open workforce employees page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+              <StatsCard
+                title="Total Workforce"
+                value={employeeCount}
+                count={`${upcomingJoiningCount} joiners next 30d`}
+                description="Active employees and scheduled onboarding pipeline."
+                icon={Users}
+                trend={upcomingJoiningCount > 0 ? "up" : "neutral"}
+                trendValue={upcomingJoiningCount > 0 ? `+${upcomingJoiningCount}` : "Stable"}
+                className="border-l-4 border-l-primary h-full cursor-pointer"
+              />
+            </Link>
+          )}
           <Link href="/it/assets" aria-label="Open hardware assets page" className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <StatsCard
               title="Hardware Stock"
@@ -216,74 +244,78 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-fade-in delay-100">
         {/* COLUMN 1: UPCOMING JOINERS */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-              <UserPlus className="w-4 h-4 text-green-500" />
-              Onboarding Pipeline
-            </h3>
-            <Link href="/hr/upcoming" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
-          </div>
-          <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
-            <div className="divide-y divide-border/50">
-              {upcomingJoiners.map((joiner) => (
-                <div key={joiner.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold truncate max-w-[150px]">{joiner.fullName}</p>
-                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{joiner.department} • {joiner.companyName}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-primary">{new Date(joiner.joiningDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-                    <p className="text-[8px] font-bold text-muted-foreground uppercase">JOINING</p>
-                  </div>
-                </div>
-              ))}
-              {upcomingJoiners.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No joiners scheduled</div>
-              )}
+        {canViewHRRequirements && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-green-500" />
+                Onboarding Pipeline
+              </h3>
+              <Link href="/hr/upcoming" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
             </div>
-          </div>
-        </div>
-
-        {/* COLUMN 2: UPCOMING EXITS */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-              <UserMinus className="w-4 h-4 text-red-500" />
-              Offboarding / Exits
-            </h3>
-            <Link href="/hr/exits" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
-          </div>
-          <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
-            <div className="divide-y divide-border/50">
-              {upcomingExits.map((emp: any) => (
-                <div key={emp.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold truncate max-w-[150px]">{emp.fullName}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{emp.employeeCode} • {emp.department}</span>
-                      <span className={cn(
-                        "text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full",
-                        emp.status === "notice_period" ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"
-                      )}>
-                        {emp.status === "notice_period" ? "NOTICE" : "EXIT"}
-                      </span>
+            <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+              <div className="divide-y divide-border/50">
+                {upcomingJoiners.map((joiner) => (
+                  <div key={joiner.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold truncate max-w-[150px]">{joiner.fullName}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{joiner.department} • {joiner.companyName}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-primary">{new Date(joiner.joiningDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">JOINING</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-red-500">
-                      {emp.exitDate ? new Date(emp.exitDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'TBD'}
-                    </p>
-                    <p className="text-[8px] font-bold text-muted-foreground uppercase">LAST DAY</p>
-                  </div>
-                </div>
-              ))}
-              {upcomingExits.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No exits in pipeline</div>
-              )}
+                ))}
+                {upcomingJoiners.length === 0 && (
+                  <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No joiners scheduled</div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* COLUMN 2: UPCOMING EXITS */}
+        {canViewHRExits && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <UserMinus className="w-4 h-4 text-red-500" />
+                Offboarding / Exits
+              </h3>
+              <Link href="/hr/exits" className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</Link>
+            </div>
+            <div className="glass border border-border/50 rounded-2xl overflow-hidden shadow-sm">
+              <div className="divide-y divide-border/50">
+                {upcomingExits.map((emp: any) => (
+                  <div key={emp.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold truncate max-w-[150px]">{emp.fullName}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{emp.employeeCode} • {emp.department}</span>
+                        <span className={cn(
+                          "text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full",
+                          emp.status === "notice_period" ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"
+                        )}>
+                          {emp.status === "notice_period" ? "NOTICE" : "EXIT"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-red-500">
+                        {emp.exitDate ? new Date(emp.exitDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'TBD'}
+                      </p>
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">LAST DAY</p>
+                    </div>
+                  </div>
+                ))}
+                {upcomingExits.length === 0 && (
+                  <div className="p-8 text-center text-muted-foreground/40 text-xs italic">No exits in pipeline</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* COLUMN 3: ALERTS */}
         <div className="space-y-4">

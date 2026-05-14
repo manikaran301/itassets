@@ -56,10 +56,10 @@ export function usePermissions() {
     // IT role refined bypass
     if (role === "it") {
       if (category.toUpperCase() === "IT" || category.toUpperCase() === "FACILITY") return true;
-      if (category.toUpperCase() === "HR") {
-        return subcategory.toUpperCase() === "EMPLOYEES" && action === "canView";
-      }
-      if (action === "canView") return true;
+      if (category.toUpperCase() === "HR" && subcategory.toUpperCase() === "EMPLOYEES" && action === "canView") return true;
+      if (action === "canView" && category.toUpperCase() === "DASHBOARD") return true;
+      
+      // Fall through to database permissions
     }
 
     // Safety check for permissions array
@@ -79,6 +79,6 @@ export function usePermissions() {
     role,
     loading,
     checkPermission,
-    isSuperAdmin: role === "admin" || role === "it"
+    isSuperAdmin: role === "admin"
   };
 }

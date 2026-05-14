@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         }
 
         // Create upcoming joining record
-        await prisma.upcomingJoining.create({
+        const created = await prisma.upcomingJoining.create({
           data: {
             fullName: record.fullName,
             designation: record.designation || '',
@@ -55,6 +55,21 @@ export async function POST(request: Request) {
             statusReason: record.statusReason || null,
           },
         });
+
+        // Audit Log
+        try {
+          await prisma.auditLog.create({
+            data: {
+              entityType: 'upcoming_joining',
+              entityId: created.id,
+              action: 'created',
+              changedBy: (session?.user as any)?.id,
+              newValue: JSON.parse(JSON.stringify(created))
+            }
+          });
+        } catch (e) {
+          console.error('Audit log failed during import:', e);
+        }
 
         count++;
       } catch (error) {

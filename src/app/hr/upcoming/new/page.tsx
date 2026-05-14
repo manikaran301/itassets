@@ -22,6 +22,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ShieldAlert } from "lucide-react";
 
 const COMPANIES = [
   { value: "Manikaran Power Limited (MPL)", label: "Manikaran Power Limited (MPL)" },
@@ -45,6 +47,7 @@ const DESIGNATIONS = [
 
 export default function NewUpcomingJoiningPage() {
   const router = useRouter();
+  const { checkPermission, loading: permissionsLoading } = usePermissions();
   const [managers, setManagers] = useState<{ value: string; label: string }[]>([]);
   const [locations, setLocations] = useState<{ value: string; label: string }[]>([]);
   const [departments, setDepartments] = useState<{ value: string; label: string }[]>([]);
@@ -65,6 +68,9 @@ export default function NewUpcomingJoiningPage() {
     placeOfPosting: "",
     joiningLocation: "",
   });
+
+  // Permission Check
+  const canCreate = checkPermission("HR", "REQUIREMENTS", "canCreate");
 
   useEffect(() => {
     fetchSupportData();
@@ -132,6 +138,37 @@ export default function NewUpcomingJoiningPage() {
       setSubmitting(false);
     }
   };
+
+  if (permissionsLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4 animate-pulse">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Verifying security clearances...</p>
+      </div>
+    );
+  }
+
+  if (!canCreate) {
+    return (
+      <div className="h-[70vh] flex flex-col items-center justify-center gap-6 animate-fade-in">
+        <div className="w-24 h-24 rounded-[40px] bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-2xl shadow-red-500/10 text-red-500">
+          <ShieldAlert className="w-12 h-12" />
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-2xl font-black uppercase tracking-tight text-foreground">Access Restricted</h3>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-60 max-w-sm mx-auto leading-relaxed">
+            Your current security profile does not have authorization to add new candidates to the pipeline.
+          </p>
+        </div>
+        <button
+          onClick={() => router.back()}
+          className="px-8 py-3 bg-card border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-muted transition-all"
+        >
+          Return to Previous Page
+        </button>
+      </div>
+    );
+  }
 
   if (submitSuccess) {
     return (

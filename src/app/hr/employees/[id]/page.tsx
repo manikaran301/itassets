@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/contexts/ToastContext";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -44,6 +45,7 @@ export default function EmployeeDetailPage({ params }: PageProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const { data: session } = useSession();
+  const { checkPermission } = usePermissions();
   const [employee, setEmployee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
@@ -124,7 +126,8 @@ export default function EmployeeDetailPage({ params }: PageProps) {
         </div>
         <div className="flex gap-2">
           {employee.status !== "inactive" &&
-            employee.status !== "exit_pending" && (
+            employee.status !== "exit_pending" && 
+            checkPermission("HR", "EXITS", "canCreate") && (
               <button
                 onClick={() => setShowExitModal(true)}
                 className="flex items-center gap-2 px-6 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl hover:bg-red-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
@@ -133,13 +136,15 @@ export default function EmployeeDetailPage({ params }: PageProps) {
                 <span>Initiate Exit</span>
               </button>
             )}
-          <Link
-            href={`/hr/employees/${employee.id}/edit`}
-            className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.03] transition-all text-[10px] font-black uppercase tracking-widest"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            <span>Edit Profile</span>
-          </Link>
+          {checkPermission("HR", "EMPLOYEES", "canEdit") && (
+            <Link
+              href={`/hr/employees/${employee.id}/edit`}
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.03] transition-all text-[10px] font-black uppercase tracking-widest"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit Profile</span>
+            </Link>
+          )}
         </div>
       </div>
 

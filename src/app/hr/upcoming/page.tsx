@@ -35,6 +35,7 @@ import { createPortal } from "react-dom";
 import Papa from "papaparse";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { useToast } from "@/contexts/ToastContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface UpcomingJoining {
   id: string;
@@ -104,6 +105,7 @@ export default function UpcomingJoiningPage() {
   const PAGE_SIZE = 50;
   const router = useRouter();
   const { showToast } = useToast();
+  const { checkPermission, isSuperAdmin } = usePermissions();
   const [data, setData] = useState<UpcomingJoining[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -502,20 +504,24 @@ export default function UpcomingJoiningPage() {
           <Loader2 className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
         </button>
 
-        <input
-          type="file"
-          id="upcoming-import"
-          accept=".csv"
-          className="hidden"
-          onChange={handleFileUpload}
-        />
-        <label
-          htmlFor="upcoming-import"
-          className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer"
-        >
-          <Upload className="w-3.5 h-3.5" />
-          Import CSV
-        </label>
+        {checkPermission("HR", "REQUIREMENTS", "canImport") && (
+          <>
+            <input
+              type="file"
+              id="upcoming-import"
+              accept=".csv"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <label
+              htmlFor="upcoming-import"
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import CSV
+            </label>
+          </>
+        )}
 
         <a
           href="/templates/upcoming_import_template.csv"
@@ -525,20 +531,24 @@ export default function UpcomingJoiningPage() {
           <Download className="w-3.5 h-3.5" /> Template
         </a>
 
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"
-        >
-          <FileSpreadsheet className="w-3.5 h-3.5 text-green-500" />
-          Export CSV
-        </button>
+        {checkPermission("HR", "REQUIREMENTS", "canExport") && (
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-green-500" />
+            Export CSV
+          </button>
+        )}
 
-        <Link
-          href="/hr/upcoming/new"
-          className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-        >
-          <Plus className="w-4 h-4" /> Add Joiner
-        </Link>
+        {checkPermission("HR", "REQUIREMENTS", "canCreate") && (
+          <Link
+            href="/hr/upcoming/new"
+            className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4" /> Add Joiner
+          </Link>
+        )}
       </div>
 
       {/* Mini Stats Row */}
@@ -794,22 +804,28 @@ export default function UpcomingJoiningPage() {
                           )}
                         />
                         {STATUS_CONFIG[item.status]?.label || item.status}
-                        <ChevronDown className="w-3 h-3 opacity-50" />
+                        {checkPermission("HR", "REQUIREMENTS", "canEdit") && <ChevronDown className="w-3 h-3 opacity-50" />}
                       </button>
                     </td>
 
                     <td className="px-4 py-3 text-center">
                       {item.status === "upcoming" ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOnboard(item);
-                          }}
-                          className="flex items-center gap-2 px-4 py-1.5 bg-green-500 text-white rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 hover:scale-105 active:scale-95 transition-all mx-auto"
-                        >
-                          <UserCheck className="w-3 h-3" />
-                          Onboard
-                        </button>
+                        checkPermission("HR", "JOINERS", "canCreate") ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOnboard(item);
+                            }}
+                            className="flex items-center gap-2 px-4 py-1.5 bg-green-500 text-white rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 hover:scale-105 active:scale-95 transition-all mx-auto"
+                          >
+                            <UserCheck className="w-3 h-3" />
+                            Onboard
+                          </button>
+                        ) : (
+                          <span className="text-[7px] font-black text-muted-foreground/30 uppercase tracking-widest">
+                            Authorized Only
+                          </span>
+                        )
                       ) : (
                         <span className="text-[7px] font-black text-muted-foreground/30 uppercase tracking-widest">
                           Locked
@@ -830,24 +846,28 @@ export default function UpcomingJoiningPage() {
                         >
                           <Activity className="w-3.5 h-3.5" />
                         </Link>
-                        <Link
-                          href={`/hr/upcoming/${item.id}/edit`}
-                          className="p-1.5 text-muted-foreground hover:text-primary transition-all"
-                          title="Edit Record"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </Link>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(item.id, item.fullName);
-                          }}
-                          className="p-1.5 text-muted-foreground hover:text-destructive transition-all"
-                          title="Remove from Pipeline"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {checkPermission("HR", "REQUIREMENTS", "canEdit") && (
+                          <Link
+                            href={`/hr/upcoming/${item.id}/edit`}
+                            className="p-1.5 text-muted-foreground hover:text-primary transition-all"
+                            title="Edit Record"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+                        {checkPermission("HR", "REQUIREMENTS", "canDelete") && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id, item.fullName);
+                            }}
+                            className="p-1.5 text-muted-foreground hover:text-destructive transition-all"
+                            title="Remove from Pipeline"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

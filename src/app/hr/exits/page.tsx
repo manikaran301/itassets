@@ -26,6 +26,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { useToast } from "@/contexts/ToastContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Lock } from "lucide-react";
 
 interface ExitEmployee {
   id: string;
@@ -47,6 +49,7 @@ export default function ExitsPage() {
   const PAGE_SIZE = 50;
   const router = useRouter();
   const { showToast } = useToast();
+  const { checkPermission, loading: permsLoading } = usePermissions();
   const [exits, setExits] = useState<ExitEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -236,6 +239,24 @@ export default function ExitsPage() {
     );
   }
 
+  // Permission Check: View
+  if (!checkPermission("HR", "EXITS", "canView")) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-6 p-8 text-center animate-fade-in">
+        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-2">
+          <Lock className="w-10 h-10 text-red-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-2xl font-black tracking-tight uppercase">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You do not have authorization to view the <span className="font-bold text-foreground">Offboarding Registry</span>. 
+            Please contact your system administrator to request <code className="bg-muted px-1.5 py-0.5 rounded text-primary">HR_EXITS_VIEW</code> clearance.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 animate-fade-in pb-20 pt-2 h-full flex flex-col">
       <div className="flex justify-end items-center px-1">
@@ -243,12 +264,14 @@ export default function ExitsPage() {
           <button onClick={() => fetchExits(0)} className="p-2.5 bg-muted/50 hover:bg-muted border border-border rounded-xl text-muted-foreground transition-all">
             <RefreshCcw className={cn("w-3.5 h-3.5", loadingMore && "animate-spin")} />
           </button>
-          <button 
-            onClick={() => setShowRegisterModal(true)}
-            className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            <UserX className="w-4 h-4" /> Register Exit
-          </button>
+          {checkPermission("HR", "EXITS", "canCreate") && (
+            <button 
+              onClick={() => setShowRegisterModal(true)}
+              className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 hover:scale-105 active:scale-95 transition-all"
+            >
+              <UserX className="w-4 h-4" /> Register Exit
+            </button>
+          )}
         </div>
       </div>
 
@@ -446,13 +469,15 @@ export default function ExitsPage() {
                         >
                           <ChevronRight className="w-4 h-4" />
                         </Link>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(emp.id, emp.fullName); }}
-                          className="p-1.5 text-muted-foreground hover:text-red-500 transition-all"
-                          title="Delete Record"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {checkPermission("HR", "EXITS", "canDelete") && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(emp.id, emp.fullName); }}
+                            className="p-1.5 text-muted-foreground hover:text-red-500 transition-all"
+                            title="Delete Record"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

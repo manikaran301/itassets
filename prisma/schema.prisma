@@ -154,6 +154,7 @@ enum AuditEntityType {
   provisioning_request
   employee_asset_requirement
   system_user
+  upcoming_joining
 }
 
 enum AuditAction {

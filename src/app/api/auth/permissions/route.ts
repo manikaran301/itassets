@@ -15,19 +15,44 @@ export async function GET() {
     select: { role: true }
   });
 
-  if (user?.role === "admin" || user?.role === "it") {
-    const isIT = user.role === "it";
+  if (user?.role === "admin") {
     return NextResponse.json({
       role: user.role,
-      permissions: [
-        { category: "IT", subcategory: "ASSETS", canView: true, canCreate: true, canEdit: true, canDelete: true, canImport: true, canExport: true },
-        { category: "IT", subcategory: "DASHBOARD", canView: true },
-        { category: "HR", subcategory: "EMPLOYEES", canView: true, canCreate: false, canEdit: false, canDelete: false, canImport: false, canExport: false },
-        { category: "FACILITY", subcategory: "SEATS", canView: true, canCreate: true, canEdit: true, canDelete: true, canImport: true, canExport: true },
-        { category: "ADMIN", subcategory: "USERS", canView: true, canCreate: !isIT, canEdit: !isIT, canDelete: false, canImport: false, canExport: true },
-        { category: "ADMIN", subcategory: "AUDIT", canView: true, canCreate: false, canEdit: false, canDelete: false, canImport: false, canExport: true },
-        { category: "ADMIN", subcategory: "REPORTS", canView: true, canCreate: true, canEdit: true, canDelete: true, canImport: true, canExport: true },
-      ]
+      permissions: [] // Admin bypass is handled in hooks/hasPermission
+    });
+  }
+
+  // Fetch database permissions for all other roles (including 'it')
+  const dbPermissions = await prisma.userPermission.findMany({
+    where: { userId: session.user.id }
+  });
+
+  if (user?.role === "it") {
+    // Combine IT defaults with database overrides
+    const itDefaults = [
+      { category: "IT", subcategory: "ASSETS", canView: true, canCreate: true, canEdit: true, canDelete: true, canImport: true, canExport: true },
+      { category: "IT", subcategory: "DASHBOARD", canView: true },
+      { category: "HR", subcategory: "EMPLOYEES", canView: true, canCreate: false, canEdit: false, canDelete: false, canImport: false, canExport: false },
+      { category: "FACILITY", subcategory: "SEATS", canView: true, canCreate: true, canEdit: true, canDelete: true, canImport: true, canExport: true },
+      { category: "ADMIN", subcategory: "AUDIT", canView: true, canCreate: false, canEdit: false, canDelete: false, canImport: false, canExport: true },
+      { category: "ADMIN", subcategory: "REPORTS", canView: true, canCreate: true, canEdit: true, canDelete: true, canImport: true, canExport: true },
+    ];
+
+    // Merge: database permissions take precedence if they exist
+    const mergedPermissions = [...itDefaults];
+    
+    dbPermissions.forEach(dbPerm => {
+      const index = mergedPermissions.findIndex(p => p.category === dbPerm.category && p.subcategory === dbPerm.subcategory);
+      if (index !== -1) {
+        mergedPermissions[index] = { ...mergedPermissions[index], ...dbPerm };
+      } else {
+        mergedPermissions.push(dbPerm);
+      }
+    });
+
+    return NextResponse.json({
+      role: user.role,
+      permissions: mergedPermissions
     });
   }
 

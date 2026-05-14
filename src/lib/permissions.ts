@@ -52,14 +52,13 @@ export async function hasPermission(
     // IT has full control over IT and Facility modules
     if (category === "IT" || category === "FACILITY") return true;
     
-    // IT can view Employees (needed for assignments) but nothing else in HR
-    if (category === "HR") {
-      if (subcategory === "EMPLOYEES" && action === "canView") return true;
-      return false;
-    }
+    // IT can view Employees (needed for assignments) by default
+    if (category === "HR" && subcategory === "EMPLOYEES" && action === "canView") return true;
 
-    // Default: IT can view other global categories (like Dashboard)
-    if (action === "canView" && category !== "ADMIN") return true;
+    // IT can view Dashboard by default
+    if (action === "canView" && category === "DASHBOARD") return true;
+    
+    // Otherwise, fall through to granular permissions
   }
 
   // 3. HR Role refined access
@@ -75,6 +74,8 @@ export async function hasPermission(
 
     // HR can view Dashboard
     if (action === "canView" && category === "DASHBOARD") return true;
+
+    // Otherwise, fall through to granular permissions
   }
 
   // 4. Check granular permissions from database

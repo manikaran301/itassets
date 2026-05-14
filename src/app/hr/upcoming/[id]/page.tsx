@@ -25,6 +25,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,6 +35,7 @@ export default function UpcomingJoiningDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { data: session } = useSession();
+  const { checkPermission } = usePermissions();
   const [record, setRecord] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -133,7 +135,7 @@ export default function UpcomingJoiningDetailPage({ params }: PageProps) {
           </div>
         </div>
         <div className="flex gap-3">
-          {record.status !== 'joined' && (
+          {record.status !== 'joined' && checkPermission("HR", "JOINERS", "canCreate") && (
             <button
               onClick={handleOnboard}
               className="flex items-center gap-2 px-8 py-3 bg-green-500 text-white rounded-2xl shadow-lg shadow-green-500/20 hover:scale-[1.03] active:scale-[0.98] transition-all text-[10px] font-black uppercase tracking-widest"
@@ -142,13 +144,15 @@ export default function UpcomingJoiningDetailPage({ params }: PageProps) {
               <span>Onboard Associate</span>
             </button>
           )}
-          <Link
-            href={`/hr/upcoming/${record.id}/edit`}
-            className="flex items-center gap-2 px-6 py-3 bg-card border border-white/10 text-foreground hover:bg-muted/50 rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest"
-          >
-            <Edit2 className="w-4 h-4" />
-            <span>Edit</span>
-          </Link>
+          {checkPermission("HR", "REQUIREMENTS", "canEdit") && (
+            <Link
+              href={`/hr/upcoming/${record.id}/edit`}
+              className="flex items-center gap-2 px-6 py-3 bg-card border border-white/10 text-foreground hover:bg-muted/50 rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest"
+            >
+              <Edit2 className="w-4 h-4" />
+              <span>Edit</span>
+            </Link>
+          )}
         </div>
       </div>
 
