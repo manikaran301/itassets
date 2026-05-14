@@ -4,8 +4,10 @@ import { headers, cookies } from "next/headers";
 import prisma from "./prisma";
 
 export interface DataScope {
-  companyId?: string;
-  locationId?: { in: string[] } | string;
+  companyId?: string | { in: string[] } | null;
+  locationId?: string | { in: string[] } | null;
+  companyName?: string | { in: string[] } | null;
+  locationName?: string | { in: string[] } | null;
 }
 
 /**
@@ -31,41 +33,67 @@ export async function getDataScope(): Promise<DataScope> {
   if (!isGlobalAdmin) {
     // 1. Company Scope - for HR, check accessible companies
     if (user.role === "hr" && user.id) {
-      // Get all accessible companies for HR user
       const accessibleCompanies = await prisma.userCompanyAccess.findMany({
         where: { userId: user.id },
         select: { companyId: true }
       });
 
       if (accessibleCompanies.length > 0) {
-        // If user selected a specific company via active filter, use that
-        if (activeLocationId) {
-          // Try to get company from active location or company filter
+        const companyIds = accessibleCompanies.map(c => c.companyId);
+        
+        // If there's an active context, check if it's one of the accessible companies
+        if (activeLocationId && companyIds.includes(activeLocationId)) {
           scope.companyId = activeLocationId;
         } else {
-          // Default: Show data from ALL accessible companies
-          // For now, if multiple companies, we'll need to handle this in the query
-          // This is a limitation of Prisma's simple where clause
-          // The API should filter by accessible companies
+          scope.companyId = { in: companyIds } as any;
         }
+
+        // Resolve company names for models that use strings
+        const targetIds = scope.companyId && typeof scope.companyId === 'string' 
+          ? [scope.companyId] 
+          : companyIds;
+          
+        const companies = await prisma.company.findMany({
+          where: { id: { in: targetIds } },
+          select: { name: true }
+        });
+        scope.companyName = targetIds.length === 1 
+          ? companies[0]?.name 
+          : { in: companies.map(c => c.name) } as any;
       } else if (user.companyId) {
-        // Fallback to primary company
         scope.companyId = user.companyId;
+        const company = await prisma.company.findUnique({ where: { id: user.companyId } });
+        if (company) scope.companyName = company.name;
       }
     } else if (user.companyId) {
       scope.companyId = user.companyId;
+      const company = await prisma.company.findUnique({ where: { id: user.companyId } });
+      if (company) scope.companyName = company.name;
     }
 
-    // 2. Location Scope
-    if (user.authorizedLocations && user.authorizedLocations.length > 0) {
-      const authIds = user.authorizedLocations.map((l: any) => l.id);
+    // 2. Location Scope - Fetch REAL-TIME from database to avoid stale session data
+    const userLocations = await prisma.systemUser.findUnique({
+      where: { id: user.id },
+      select: {
+        managedLocations: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    const authorizedLocations = userLocations?.managedLocations || [];
+    
+    if (authorizedLocations.length > 0) {
+      const authIds = authorizedLocations.map((l) => l.id);
       
       if (activeLocationId && authIds.includes(activeLocationId)) {
-        // If user selected a specific location from their authorized list
         scope.locationId = activeLocationId;
+        const loc = authorizedLocations.find(l => l.id === activeLocationId);
+        if (loc) scope.locationName = loc.name;
       } else {
-        // Default: Show data from ALL authorized locations
+        // Only apply 'in' filter if they actually have specific authorized locations
         scope.locationId = { in: authIds };
+        scope.locationName = { in: authorizedLocations.map(l => l.name) } as any;
       }
     }
   } else {

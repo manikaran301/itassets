@@ -8,6 +8,12 @@ const roleRoutes: Record<string, string[]> = {
   "/api/admin": ["admin"],
 };
 
+// Routes under /api/admin that should be readable by all authenticated users
+// (e.g., master data dropdowns needed by HR forms).
+const adminReadExemptions = [
+  "/api/admin/master-data",
+];
+
 // Next.js 16: 'middleware' is renamed to 'proxy'
 export default withAuth(
   function proxy(req) {
@@ -26,6 +32,10 @@ export default withAuth(
     // Check role-based access for all protected routes
     for (const [route, allowedRoles] of Object.entries(roleRoutes)) {
       if (path.startsWith(route)) {
+        // Allow read-only access to exempted admin sub-routes for all authenticated users
+        const isExempted = adminReadExemptions.some(ex => path.startsWith(ex)) && req.method === "GET";
+        if (isExempted) break;
+
         if (!allowedRoles.includes(userRole)) {
           // For API routes, return JSON error
           if (path.startsWith("/api/")) {

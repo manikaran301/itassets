@@ -25,32 +25,14 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ShieldAlert } from "lucide-react";
 
-const COMPANIES = [
-  { value: "Manikaran Power Limited (MPL)", label: "Manikaran Power Limited (MPL)" },
-  { value: "Manikaran Renewables Limited (MRL)", label: "Manikaran Renewables Limited (MRL)" },
-  { value: "Manikaran Analytics Limited (MAL)", label: "Manikaran Analytics Limited (MAL)" },
-  { value: "Manikaran Hydro Private Limited (MHPL)", label: "Manikaran Hydro Private Limited (MHPL)" },
-  { value: "50Hertz Limted", label: "50Hertz Limted" },
-  { value: "Manikaran Utility Services Company Limited", label: "Manikaran Utility Services Company Limited" },
-];
-
-const DESIGNATIONS = [
-  { value: "Associate", label: "Associate" },
-  { value: "Senior Associate", label: "Senior Associate" },
-  { value: "Lead", label: "Lead" },
-  { value: "Manager", label: "Manager" },
-  { value: "Director", label: "Director" },
-  { value: "Executive", label: "Executive" },
-  { value: "Intern", label: "Intern" },
-  { value: "Technician", label: "Technician" },
-];
-
 export default function NewUpcomingJoiningPage() {
   const router = useRouter();
   const { checkPermission, loading: permissionsLoading } = usePermissions();
   const [managers, setManagers] = useState<{ value: string; label: string }[]>([]);
   const [locations, setLocations] = useState<{ value: string; label: string }[]>([]);
   const [departments, setDepartments] = useState<{ value: string; label: string }[]>([]);
+  const [designations, setDesignations] = useState<{ value: string; label: string }[]>([]);
+  const [companies, setCompanies] = useState<{ value: string; label: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -62,10 +44,12 @@ export default function NewUpcomingJoiningPage() {
     email: "",
     phoneNumber: "",
     companyName: "",
+    companyId: "",
     reportingManager: "",
     joiningDate: "",
     experience: "",
     placeOfPosting: "",
+    locationId: "",
     joiningLocation: "",
   });
 
@@ -78,25 +62,42 @@ export default function NewUpcomingJoiningPage() {
 
   const fetchSupportData = async () => {
     try {
-      const res = await fetch("/api/employees");
-      const employees = await res.json();
-      const data = employees.data || employees;
-
-      const managerList = data.map((e: any) => ({
+      // Fetch Managers from existing employees
+      const empRes = await fetch("/api/employees");
+      const empData = await empRes.json();
+      const managerList = (empData.data || empData).map((e: any) => ({
         value: e.fullName,
         label: `${e.fullName} (${e.employeeCode})`,
       }));
       setManagers(managerList);
 
-      const locList = [...new Set(data.map((e: any) => e.locationJoining).filter(Boolean))].map(
-        (l: any) => ({ value: l as string, label: (l as string).toUpperCase() })
-      );
-      setLocations(locList);
+      // Fetch Master Data
+      const [companiesRes, deptsRes, desigsRes, locsRes] = await Promise.all([
+        fetch("/api/admin/master-data/companies"),
+        fetch("/api/admin/master-data/departments"),
+        fetch("/api/admin/master-data/designations"),
+        fetch("/api/admin/master-data/locations"),
+      ]);
 
-      const deptList = [...new Set(data.map((e: any) => e.department).filter(Boolean))].map(
-        (d: any) => ({ value: d as string, label: d as string })
-      );
-      setDepartments(deptList);
+      const [companiesData, deptsData, desigsData, locsData] = await Promise.all([
+        companiesRes.json(),
+        deptsRes.json(),
+        desigsRes.json(),
+        locsRes.json(),
+      ]);
+
+      if (Array.isArray(companiesData)) {
+        setCompanies(companiesData.map(c => ({ value: c.id, label: c.name })));
+      }
+      if (Array.isArray(deptsData)) {
+        setDepartments(deptsData.map(d => ({ value: d.name, label: d.name })));
+      }
+      if (Array.isArray(desigsData)) {
+        setDesignations(desigsData.map(d => ({ value: d.name, label: d.name })));
+      }
+      if (Array.isArray(locsData)) {
+        setLocations(locsData.map(l => ({ value: l.id, label: l.name })));
+      }
     } catch (error) {
       console.error("Failed to fetch support data:", error);
     }
@@ -263,7 +264,7 @@ export default function NewUpcomingJoiningPage() {
                 Designation
               </label>
               <SearchableSelect
-                options={DESIGNATIONS}
+                options={designations}
                 value={formData.designation}
                 onChange={(val) => updateField("designation", val)}
                 placeholder="Select Title..."
@@ -289,9 +290,12 @@ export default function NewUpcomingJoiningPage() {
                 Company Name
               </label>
               <SearchableSelect
-                options={COMPANIES}
-                value={formData.companyName}
-                onChange={(val) => updateField("companyName", val)}
+                options={companies}
+                value={formData.companyId}
+                onChange={(val) => {
+                  const label = companies.find(c => c.value === val)?.label || val;
+                  setFormData(prev => ({ ...prev, companyId: val, companyName: label }));
+                }}
                 placeholder="Select Entity..."
                 allowCustom
               />
@@ -347,8 +351,11 @@ export default function NewUpcomingJoiningPage() {
               </label>
               <SearchableSelect
                 options={locations}
-                value={formData.placeOfPosting}
-                onChange={(val) => updateField("placeOfPosting", val)}
+                value={formData.locationId}
+                onChange={(val) => {
+                  const label = locations.find(l => l.value === val)?.label || val;
+                  setFormData(prev => ({ ...prev, locationId: val, placeOfPosting: label }));
+                }}
                 placeholder="Select Location..."
                 allowCustom
               />
@@ -358,17 +365,16 @@ export default function NewUpcomingJoiningPage() {
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
                 Joining Location Details
               </label>
-              <div className="relative group/field">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
-                <input
-                  type="text"
-                  placeholder="E.g. Main Reception, Block B, Floor 4"
-                  value={formData.joiningLocation}
-                  onChange={(e) => updateField("joiningLocation", e.target.value)}
-                  className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs text-foreground outline-none transition-all font-bold"
-                />
-              </div>
+              <SearchableSelect
+                options={locations}
+                value={formData.joiningLocation}
+                onChange={(val) => updateField("joiningLocation", val)}
+                placeholder="Select Joining Location..."
+                icon={<MapPin className="w-4 h-4" />}
+                allowCustom
+              />
             </div>
+
           </div>
         </div>
 

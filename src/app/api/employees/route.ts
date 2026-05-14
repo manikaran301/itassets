@@ -25,6 +25,8 @@ const EmployeeSchema = z.object({
   createdBy: z.string().uuid().nullable().optional().or(z.literal('')),
   workspaceId: z.string().uuid().nullable().optional().or(z.literal('')),
   upcomingId: z.string().uuid().nullable().optional().or(z.literal('')),
+  companyId: z.string().uuid().nullable().optional().or(z.literal('')),
+  locationId: z.string().uuid().nullable().optional().or(z.literal('')),
 });
 
 export async function GET(request: Request) {
@@ -40,7 +42,12 @@ export async function GET(request: Request) {
     }
     await enforcePermission(userId, 'HR', 'EMPLOYEES', 'canView', userRole);
 
-    const scope = await getDataScope();
+    const fullScope = await getDataScope();
+    // Only use ID-based scoping for Employee model (it has both companyId and locationId)
+    const scope = {
+      ...(fullScope.companyId ? { companyId: fullScope.companyId } : {}),
+      ...(fullScope.locationId ? { locationId: fullScope.locationId } : {}),
+    };
 
     const { searchParams } = new URL(request.url);
     const skip = parseInt(searchParams.get('skip') || '0');
@@ -138,6 +145,40 @@ export async function POST(request: Request) {
     const creatorId = data.createdBy && data.createdBy.trim() !== "" ? data.createdBy : null;
 
     const result = await prisma.$transaction(async (tx) => {
+      // Resolve IDs from master tables if names are provided
+      let resolvedCompanyId = data.companyId && data.companyId.trim() !== "" ? data.companyId : null;
+      let resolvedDepartmentId = null;
+      let resolvedDesignationId = null;
+      let resolvedLocationId = data.locationId && data.locationId.trim() !== "" ? data.locationId : null;
+
+      if (!resolvedCompanyId && data.companyName) {
+        const company = await tx.company.findFirst({
+          where: { name: { contains: data.companyName, mode: 'insensitive' } }
+        });
+        if (company) resolvedCompanyId = company.id;
+      }
+
+      if (data.department) {
+        const dept = await tx.department.findFirst({
+          where: { name: { contains: data.department, mode: 'insensitive' } }
+        });
+        if (dept) resolvedDepartmentId = dept.id;
+      }
+
+      if (data.designation) {
+        const desig = await tx.designation.findFirst({
+          where: { name: { contains: data.designation, mode: 'insensitive' } }
+        });
+        if (desig) resolvedDesignationId = desig.id;
+      }
+
+      if (!resolvedLocationId && data.locationJoining) {
+        const loc = await tx.location.findFirst({
+          where: { name: { contains: data.locationJoining, mode: 'insensitive' } }
+        });
+        if (loc) resolvedLocationId = loc.id;
+      }
+
       const employee = await tx.employee.create({
         data: {
           employeeCode: data.employeeCode,
@@ -153,9 +194,15 @@ export async function POST(request: Request) {
           exitDate: (data.exitDate && data.exitDate.trim() !== "") ? new Date(data.exitDate) : null,
           status: data.status,
           photoPath: data.photoPath || null,
-          manager: managerId ? { connect: { id: managerId } } : undefined,
-          creator: creatorId ? { connect: { id: creatorId } } : undefined,
+          reportingManagerId: managerId || null,
+          createdBy: creatorId || null,
           workspace: data.workspaceId ? { connect: { id: data.workspaceId } } : undefined,
+          
+          // Link to master records
+          companyId: resolvedCompanyId,
+          departmentId: resolvedDepartmentId,
+          designationId: resolvedDesignationId,
+          locationId: resolvedLocationId,
         },
       });
 

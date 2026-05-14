@@ -22,8 +22,42 @@ export async function GET() {
     
     // Map the scope for Asset (which filters via Workspace)
     const assetScope: any = {};
-    if (scope.companyId) assetScope.workspace = { ...assetScope.workspace, company: scope.companyId as any };
     if (scope.locationId) assetScope.workspace = { ...assetScope.workspace, locationId: scope.locationId };
+    
+    if (scope.companyId) {
+      const companyIds = typeof scope.companyId === 'string' 
+        ? [scope.companyId] 
+        : (scope.companyId as any).in || [];
+
+      if (companyIds.length > 0) {
+        const companies = await prisma.company.findMany({
+          where: { id: { in: companyIds } },
+          select: { name: true }
+        });
+
+        const enumValues: string[] = [];
+        companies.forEach(company => {
+          if (company.name === "50Hertz Limited" || company.name === "50-Hertz" || company.name === "50Hertz") {
+            enumValues.push("FIFTY_HERTZ");
+          } else if (company.name === "MPL" || company.name.includes("Power Limited")) {
+            enumValues.push("MPL");
+          } else if (company.name === "MAL" || company.name.includes("Analytics Limited")) {
+            enumValues.push("MAL");
+          } else {
+            enumValues.push("OTHER");
+          }
+        });
+
+        if (enumValues.length > 0) {
+          assetScope.workspace = { 
+            ...assetScope.workspace, 
+            company: { in: [...new Set(enumValues)] } 
+          };
+        }
+      }
+    }
+    // Also include assets with NO workspace (global assets) if the user has broad access
+    // This part depends on business logic, but for now we keep it strict to the workspace scope
 
     const assets = await prisma.asset.findMany({
       where: assetScope,

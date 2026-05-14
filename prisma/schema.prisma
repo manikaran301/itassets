@@ -300,6 +300,7 @@ model Company {
   employees       Employee[]
   users           SystemUser[]
   userAccess      UserCompanyAccess[] @relation("UserCompanyAccess")
+  upcomingJoiners UpcomingJoining[]   @relation("CompanyToJoiners")
 
   @@map("master_companies")
 }
@@ -339,6 +340,7 @@ model Location {
   employees Employee[]
   workspaces Workspace[]
   authorizedUsers SystemUser[] @relation("UserLocations")
+  upcomingJoiners UpcomingJoining[] @relation("LocationToJoiners")
 
   @@map("master_locations")
 }
@@ -617,6 +619,12 @@ model UpcomingJoining {
   statusReason     String?  @db.Text
   createdAt        DateTime @default(now()) @db.Timestamp
   updatedAt        DateTime @updatedAt @db.Timestamp
+
+  companyId String? @db.Uuid
+  locationId String? @db.Uuid
+
+  company  Company?  @relation("CompanyToJoiners", fields: [companyId], references: [id])
+  location Location? @relation("LocationToJoiners", fields: [locationId], references: [id])
 
   @@map("upcoming_joinings")
 }

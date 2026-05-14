@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '../auth/[...nextauth]/route';
+import { enforcePermission } from '@/lib/permissions';
 
 const DAYS_THRESHOLD = 120;
 
@@ -12,7 +13,6 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { enforcePermission } = require('@/lib/permissions');
     await enforcePermission(userId, 'HR', 'JOINERS', 'canView');
 
     const cutoffDate = new Date();
@@ -66,10 +66,10 @@ export async function GET() {
       // Check if email has been assigned from IT/Email system
       const hasEmail = joiner.emailAccounts.length > 0;
 
-      // Identity is "Pending" if mandatory fields are missing
+      // Identity is considered "Ready" if they have an official employeeCode (which old/imported employees do)
+      // or if they have provided personal details.
       const hasPersonalDetails = !!joiner.personalEmail && !!joiner.personalPhone;
-      const hasPhoto = !!joiner.photoPath;
-      const identityComplete = hasPersonalDetails && hasPhoto;
+      const identityComplete = !!joiner.employeeCode || hasPersonalDetails || hasEmail;
 
       return {
         id: joiner.id,

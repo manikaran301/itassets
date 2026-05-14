@@ -22,23 +22,33 @@ export async function GET() {
     // Map scope for Workspace (which uses Enum 'company' and 'locationId')
     const workspaceScope: any = {};
     if (scope.locationId) workspaceScope.locationId = scope.locationId;
+    
     if (scope.companyId) {
-      // Look up the company by ID to get its name, then map to CompanyBranch enum
-      const company = await prisma.company.findUnique({
-        where: { id: scope.companyId },
-        select: { name: true }
-      });
-      
-      if (company) {
-        // Map company name to CompanyBranch enum value
-        if (company.name === "50Hertz Limited" || company.name === "50-Hertz" || company.name === "50Hertz") {
-          workspaceScope.company = "FIFTY_HERTZ";
-        } else if (company.name === "MPL") {
-          workspaceScope.company = "MPL";
-        } else if (company.name === "MAL") {
-          workspaceScope.company = "MAL";
-        } else {
-          workspaceScope.company = "OTHER";
+      const companyIds = typeof scope.companyId === 'string' 
+        ? [scope.companyId] 
+        : (scope.companyId as any).in || [];
+
+      if (companyIds.length > 0) {
+        const companies = await prisma.company.findMany({
+          where: { id: { in: companyIds } },
+          select: { name: true }
+        });
+
+        const enumValues: string[] = [];
+        companies.forEach(company => {
+          if (company.name === "50Hertz Limited" || company.name === "50-Hertz" || company.name === "50Hertz") {
+            enumValues.push("FIFTY_HERTZ");
+          } else if (company.name === "MPL" || company.name.includes("Power Limited")) {
+            enumValues.push("MPL");
+          } else if (company.name === "MAL" || company.name.includes("Analytics Limited")) {
+            enumValues.push("MAL");
+          } else {
+            enumValues.push("OTHER");
+          }
+        });
+
+        if (enumValues.length > 0) {
+          workspaceScope.company = { in: [...new Set(enumValues)] };
         }
       }
     }

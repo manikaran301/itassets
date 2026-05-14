@@ -43,6 +43,10 @@ export default function NewEmployeePage() {
   const { checkPermission, loading: permsLoading } = usePermissions();
   const [managers, setManagers] = useState<ManagerOption[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(true);
+  const [companies, setCompanies] = useState<{ value: string; label: string }[]>([]);
+  const [departments, setDepartments] = useState<{ value: string; label: string }[]>([]);
+  const [designations, setDesignations] = useState<{ value: string; label: string }[]>([]);
+  const [locations, setLocations] = useState<{ value: string; label: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -63,6 +67,8 @@ export default function NewEmployeePage() {
     status: "active",
     workspaceId: "",
     upcomingId: searchParams.get("upcomingId") || "",
+    companyId: "",
+    locationId: "",
   });
 
   const [photo, setPhoto] = useState<File | null>(null);
@@ -84,21 +90,43 @@ export default function NewEmployeePage() {
   }, [photoPreview]);
 
   useEffect(() => {
-    const fetchSupportData = async () => {
-      try {
-        const res = await fetch("/api/employees");
-        const employees = await res.json();
-        const data = employees.data || employees;
-        const managerList = data.map((e: any) => ({
-          value: e.id,
-          label: `${e.fullName} (${e.employeeCode})`,
-        }));
-        setManagers(managerList);
-        setLoadingManagers(false);
-      } catch (error) {
-        console.error("Failed to fetch managers:", error);
-      }
-    };
+  const fetchSupportData = async () => {
+    try {
+      // Fetch Managers
+      const empRes = await fetch("/api/employees");
+      const empData = await empRes.json();
+      const data = empData.data || empData;
+      const managerList = data.map((e: any) => ({
+        value: e.id,
+        label: `${e.fullName} (${e.employeeCode})`,
+      }));
+      setManagers(managerList);
+
+      // Fetch Master Data
+      const [compRes, deptRes, desigRes, locRes] = await Promise.all([
+        fetch("/api/admin/master-data/companies"),
+        fetch("/api/admin/master-data/departments"),
+        fetch("/api/admin/master-data/designations"),
+        fetch("/api/admin/master-data/locations"),
+      ]);
+
+      const [compData, deptData, desigData, locData] = await Promise.all([
+        compRes.json(),
+        deptRes.json(),
+        desigRes.json(),
+        locRes.json(),
+      ]);
+
+      if (Array.isArray(compData)) setCompanies(compData.map(c => ({ value: c.id, label: c.name })));
+      if (Array.isArray(deptData)) setDepartments(deptData.map(d => ({ value: d.name, label: d.name })));
+      if (Array.isArray(desigData)) setDesignations(desigData.map(d => ({ value: d.name, label: d.name })));
+      if (Array.isArray(locData)) setLocations(locData.map(l => ({ value: l.id, label: l.name })));
+
+      setLoadingManagers(false);
+    } catch (error) {
+      console.error("Failed to fetch support data:", error);
+    }
+  };
     fetchSupportData();
   }, []);
 
@@ -131,8 +159,14 @@ export default function NewEmployeePage() {
           locationJoining: data.placeOfPosting || "",
           startDate: data.joiningDate ? new Date(data.joiningDate).toISOString().split('T')[0] : "",
           reportingManagerId: matchedManagerId,
-          upcomingId: upcomingId
+          upcomingId: upcomingId,
+          companyId: data.companyId || "",
+          locationId: data.locationId || ""
         }));
+        
+        // Also sync the companyName and locationJoining for display
+        if (data.companyName) updateField("companyName", data.companyName);
+        if (data.placeOfPosting) updateField("locationJoining", data.placeOfPosting);
       } catch (err) {
         console.error("Failed to fetch upcoming candidate data:", err);
       }
@@ -189,6 +223,7 @@ export default function NewEmployeePage() {
       if (photo) {
         const uploadData = new FormData();
         uploadData.append("file", photo);
+        uploadData.append("company", formData.companyName || "Unassigned");
         const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
         const uploadResult = await uploadRes.json();
         if (uploadRes.ok) photoPath = uploadResult.path;
@@ -268,38 +303,6 @@ export default function NewEmployeePage() {
       </div>
     );
   }
-
-  const COMPANIES = [
-    { value: "Manikaran Power Limited (MPL)", label: "Manikaran Power Limited (MPL)" },
-    { value: "Manikaran Renewables Limited (MRL)", label: "Manikaran Renewables Limited (MRL)" },
-    { value: "Manikaran Analytics Limited (MAL)", label: "Manikaran Analytics Limited (MAL)" },
-    { value: "Manikaran Hydro Private Limited (MHPL)", label: "Manikaran Hydro Private Limited (MHPL)" },
-    { value: "50Hertz Limted", label: "50Hertz Limted" },
-    { value: "Manikaran Utility Services Company Limited", label: "Manikaran Utility Services Company Limited" },
-  ];
-
-  const DEPARTMENTS = [
-    { value: "Engineering", label: "Engineering" },
-    { value: "Operations", label: "Operations" },
-    { value: "HR", label: "HR" },
-    { value: "Marketing", label: "Marketing" },
-    { value: "Sales", label: "Sales" },
-    { value: "Logistics", label: "Logistics" },
-    { value: "Finance", label: "Finance" },
-    { value: "Compliance", label: "Compliance" },
-    { value: "IT Support", label: "IT Support" },
-  ];
-
-  const DESIGNATIONS = [
-    { value: "Associate", label: "Associate" },
-    { value: "Senior Associate", label: "Senior Associate" },
-    { value: "Lead", label: "Lead" },
-    { value: "Manager", label: "Manager" },
-    { value: "Director", label: "Director" },
-    { value: "Executive", label: "Executive" },
-    { value: "Intern", label: "Intern" },
-    { value: "Technician", label: "Technician" },
-  ];
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-20">
@@ -393,21 +396,30 @@ export default function NewEmployeePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Company/Subsidiary</label>
-                    <SearchableSelect options={COMPANIES} value={formData.companyName} onChange={(val) => updateField("companyName", val)} placeholder="Select..." allowCustom />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Company/Subsidiary</label>
+                      <SearchableSelect 
+                        options={companies} 
+                        value={formData.companyId} 
+                        onChange={(val) => {
+                          const label = companies.find(c => c.value === val)?.label || val;
+                          setFormData(prev => ({ ...prev, companyId: val, companyName: label }));
+                        }} 
+                        placeholder="Select..." 
+                        allowCustom 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Department</label>
+                      <SearchableSelect options={departments} value={formData.department} onChange={(val) => updateField("department", val)} placeholder="Select..." allowCustom />
+                    </div>
                   </div>
+                  
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Department</label>
-                    <SearchableSelect options={DEPARTMENTS} value={formData.department} onChange={(val) => updateField("department", val)} placeholder="Select..." allowCustom />
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Designation</label>
+                    <SearchableSelect options={designations} value={formData.designation} onChange={(val) => updateField("designation", val)} placeholder="Select Seniority..." allowCustom />
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Designation</label>
-                  <SearchableSelect options={DESIGNATIONS} value={formData.designation} onChange={(val) => updateField("designation", val)} placeholder="Select Seniority..." allowCustom />
-                </div>
               </div>
             </div>
           </div>
@@ -442,10 +454,17 @@ export default function NewEmployeePage() {
                 <div className="space-y-4">
                    <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1">Location</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/30" />
-                        <input type="text" placeholder="Campus / Site" value={formData.locationJoining} onChange={(e) => updateField("locationJoining", e.target.value)} className="w-full bg-muted/15 border border-white/5 focus:border-amber-500/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs font-bold outline-none transition-all" />
-                      </div>
+                      <SearchableSelect 
+                        options={locations} 
+                        value={formData.locationId} 
+                        onChange={(val) => {
+                          const label = locations.find(l => l.value === val)?.label || val;
+                          setFormData(prev => ({ ...prev, locationId: val, locationJoining: label }));
+                        }} 
+                        placeholder="Campus / Site"
+                        icon={<MapPin className="w-4 h-4" />}
+                        allowCustom
+                      />
                    </div>
                    <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1">Join Date</label>

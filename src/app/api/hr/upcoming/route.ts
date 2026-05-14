@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { enforcePermission } from '@/lib/permissions';
+import { getDataScope } from '@/lib/scoping';
 
 export async function GET(request: Request) {
   try {
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     await enforcePermission(userId, 'HR', 'REQUIREMENTS', 'canView');
+    const scope = await getDataScope();
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -32,7 +34,28 @@ export async function GET(request: Request) {
     const status = searchParams.get('status') || 'active_pipeline';
     const period = searchParams.get('period');
 
-    let where: any = {};
+    let where: any = {
+      ...scope
+    };
+    
+    // Use IDs if available, fallback to names for backward compatibility
+    if (scope.companyId) {
+      where.companyId = scope.companyId;
+    } else if (scope.companyName) {
+      where.companyName = scope.companyName;
+    }
+
+    if (scope.locationId) {
+      where.locationId = scope.locationId;
+    } else if (scope.locationName) {
+      where.placeOfPosting = scope.locationName;
+    }
+
+    // Clean up non-existent fields from where clause
+    delete where.companyName; 
+    delete where.locationName;
+    if (where.companyId && where.companyName) delete where.companyName;
+    if (where.locationId && where.placeOfPosting) delete where.placeOfPosting;
     
     if (search) {
       where.OR = [
@@ -72,6 +95,7 @@ export async function GET(request: Request) {
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       where.joiningDate = { gte: start, lte: end };
     }
+
 
     const [upcoming, total] = await Promise.all([
       prisma.upcomingJoining.findMany({
@@ -118,7 +142,9 @@ export async function POST(request: Request) {
       joiningDate, 
       experience, 
       placeOfPosting, 
-      joiningLocation 
+      joiningLocation,
+      companyId,
+      locationId
     } = body;
 
     const record = await prisma.upcomingJoining.create({
@@ -134,6 +160,8 @@ export async function POST(request: Request) {
         experience,
         placeOfPosting,
         joiningLocation,
+        companyId,
+        locationId,
       },
     });
 
@@ -186,7 +214,9 @@ export async function PUT(request: Request) {
       placeOfPosting, 
       joiningLocation,
       status,
-      statusReason
+      statusReason,
+      companyId,
+      locationId
     } = body;
 
     const existing = await prisma.upcomingJoining.findUnique({ where: { id } });
@@ -207,7 +237,9 @@ export async function PUT(request: Request) {
         placeOfPosting,
         joiningLocation,
         status,
-        statusReason
+        statusReason,
+        companyId,
+        locationId,
       },
     });
 
