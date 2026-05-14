@@ -66,10 +66,17 @@ export async function GET() {
       // Check if email has been assigned from IT/Email system
       const hasEmail = joiner.emailAccounts.length > 0;
 
+      // Identity is "Pending" if mandatory fields are missing
+      const hasPersonalDetails = !!joiner.personalEmail && !!joiner.personalPhone;
+      const hasPhoto = !!joiner.photoPath;
+      const identityComplete = hasPersonalDetails && hasPhoto;
+
       return {
         id: joiner.id,
         employeeCode: joiner.employeeCode,
         fullName: joiner.fullName,
+        personalEmail: joiner.personalEmail,
+        personalPhone: joiner.personalPhone,
         department: joiner.department,
         designation: joiner.designation,
         companyName: joiner.companyName,
@@ -79,7 +86,10 @@ export async function GET() {
         photoPath: joiner.photoPath,
         createdAt: joiner.createdAt,
         pipeline: {
-          identity: { status: 'ready', label: 'Ready' },
+          identity: { 
+            status: identityComplete ? 'ready' : 'pending', 
+            label: identityComplete ? 'Ready' : 'Pending Details' 
+          },
           hardware: {
             status: hardwareFulfilled ? 'ready' : hardwarePending ? 'awaiting_it' : hasHardwareReq ? 'pending' : 'not_raised',
             label: hardwareFulfilled ? 'Ready' : hardwarePending ? 'Awaiting IT' : hasHardwareReq ? 'Pending' : 'Not Raised',
@@ -95,8 +105,8 @@ export async function GET() {
           },
         },
         provisioningRequests: joiner.provisioningRequests,
-        // Fully onboarded if they have hardware, email, AND seating all assigned
-        isFullyOnboarded: hardwareFulfilled && hasEmail && !!joiner.deskNumber,
+        // Fully onboarded if they have hardware, email, seating AND identity all complete
+        isFullyOnboarded: identityComplete && hardwareFulfilled && hasEmail && !!joiner.deskNumber,
       };
     });
 

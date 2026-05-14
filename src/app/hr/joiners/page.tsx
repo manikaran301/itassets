@@ -39,6 +39,8 @@ interface Joiner {
   id: string;
   employeeCode: string;
   fullName: string;
+  personalEmail: string | null;
+  personalPhone: string | null;
   department: string | null;
   companyName: string | null;
   locationJoining: string | null;
@@ -593,6 +595,10 @@ export default function JoinersPage() {
                                   {key}
                                 </p>
                                 <div
+                                  title={key === 'identity' && step.status === 'pending' ? 
+                                    `Missing: ${[!joiner.personalEmail && 'Email', !joiner.personalPhone && 'Phone', !joiner.photoPath && 'Photo'].filter(Boolean).join(', ')}` : 
+                                    undefined
+                                  }
                                   className={cn(
                                     "w-full px-2 py-1.5 rounded-lg text-[9px] font-black text-center border flex items-center justify-center gap-1",
                                     getStatusStyle(step.status),
