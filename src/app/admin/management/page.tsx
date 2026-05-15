@@ -133,15 +133,7 @@ export default function ManagementPage() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in px-1">
-      {/* Header */}
-      <div className="shrink-0 py-6 space-y-1">
-        <h1 className="text-2xl font-black tracking-tight uppercase">Master Data Management</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-          Govern central organizational entities and taxonomies
-        </p>
-      </div>
-
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in px-1 pt-6">
       {/* Tabs & Actions */}
       <div className="shrink-0 flex flex-col md:flex-row gap-4 justify-between items-center bg-card/50 border border-border p-2 rounded-2xl mb-6">
         <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-full md:w-auto">

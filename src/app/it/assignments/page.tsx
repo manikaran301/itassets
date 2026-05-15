@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface AssignmentLog {
   id: string;
@@ -324,15 +325,11 @@ export default function AssignmentsPage() {
                       <td className="px-4 py-2.5">
                         {log.employee ? (
                           <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center overflow-hidden">
-                              {log.employee.photoPath ? (
-                                <img src={log.employee.photoPath} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase">
-                                  {log.employee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                </span>
-                              )}
-                            </div>
+                            <UserAvatar
+                              photoPath={log.employee.photoPath}
+                              fullName={log.employee.fullName}
+                              className="w-7 h-7 rounded-lg text-[9px]"
+                            />
                             <div className="min-w-0">
                               <p className="text-[10px] font-bold truncate leading-tight">{log.employee.fullName}</p>
                               <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-widest">{log.employee.employeeCode}</p>

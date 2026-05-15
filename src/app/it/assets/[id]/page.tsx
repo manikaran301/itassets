@@ -22,6 +22,7 @@ import {
 import { useState, useEffect, use } from "react";
 import { cn } from "@/lib/utils";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { UserAvatar } from "@/components/UserAvatar";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -424,19 +425,15 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                   <div className="relative">
                     {/* Primary Profile Image */}
                     <div className="w-24 h-24 rounded-[32px] overflow-hidden border-2 border-primary/20 shadow-[0_10px_30px_rgba(0,0,0,0.2)] group-hover/profile:scale-105 transition-all duration-500 relative">
-                      {asset.currentEmployee?.photoPath ? (
-                        <img 
-                          src={asset.currentEmployee.photoPath} 
-                          className="w-full h-full object-cover"
-                          alt={asset.currentEmployee.fullName}
+                      {asset.currentEmployee ? (
+                        <UserAvatar 
+                          photoPath={asset.currentEmployee.photoPath} 
+                          fullName={asset.currentEmployee.fullName}
+                          className="w-full h-full text-3xl"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/5 flex items-center justify-center text-3xl font-black text-primary border border-primary/20">
-                          {asset.currentEmployee ? (
-                            asset.currentEmployee.fullName.split(' ').map((n: any) => n[0]).join('').slice(0, 2)
-                          ) : (
-                            <User className="w-10 h-10 opacity-20" />
-                          )}
+                          <User className="w-10 h-10 opacity-20" />
                         </div>
                       )}
                       
@@ -735,13 +732,11 @@ export default function AssetDetailPage({ params }: AssetDetailProps) {
                         </time>
                         <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                           <div className="w-5 h-5 rounded-lg overflow-hidden bg-primary/20 flex items-center justify-center border border-white/5">
-                            { (event.user || event.assigner)?.photoPath ? (
-                              <img src={(event.user || event.assigner).photoPath} className="w-full h-full object-cover" alt="" />
-                            ) : (
-                              <span className="text-[8px] font-black text-primary uppercase">
-                                {(event.user || event.assigner)?.fullName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2) || "S"}
-                              </span>
-                            )}
+                            <UserAvatar
+                              photoPath={(event.user || event.assigner)?.photoPath}
+                              fullName={(event.user || event.assigner)?.fullName || "System"}
+                              className="w-full h-full text-[8px]"
+                            />
                           </div>
                           <span className="text-[9px] font-black text-muted-foreground/60">
                             {(event.user || event.assigner)?.fullName || "System"}

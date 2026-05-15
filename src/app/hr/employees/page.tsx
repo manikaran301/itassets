@@ -21,12 +21,14 @@ import {
   AlertCircle,
   FileSpreadsheet,
   RefreshCw,
+  User
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { usePermissions } from "@/hooks/usePermissions";
 import Papa from "papaparse";
+import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 import type { EmployeeListItem } from "@/lib/types";
 import Link from "next/link";
@@ -475,7 +477,7 @@ export default function EmployeesPage() {
               <tr className="bg-muted/50 backdrop-blur-md border-b border-border/50">
                 <th className="pl-6 pr-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Associate Registry</th>
                 <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Designation & Dept</th>
-                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Business Units</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Organization</th>
                 <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Location</th>
                 <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Joining Date</th>
                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-right pr-10">Actions</th>
@@ -500,26 +502,18 @@ export default function EmployeesPage() {
                   <tr key={`${emp.id}-${idx}`} className="group hover:bg-muted/20 cursor-default transition-all border-l-2 border-l-transparent hover:border-l-primary" onClick={() => router.push(`/hr/employees/${emp.id}`)}>
                     <td className="pl-6 pr-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 overflow-hidden shrink-0">
-                          {emp.photoPath ? (
-                            <img 
-                              src={emp.photoPath} 
-                              alt={emp.fullName} 
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-[10px] font-black uppercase tracking-tighter">
-                              {emp.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </span>
-                          )}
-                        </div>
+                        <UserAvatar 
+                          photoPath={emp.photoPath} 
+                          fullName={emp.fullName} 
+                          className="w-10 h-10 rounded-xl text-[10px]" 
+                        />
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-black tracking-tight">{emp.fullName}</p>
+                            <p className="text-xs uppercase font-black tracking-tight">{emp.fullName}</p>
                             <span className={cn("w-1 h-1 rounded-full", emp.status === "active" ? "bg-green-500" : "bg-red-500")} />
                           </div>
                           <div className="flex flex-col gap-0.5">
-                            <p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest leading-none">
+                            <p className="text-[8px] uppercase font-black text-muted-foreground/50 uppercase tracking-widest leading-none">
                               {emp.employeeCode}
                             </p>
                             {emp.emailAccounts && emp.emailAccounts.length > 0 && (
@@ -538,9 +532,15 @@ export default function EmployeesPage() {
                     </td>
 
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground/70 uppercase tracking-tighter">
-                        <Building2 className="w-3 h-3 opacity-30" />
-                        {emp.companyName || "—"}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground/70 uppercase tracking-tighter">
+                          <Building2 className="w-3 h-3 opacity-30 shrink-0" />
+                          <span className="truncate">{emp.companyName || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+                          <User className="w-3 h-3 opacity-30 shrink-0" />
+                          <span className="truncate">Reporting: <span className="text-[8px] font-black uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded tracking-[0.1em]">{emp.manager?.fullName || "Unassigned"}</span></span>
+                        </div>
                       </div>
                     </td>
 
@@ -569,18 +569,21 @@ export default function EmployeesPage() {
                       <p className="text-[9px] font-black tracking-widest text-foreground/80 uppercase">
                         {emp.startDate ? format(new Date(emp.startDate), "MMM dd, yyyy") : "n/a"}
                       </p>
-                      <p className="text-[8px] text-muted-foreground/50 font-bold italic">
+                      <div className="text-[8px] font-bold italic mt-0.5">
                         {emp.startDate ? (() => {
                           const start = new Date(emp.startDate);
                           const diff = new Date().getTime() - start.getTime();
                           const years = diff / (1000 * 60 * 60 * 24 * 365.25);
                           if (years < 1) {
                             const months = Math.floor(years * 12);
-                            return months === 0 ? "New Joiner" : `${months} Months`;
+                            if (months === 0) {
+                              return <span className="text-green-500">New Joiner</span>;
+                            }
+                            return <span className="text-muted-foreground/50">{months} Months</span>;
                           }
-                          return `${years.toFixed(1)} Years`;
-                        })() : "—"}
-                      </p>
+                          return <span className="text-muted-foreground/50">{years.toFixed(1)} Years</span>;
+                        })() : <span className="text-muted-foreground/50">—</span>}
+                      </div>
                     </td>
 
                     <td className="px-6 py-3 text-right pr-10">

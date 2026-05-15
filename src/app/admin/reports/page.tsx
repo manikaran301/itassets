@@ -136,30 +136,7 @@ export default async function ReportsPage() {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
-      {/* Premium Page Header */}
-      <div className="relative group p-8 rounded-[32px] bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 border border-white/5 overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
-        <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">
-               <TrendingUp className="w-4 h-4" />
-               <span>Infrastructure Intelligence</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none">
-              Analytics <span className="text-muted-foreground/20 italic font-medium">Dashboard</span>
-            </h1>
-            <p className="text-sm text-muted-foreground font-medium max-w-md leading-relaxed">
-              Global resource overview and lifecycle signals for HR, IT, and System Administrative domains.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 bg-background/50 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10 shadow-sm">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">System Live Status</span>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-8 animate-fade-in pb-16 pt-6">
       {/* High-Impact KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {metricCards.map((card) => (

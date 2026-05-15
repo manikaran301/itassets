@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/contexts/ToastContext";
 
 interface AccessoryDetail {
@@ -313,13 +314,11 @@ export default function AccessoryDetailPage() {
                 ) : accessory.currentEmployee ? (
                   <div className="flex items-center gap-4 p-4 bg-primary/5 border border-primary/10 rounded-2xl group hover:border-primary/30 transition-all">
                     <div className="relative group/avatar">
-                      {accessory.currentEmployee.photoPath ? (
-                        <img src={accessory.currentEmployee.photoPath} alt="" className="w-12 h-12 rounded-xl object-cover border border-white/10" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-black text-primary">
-                          {accessory.currentEmployee.fullName.split(' ').map(n => n[0]).join('')}
-                        </div>
-                      )}
+                      <UserAvatar
+                        photoPath={accessory.currentEmployee.photoPath}
+                        fullName={accessory.currentEmployee.fullName}
+                        className="w-12 h-12 rounded-xl border border-white/10"
+                      />
                     </div>
                     <div>
                       <p className="text-xs font-black uppercase leading-tight">{accessory.currentEmployee.fullName}</p>
@@ -380,17 +379,11 @@ export default function AccessoryDetailPage() {
                     <p className="text-[9px] text-muted-foreground/60 uppercase tracking-widest font-black">Assigned To</p>
                     <div className="flex items-center gap-3 p-2 bg-primary/5 border border-primary/10 rounded-xl">
                       <div className="relative">
-                        {employees.find(e => e.value === formData.currentEmployeeId)?.image ? (
-                          <img 
-                            src={employees.find(e => e.value === formData.currentEmployeeId)?.image!} 
-                            className="w-8 h-8 rounded-lg object-cover border border-white/10"
-                            alt=""
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary uppercase">
-                            {employees.find(e => e.value === formData.currentEmployeeId)?.initials || "???"}
-                          </div>
-                        )}
+                        <UserAvatar
+                          photoPath={employees.find(e => e.value === formData.currentEmployeeId)?.image}
+                          fullName={employees.find(e => e.value === formData.currentEmployeeId)?.label?.split(' ')[0]}
+                          className="w-8 h-8 rounded-lg border border-white/10 text-[10px]"
+                        />
                       </div>
                       <p className="text-[11px] font-black tracking-tight text-primary uppercase truncate">
                         {employees.find(e => e.value === formData.currentEmployeeId)?.label || "Active Assignment"}

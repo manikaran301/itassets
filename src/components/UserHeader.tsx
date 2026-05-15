@@ -87,8 +87,13 @@ const headerContent = [
   },
   {
     matcher: (pathname: string) => pathname === "/admin/reports",
-    title: "Executive Reports",
-    subtitle: "Insights, Trends, and Performance Signals",
+    title: "Infrastructure Intelligence",
+    subtitle: "Global resource overview for HR, IT, and System Administrative domains.",
+  },
+  {
+    matcher: (pathname: string) => pathname === "/admin/management",
+    title: "Master Data Management",
+    subtitle: "Govern central organizational entities and taxonomies",
   },
   {
     matcher: (pathname: string) => pathname === "/admin/audit",

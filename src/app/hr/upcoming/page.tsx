@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Papa from "papaparse";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/contexts/ToastContext";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -697,25 +698,12 @@ export default function UpcomingJoiningPage() {
 
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/10 shrink-0 overflow-hidden">
-                          {item.reportingManager &&
-                          managerPhotos[item.reportingManager] ? (
-                            <img
-                              src={managerPhotos[item.reportingManager]}
-                              alt={item.reportingManager}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-[9px] font-black uppercase tracking-tighter">
-                              {item.reportingManager
-                                ? item.reportingManager
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")
-                                    .slice(0, 2)
-                                : "—"}
-                            </span>
-                          )}
+                        <div className="relative group/avatar">
+                          <UserAvatar
+                            photoPath={managerPhotos[item.reportingManager]}
+                            fullName={item.reportingManager || "—"}
+                            className="w-8 h-8 rounded-lg text-[9px] border border-secondary/10"
+                          />
                         </div>
                         <p className="text-[10px] font-bold">
                           {item.reportingManager || "—"}

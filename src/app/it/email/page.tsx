@@ -29,6 +29,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { usePermissions } from "@/hooks/usePermissions";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/contexts/ToastContext";
 
 import type { EmailAccountListItem } from "@/lib/types";
@@ -979,17 +980,11 @@ export default function EmailAccountsPage() {
                       {email.employee ? (
                         <div className="flex items-center gap-3">
                           <div className="relative group/avatar">
-                            {email.employee.photoPath ? (
-                              <img 
-                                src={email.employee.photoPath} 
-                                alt={email.employee.fullName}
-                                className="w-8 h-8 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-[9px] font-black text-primary uppercase group-hover/avatar:scale-110 transition-transform">
-                                {email.employee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                              </div>
-                            )}
+                            <UserAvatar
+                              photoPath={email.employee.photoPath}
+                              fullName={email.employee.fullName}
+                              className="w-8 h-8 rounded-xl object-cover border border-white/10 group-hover/avatar:scale-110 transition-transform shadow-lg text-[9px]"
+                            />
                           </div>
                           <div>
                             <p className="text-[10px] font-black truncate max-w-[120px] uppercase leading-none mb-1">{email.employee.fullName}</p>

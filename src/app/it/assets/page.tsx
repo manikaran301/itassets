@@ -37,6 +37,7 @@ import type { AssetListItem } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/contexts/ToastContext";
 
 import { SearchableSelect } from "@/components/SearchableSelect";
@@ -826,15 +827,15 @@ export default function AssetsPage() {
                             <TypeIcon className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-xs font-black tracking-tight">{asset.assetTag}</p>
-                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">{asset.type}</p>
+                            <p className="text-xs uppercase font-black tracking-tight">{asset.assetTag}</p>
+                            <p className="text-[8px] uppercase font-black uppercase tracking-widest text-muted-foreground/50">{asset.type}</p>
                           </div>
                         </div>
                       </td>
 
                       <td className="px-4 py-3">
-                        <p className="text-[10px] font-black uppercase">{asset.make || "Generic"}</p>
-                        <p className="text-[9px] text-muted-foreground font-bold italic">{asset.model || "Standard"}</p>
+                        <p className="text-[10px] uppercase font-black">{asset.make || "Generic"}</p>
+                        <p className="text-[9px] uppercase text-muted-foreground font-bold italic">{asset.model || "Standard"}</p>
                       </td>
 
                       <td className="px-4 py-3">
@@ -855,17 +856,11 @@ export default function AssetsPage() {
                           <div className="flex items-center gap-3 group/profile relative">
                             <div className="relative">
                               <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 shadow-lg group-hover/profile:scale-110 transition-all duration-300 relative">
-                                {asset.currentEmployee.photoPath ? (
-                                  <img 
-                                    src={asset.currentEmployee.photoPath} 
-                                    alt={asset.currentEmployee.fullName}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary uppercase">
-                                    {asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                  </div>
-                                )}
+                                <UserAvatar
+                                  photoPath={asset.currentEmployee.photoPath}
+                                  fullName={asset.currentEmployee.fullName}
+                                  className="w-full h-full text-[10px]"
+                                />
                                 <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px] opacity-0 group-hover/profile:opacity-100 transition-opacity flex items-center justify-center">
                                   <User className="w-4 h-4 text-white" />
                                 </div>
@@ -889,11 +884,11 @@ export default function AssetsPage() {
                                 <div className="relative z-10">
                                   <div className="flex items-center gap-3 mb-2 pb-2 border-b border-white/5">
                                     <div className="w-8 h-8 rounded-lg overflow-hidden bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
-                                      {asset.currentEmployee.photoPath ? (
-                                        <img src={asset.currentEmployee.photoPath} alt={asset.currentEmployee.fullName} className="w-full h-full object-cover" />
-                                      ) : (
-                                        asset.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)
-                                      )}
+                                      <UserAvatar
+                                        photoPath={asset.currentEmployee.photoPath}
+                                        fullName={asset.currentEmployee.fullName}
+                                        className="w-full h-full text-[10px]"
+                                      />
                                     </div>
                                     <div>
                                       <p className="text-[10px] font-black uppercase text-foreground leading-none">

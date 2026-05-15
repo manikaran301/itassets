@@ -28,7 +28,9 @@ import { createPortal } from "react-dom";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/contexts/ToastContext";
 import Papa from "papaparse";
+import { UserAvatar } from "@/components/UserAvatar";
 import { format } from "date-fns";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface PipelineStep {
   status: string;
@@ -389,52 +391,54 @@ export default function JoinersPage() {
           </div>
 
           <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-            <select
-              value={onboardingStatus}
-              onChange={(e) =>
-                setOnboardingStatus(e.target.value as "active" | "completed")
-              }
-              className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]"
-            >
-              <option value="active">ACTIVE JOINERS</option>
-              <option value="completed">COMPLETED</option>
-            </select>
-            <select
-              value={selectedCompany}
-              onChange={(e) => setSelectedCompany(e.target.value)}
-              className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]"
-            >
-              <option value="all">COMPANIES</option>
-              {companies.map((c) => (
-                <option key={c} value={c}>
-                  {c.toUpperCase()}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]"
-            >
-              <option value="all">DEPARTMENTS</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d.toUpperCase()}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="bg-muted/30 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-border focus:border-primary/30 outline-none cursor-pointer transition-all min-w-[140px]"
-            >
-              <option value="all">LOCATIONS</option>
-              {locations.map((l) => (
-                <option key={l} value={l}>
-                  {l.toUpperCase()}
-                </option>
-              ))}
-            </select>
+            <div className="w-full lg:w-48">
+              <SearchableSelect
+                options={[
+                  { value: "active", label: "ACTIVE JOINERS" },
+                  { value: "completed", label: "COMPLETED" },
+                ]}
+                value={onboardingStatus}
+                onChange={(val) => setOnboardingStatus((val as "active" | "completed") || "active")}
+                placeholder="STATUS"
+                compact
+              />
+            </div>
+            <div className="w-full lg:w-48">
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "COMPANIES" },
+                  ...companies.map((c) => ({ value: c, label: c.toUpperCase() })),
+                ]}
+                value={selectedCompany}
+                onChange={(val) => setSelectedCompany(val || "all")}
+                placeholder="COMPANY"
+                compact
+              />
+            </div>
+            <div className="w-full lg:w-48">
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "DEPARTMENTS" },
+                  ...departments.map((d) => ({ value: d, label: d.toUpperCase() })),
+                ]}
+                value={selectedDepartment}
+                onChange={(val) => setSelectedDepartment(val || "all")}
+                placeholder="DEPARTMENT"
+                compact
+              />
+            </div>
+            <div className="w-full lg:w-48">
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "LOCATIONS" },
+                  ...locations.map((l) => ({ value: l, label: l.toUpperCase() })),
+                ]}
+                value={selectedLocation}
+                onChange={(val) => setSelectedLocation(val || "all")}
+                placeholder="LOCATION"
+                compact
+              />
+            </div>
           </div>
         </div>
 
@@ -546,17 +550,11 @@ export default function JoinersPage() {
                       {/* Employee */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-xs border border-primary/10 overflow-hidden shrink-0">
-                            {joiner.photoPath ? (
-                              <img
-                                src={joiner.photoPath}
-                                alt={joiner.fullName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              joiner.fullName[0]
-                            )}
-                          </div>
+                          <UserAvatar
+                            photoPath={joiner.photoPath}
+                            fullName={joiner.fullName}
+                            className="w-9 h-9 rounded-xl text-xs"
+                          />
                           <div>
                             <p className="text-sm font-bold group-hover:text-primary transition-colors">
                               {joiner.fullName}

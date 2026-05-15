@@ -57,6 +57,64 @@ interface AuditLogTableProps {
   totalPages: number;
 }
 
+const JsonDiffViewer = ({ oldValue, newValue }: { oldValue: any; newValue: any }) => {
+  if (!oldValue && !newValue) return <div className="text-zinc-500 italic">No data</div>;
+
+  const safeOld = typeof oldValue === 'object' && oldValue !== null ? oldValue : (!oldValue ? {} : { value: oldValue });
+  const safeNew = typeof newValue === 'object' && newValue !== null ? newValue : (!newValue ? {} : { value: newValue });
+
+  const allKeys = Array.from(new Set([...Object.keys(safeOld), ...Object.keys(safeNew)]));
+
+  return (
+    <div className="font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+      <div className="text-zinc-500">{"{"}</div>
+      {allKeys.map((key) => {
+        const oldV = safeOld[key];
+        const newV = safeNew[key];
+        const oldStr = JSON.stringify(oldV);
+        const newStr = JSON.stringify(newV);
+
+        if (oldStr === newStr) {
+          return (
+            <div key={key} className="pl-4 text-zinc-400 flex">
+              <span className="w-4 shrink-0 inline-block"></span>
+              <span className="text-zinc-500">"{key}":</span>&nbsp;<span className="break-all">{newStr},</span>
+            </div>
+          );
+        } else if (oldV === undefined) {
+          return (
+            <div key={key} className="pl-4 text-green-400 bg-green-500/10 flex">
+              <span className="w-4 shrink-0 inline-block font-bold text-green-500">+</span>
+              <span className="opacity-80">"{key}":</span>&nbsp;<span className="break-all">{newStr},</span>
+            </div>
+          );
+        } else if (newV === undefined) {
+          return (
+            <div key={key} className="pl-4 text-red-400 bg-red-500/10 flex">
+              <span className="w-4 shrink-0 inline-block font-bold text-red-500">-</span>
+              <span className="opacity-80">"{key}":</span>&nbsp;<span className="break-all">{oldStr},</span>
+            </div>
+          );
+        } else {
+          return (
+            <div key={key} className="pl-4 flex flex-col">
+              <div className="text-red-400 bg-red-500/10 flex w-full">
+                <span className="w-4 shrink-0 inline-block font-bold text-red-500">-</span>
+                <span className="opacity-80">"{key}":</span>&nbsp;<span className="break-all">{oldStr},</span>
+              </div>
+              <div className="text-green-400 bg-green-500/10 flex w-full">
+                <span className="w-4 shrink-0 inline-block font-bold text-green-500">+</span>
+                <span className="opacity-80">"{key}":</span>&nbsp;<span className="break-all">{newStr},</span>
+              </div>
+            </div>
+          );
+        }
+      })}
+      <div className="text-zinc-500">{"}"}</div>
+    </div>
+  );
+};
+
 export function AuditLogTable({
   logs,
   currentPage,
@@ -270,63 +328,91 @@ export function AuditLogTable({
               {/* Modal Content */}
               <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
                 {/* Metadata Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl border border-border bg-muted/10">
-                    <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                      <Activity className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        Operation Type
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Operation Type */}
+                  <div className="group relative overflow-hidden p-5 rounded-[24px] border border-white/5 bg-gradient-to-br from-card/80 to-muted/20 backdrop-blur-xl hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors duration-500" />
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3 text-muted-foreground group-hover:text-primary transition-colors duration-300">
+                        <Activity className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                          Operation Type
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "inline-flex items-center px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur-md",
+                          actionColor(selectedLog.action),
+                        )}
+                      >
+                        {selectedLog.action.replaceAll("_", " ")}
                       </span>
                     </div>
-                    <span
-                      className={cn(
-                        "inline-flex items-center px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest shadow-sm",
-                        actionColor(selectedLog.action),
-                      )}
-                    >
-                      {selectedLog.action.replaceAll("_", " ")}
-                    </span>
                   </div>
-                  <div className="p-4 rounded-2xl border border-border bg-muted/10">
-                    <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                      <UserIcon className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        Authenticated User
-                      </span>
+
+                  {/* Authenticated User */}
+                  <div className="group relative overflow-hidden p-5 rounded-[24px] border border-white/5 bg-gradient-to-br from-card/80 to-muted/20 backdrop-blur-xl hover:border-secondary/30 transition-all duration-500 hover:shadow-2xl hover:shadow-secondary/10">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-secondary/10 rounded-full blur-2xl group-hover:bg-secondary/20 transition-colors duration-500" />
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-2 text-muted-foreground group-hover:text-secondary transition-colors duration-300">
+                        <UserIcon className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                          Authenticated User
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-3">
+                        <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary font-black shadow-inner">
+                          {selectedLog.user?.fullName?.[0] || "S"}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-foreground">
+                            {selectedLog.user?.fullName || "System"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                            @{selectedLog.user?.username || "automation"}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm font-black">
-                      {selectedLog.user?.fullName || "System"}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground uppercase opacity-60">
-                      @{selectedLog.user?.username || "automation"}
-                    </p>
                   </div>
-                  <div className="p-4 rounded-2xl border border-border bg-muted/10">
-                    <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        Occurred At
-                      </span>
+
+                  {/* Occurred At */}
+                  <div className="group relative overflow-hidden p-5 rounded-[24px] border border-white/5 bg-gradient-to-br from-card/80 to-muted/20 backdrop-blur-xl hover:border-amber-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-colors duration-500" />
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3 text-muted-foreground group-hover:text-amber-500 transition-colors duration-300">
+                        <Clock className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                          Occurred At
+                        </span>
+                      </div>
+                      <p className="text-sm font-black text-foreground">
+                        {new Date(selectedLog.changedAt).toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-amber-500/80 uppercase tracking-widest font-bold mt-1">
+                        {formatDistanceToNow(new Date(selectedLog.changedAt), {
+                          addSuffix: true,
+                        })}
+                      </p>
                     </div>
-                    <p className="text-sm font-black">
-                      {new Date(selectedLog.changedAt).toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground italic font-medium">
-                      {formatDistanceToNow(new Date(selectedLog.changedAt), {
-                        addSuffix: true,
-                      })}
-                    </p>
                   </div>
-                  <div className="p-4 rounded-2xl border border-border bg-muted/10">
-                    <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                      <Info className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        Internal ID
-                      </span>
+
+                  {/* Internal ID */}
+                  <div className="group relative overflow-hidden p-5 rounded-[24px] border border-white/5 bg-gradient-to-br from-card/80 to-muted/20 backdrop-blur-xl hover:border-blue-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors duration-500" />
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3 text-muted-foreground group-hover:text-blue-500 transition-colors duration-300">
+                        <Info className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                          Internal Reference
+                        </span>
+                      </div>
+                      <div className="bg-muted/30 px-3 py-2 rounded-xl border border-border/50 group-hover:border-blue-500/30 transition-colors duration-300">
+                        <p className="text-[11px] font-black font-mono tracking-wider text-blue-400 break-all">
+                          {selectedLog.entityId}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[10px] font-black font-mono break-all">
-                      {selectedLog.entityId}
-                    </p>
                   </div>
                 </div>
 
@@ -338,15 +424,12 @@ export function AuditLogTable({
                     </h3>
                     <div className="rounded-[24px] border border-white/5 bg-zinc-950 p-6 overflow-x-auto shadow-2xl relative group/code">
                       <div className="absolute top-4 right-4 text-[9px] font-black text-white/20 uppercase tracking-widest group-hover/code:text-primary transition-colors">
-                        JSON SNAPSHOT
+                        JSON DIFF
                       </div>
-                      <pre className="text-[11px] font-mono leading-relaxed text-zinc-300">
-                        {JSON.stringify(
-                          selectedLog.newValue || selectedLog.oldValue,
-                          null,
-                          2,
-                        )}
-                      </pre>
+                      <JsonDiffViewer 
+                        oldValue={selectedLog.oldValue} 
+                        newValue={selectedLog.newValue} 
+                      />
                     </div>
                   </div>
                 </div>

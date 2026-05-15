@@ -281,6 +281,9 @@ export default function EditEmployeePage() {
       if (photo) {
         const uploadData = new FormData();
         uploadData.append("file", photo);
+        uploadData.append("company", formData.companyName || "Unassigned");
+        uploadData.append("employeeCode", formData.employeeCode || "");
+        uploadData.append("employeeName", formData.fullName || "");
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
           body: uploadData,

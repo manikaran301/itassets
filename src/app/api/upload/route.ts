@@ -8,6 +8,8 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const company = formData.get("company") as string || "Unassigned";
+    const empCode = formData.get("employeeCode") as string || "";
+    const empName = formData.get("employeeName") as string || "";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -16,9 +18,18 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create unique filename
+    // Create unique filename with employee details if available
     const fileExtension = file.name.split(".").pop();
-    const fileName = `${randomUUID()}.${fileExtension}`;
+    
+    let prefix = "";
+    if (empCode || empName) {
+      const safeCode = empCode.replace(/[^a-zA-Z0-9]/g, "_");
+      const safeName = empName.replace(/[^a-zA-Z0-9]/g, "_");
+      // Combine code and name, remove duplicate underscores, and remove leading underscores
+      prefix = `${safeCode}_${safeName}_`.replace(/_+/g, "_").replace(/^_/, "");
+    }
+    
+    const fileName = `${prefix}${randomUUID().slice(0, 8)}.${fileExtension}`;
     
     // Sanitize company name for folder structure (replace special chars with underscores)
     const sanitizedCompany = company.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_");

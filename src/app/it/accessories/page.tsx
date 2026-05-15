@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Papa from "papaparse";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { UserAvatar } from "@/components/UserAvatar";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/contexts/ToastContext";
 
@@ -473,14 +474,12 @@ export default function AccessoriesPage() {
                     <td className="px-4 py-2.5">
                       {acc.currentEmployee ? (
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center overflow-hidden">
-                            {acc.currentEmployee.photoPath ? (
-                              <img src={acc.currentEmployee.photoPath} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[9px] font-black text-muted-foreground/40 uppercase">
-                                {acc.currentEmployee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                              </span>
-                            )}
+                          <div className="relative group/avatar">
+                            <UserAvatar
+                              photoPath={acc.currentEmployee.photoPath}
+                              fullName={acc.currentEmployee.fullName}
+                              className="w-7 h-7 rounded-lg text-[9px] border border-white/5 overflow-hidden"
+                            />
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-bold truncate leading-tight group-hover:text-primary transition-colors">{acc.currentEmployee.fullName}</p>

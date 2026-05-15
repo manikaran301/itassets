@@ -34,6 +34,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { useToast } from "@/contexts/ToastContext";
 import { Download, FileSpreadsheet } from "lucide-react";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface Workspace {
   id: string;
@@ -531,15 +532,11 @@ export default function WorkspacesPage() {
                   <div className="mb-4">
                     {ws.employee ? (
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 overflow-hidden shrink-0">
-                          {ws.employee.photoPath ? (
-                            <img src={ws.employee.photoPath} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-primary">
-                              {ws.employee.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </div>
-                          )}
-                        </div>
+                        <UserAvatar
+                          photoPath={ws.employee.photoPath}
+                          fullName={ws.employee.fullName}
+                          className="w-10 h-10 rounded-xl"
+                        />
                         <div className="min-w-0">
                           <p className="text-[10px] font-black truncate uppercase tracking-tight">{ws.employee.fullName}</p>
                           <p className="text-[8px] font-bold text-muted-foreground/60 uppercase">{ws.employee.employeeCode}</p>
