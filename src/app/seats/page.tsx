@@ -222,7 +222,7 @@ export default function WorkspacesPage() {
 
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/workspaces?id=${editingWorkspace.id}`, {
+      const res = await fetch(`/api/workspaces/${editingWorkspace.id}`, {
         method: "DELETE"
       });
 
