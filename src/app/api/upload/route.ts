@@ -38,12 +38,20 @@ export async function POST(req: NextRequest) {
     const uploadDir = path.join(process.cwd(), "public", "uploads", "employees", sanitizedCompany);
     try {
       await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // Ignore if directory exists
+    } catch (e: any) {
+      if (e.code !== 'EEXIST') {
+        console.error("mkdir error:", e);
+        return NextResponse.json({ error: "Failed to create directory", details: e.message }, { status: 500 });
+      }
     }
 
     const filePath = path.join(uploadDir, fileName);
-    await writeFile(filePath, buffer);
+    try {
+      await writeFile(filePath, buffer);
+    } catch (e: any) {
+      console.error("writeFile error:", e);
+      return NextResponse.json({ error: "Failed to write file", details: e.message }, { status: 500 });
+    }
 
     // Return the relative path for database storage
     const relativePath = `/api/uploads/employees/${sanitizedCompany}/${fileName}`;
@@ -52,8 +60,8 @@ export async function POST(req: NextRequest) {
       message: "File uploaded successfully", 
       path: relativePath 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json({ error: "Upload failed", details: error.message }, { status: 500 });
   }
 }
