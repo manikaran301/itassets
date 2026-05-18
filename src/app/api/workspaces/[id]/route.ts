@@ -49,7 +49,7 @@ export async function PATCH(
         company: mapCompanyBranch(company),
         type,
         floor,
-        capacity,
+        capacity: capacity ? parseInt(capacity.toString(), 10) : undefined,
       }
     });
 

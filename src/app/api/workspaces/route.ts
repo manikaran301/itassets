@@ -201,7 +201,7 @@ export async function POST(request: Request) {
         company: mapCompanyBranch(company),
         type: type || "workstation",
         floor: floor || "03",
-        capacity: capacity || 1,
+        capacity: capacity ? parseInt(capacity.toString(), 10) : 1,
         locationId: locationId || null,
       },
     });
@@ -242,7 +242,7 @@ export async function PUT(request: Request) {
         company: mapCompanyBranch(company),
         type,
         floor,
-        capacity,
+        capacity: capacity ? parseInt(capacity.toString(), 10) : undefined,
         locationId: locationId || null,
       },
     });
