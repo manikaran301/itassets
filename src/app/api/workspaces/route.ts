@@ -5,6 +5,16 @@ import { authOptions } from '@/lib/auth';
 import { getDataScope } from '@/lib/scoping';
 import { enforcePermission } from '@/lib/permissions';
 
+function mapCompanyBranch(company: string | null | undefined): "MPL" | "MAL" | "FIFTY_HERTZ" | "OTHER" {
+  if (!company) return "MPL";
+  const upper = company.toUpperCase();
+  if (upper.includes("MPL") || upper.includes("MANIKARAN POWER")) return "MPL";
+  if (upper.includes("MAL") || upper.includes("ANALYTICS")) return "MAL";
+  if (upper.includes("50") || upper.includes("FIFTY")) return "FIFTY_HERTZ";
+  if (upper === "MPL" || upper === "MAL" || upper === "FIFTY_HERTZ" || upper === "OTHER") return upper as any;
+  return "OTHER";
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -188,7 +198,7 @@ export async function POST(request: Request) {
     const workspace = await prisma.workspace.create({
       data: {
         code,
-        company: company || "MPL",
+        company: mapCompanyBranch(company),
         type: type || "workstation",
         floor: floor || "03",
         capacity: capacity || 1,
@@ -229,7 +239,7 @@ export async function PUT(request: Request) {
       where: { id },
       data: {
         code,
-        company,
+        company: mapCompanyBranch(company),
         type,
         floor,
         capacity,

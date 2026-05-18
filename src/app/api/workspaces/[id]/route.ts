@@ -4,6 +4,16 @@ import prisma from '@/lib/prisma';
 import { authOptions } from "@/lib/auth";
 import { enforcePermission } from '@/lib/permissions';
 
+function mapCompanyBranch(company: string | null | undefined): "MPL" | "MAL" | "FIFTY_HERTZ" | "OTHER" {
+  if (!company) return "MPL";
+  const upper = company.toUpperCase();
+  if (upper.includes("MPL") || upper.includes("MANIKARAN POWER")) return "MPL";
+  if (upper.includes("MAL") || upper.includes("ANALYTICS")) return "MAL";
+  if (upper.includes("50") || upper.includes("FIFTY")) return "FIFTY_HERTZ";
+  if (upper === "MPL" || upper === "MAL" || upper === "FIFTY_HERTZ" || upper === "OTHER") return upper as any;
+  return "OTHER";
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -36,7 +46,7 @@ export async function PATCH(
       where: { id },
       data: {
         code,
-        company,
+        company: mapCompanyBranch(company),
         type,
         floor,
         capacity,

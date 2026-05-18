@@ -8,17 +8,26 @@ export async function GET(
 ) {
   try {
     const { path: pathSegments } = await context.params;
-    const filePath = path.join(process.cwd(), "uploads", ...pathSegments);
+    let fileBuffer;
+    let resolvedPath = path.resolve(path.join(process.cwd(), "public", "uploads", ...pathSegments));
+    const publicUploadDir = path.resolve(path.join(process.cwd(), "public", "uploads"));
     
-    // Security check: ensure the path is within the uploads directory
-    const resolvedPath = path.resolve(filePath);
-    const uploadDir = path.resolve(path.join(process.cwd(), "uploads"));
-    
-    if (!resolvedPath.startsWith(uploadDir)) {
+    // Security check for public/uploads
+    if (!resolvedPath.startsWith(publicUploadDir)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const fileBuffer = await readFile(resolvedPath);
+    try {
+      fileBuffer = await readFile(resolvedPath);
+    } catch (err) {
+      // Fallback to old 'uploads' directory
+      resolvedPath = path.resolve(path.join(process.cwd(), "uploads", ...pathSegments));
+      const oldUploadDir = path.resolve(path.join(process.cwd(), "uploads"));
+      if (!resolvedPath.startsWith(oldUploadDir)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      fileBuffer = await readFile(resolvedPath);
+    }
     
     // Basic mime type detection based on extension
     const ext = path.extname(resolvedPath).toLowerCase();

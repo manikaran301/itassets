@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const sanitizedCompany = company.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_");
     
     // Ensure uploads directory exists
-    const uploadDir = path.join(process.cwd(), "uploads", "employees", sanitizedCompany);
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "employees", sanitizedCompany);
     try {
       await mkdir(uploadDir, { recursive: true });
     } catch (e) {
@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
     await writeFile(filePath, buffer);
 
     // Return the relative path for database storage
-    // We'll serve this via /api/uploads/employees/[company_name]/[filename]
     const relativePath = `/api/uploads/employees/${sanitizedCompany}/${fileName}`;
 
     return NextResponse.json({ 
