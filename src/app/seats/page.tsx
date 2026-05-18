@@ -35,6 +35,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { useToast } from "@/contexts/ToastContext";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
+import { InteractiveFloorPlan } from "@/components/InteractiveFloorPlan";
 
 interface Workspace {
   id: string;
@@ -469,7 +470,7 @@ export default function WorkspacesPage() {
             <SearchableSelect
               options={[
                 { value: "all", label: "ALL LOCATIONS" },
-                ...masterLocations.map(l => ({ value: l.id, label: l.name.toUpperCase() }))
+                ...masterLocations.map(l => ({ value: l.id, label: l.state ? `${l.name} (${l.state})`.toUpperCase() : l.name.toUpperCase() }))
               ]}
               value={activeFloor}
               onChange={(val) => setActiveFloor(val || "all")}
@@ -576,78 +577,11 @@ export default function WorkspacesPage() {
           )
         ) : (
           /* Premium Visual Layout (Always Visible Template) */
-          <div 
-            className="w-full h-full min-h-[600px] bg-card/20 border border-border/40 rounded-[32px] relative overflow-hidden cursor-grab active:cursor-grabbing z-0"
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseUp}
-            onWheel={onWheel}
-          >
-            <div 
-              className="absolute inset-0 flex items-center justify-center"
-              style={{
-                transformOrigin: "center",
-                transform: `scale(${scale}) translate(${panX / scale}px, ${panY / scale}px)`,
-                transition: isDragging.current ? "none" : "transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
-            >
-              <svg 
-                viewBox={`0 0 ${SVG_W} ${svgH}`} 
-                className="w-full max-w-[1200px] min-w-[600px] min-h-[600px] h-auto drop-shadow-2xl border-2 border-red-500/20"
-              >
-                {/* Visual grid system */}
-                <defs>
-                  <pattern id="dotGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <circle cx="2" cy="2" r="1" fill="var(--primary)" fillOpacity="0.1" />
-                  </pattern>
-                </defs>
-                <rect width={SVG_W} height={svgH} fill="url(#dotGrid)" rx="40" />
-
-                {/* Table Blocks */}
-                {Array.from({ length: tableCount }).map((_, i) => {
-                  const row = Math.floor(i / GRID_COLS);
-                  const col = i % GRID_COLS;
-                  const x = col * TABLE_BLOCK_W + 50;
-                  const y = row * TABLE_BLOCK_H + 50;
-                  
-                  const tablePath = getTablePath(x, y, 300, 180);
-                  
-                  return (
-                    <g key={i} className="transition-all duration-700">
-                      {/* Table Surface */}
-                      <path 
-                        d={tablePath} 
-                        fill="#4f46e5" 
-                        fillOpacity="0.8" 
-                        stroke="#818cf8" 
-                        strokeWidth="4" 
-                      />
-                      
-                      {/* Seats around the table */}
-                      {Array.from({ length: SEATS_PER_TABLE }).map((_, si) => {
-                        let sx, sy;
-                        if (si < 4) { sx = x + (si * 75) + 35; sy = y - 30; }
-                        else if (si < 8) { sx = x + ((si-4) * 75) + 35; sy = y + 180 + 30; }
-                        else { sx = x - 30; sy = y + 90; }
-
-                        return (
-                          <circle 
-                            key={si} 
-                            cx={sx} 
-                            cy={sy} 
-                            r="18" 
-                            fill="#06b6d4" 
-                            stroke="#22d3ee" 
-                            strokeWidth="2" 
-                          />
-                        );
-                      })}
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
+          <div className="w-full h-full min-h-[600px] bg-card/20 border border-border/40 rounded-[32px] relative overflow-hidden z-0">
+             <InteractiveFloorPlan 
+                workspaces={workspaces} 
+                onSeatClick={(ws) => handleOpenModal(ws)}
+             />
           </div>
         )}
       </div>
@@ -724,7 +658,7 @@ export default function WorkspacesPage() {
                     <Map className="w-3 h-3" /> Location / Floor
                   </label>
                   <SearchableSelect
-                    options={masterLocations.map(l => ({ value: l.id, label: l.name.toUpperCase() }))}
+                    options={masterLocations.map(l => ({ value: l.id, label: l.state ? `${l.name} (${l.state})`.toUpperCase() : l.name.toUpperCase() }))}
                     value={formData.locationId}
                     onChange={(val) => {
                       const loc = masterLocations.find(l => l.id === val);

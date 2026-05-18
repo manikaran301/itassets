@@ -25,6 +25,7 @@ interface MasterItem {
   name: string;
   code?: string;
   address?: string;
+  state?: string;
   isActive: boolean;
 }
 
@@ -33,6 +34,45 @@ const TABS = [
   { id: "departments", label: "Departments", icon: Users2 },
   { id: "designations", label: "Designations", icon: Briefcase },
   { id: "locations", label: "Locations", icon: MapPin },
+] as const;
+
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chandigarh",
+  "Chhattisgarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi (NCT of Delhi)",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Ladakh",
+  "Lakshadweep",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Puducherry",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal"
 ] as const;
 
 export default function ManagementPage() {
@@ -45,7 +85,7 @@ export default function ManagementPage() {
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<MasterItem | null>(null);
-  const [formData, setFormData] = useState({ name: "", code: "", address: "", isActive: true });
+  const [formData, setFormData] = useState({ name: "", code: "", address: "", state: "", isActive: true });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -72,11 +112,12 @@ export default function ManagementPage() {
         name: item.name, 
         code: item.code || "", 
         address: item.address || "",
+        state: item.state || "",
         isActive: item.isActive
       });
     } else {
       setEditingItem(null);
-      setFormData({ name: "", code: "", address: "", isActive: true });
+      setFormData({ name: "", code: "", address: "", state: "", isActive: true });
     }
     setShowModal(true);
   };
@@ -198,7 +239,10 @@ export default function ManagementPage() {
                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Entity Code</th>
                   )}
                   {activeTab === "locations" && (
-                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Address</th>
+                    <>
+                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Address</th>
+                      <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">State</th>
+                    </>
                   )}
                   <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Status</th>
                   <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-right">Actions</th>
@@ -214,7 +258,12 @@ export default function ManagementPage() {
                       </td>
                     )}
                     {activeTab === "locations" && (
-                      <td className="px-6 py-4 text-[10px] text-muted-foreground font-bold">{item.address || "—"}</td>
+                      <>
+                        <td className="px-6 py-4 text-10px text-muted-foreground font-bold">{item.address || "—"}</td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-1 bg-muted rounded text-[10px] font-mono font-bold">{item.state || "—"}</span>
+                        </td>
+                      </>
                     )}
                     <td className="px-6 py-4 text-center">
                       <span className={cn(
@@ -258,7 +307,7 @@ export default function ManagementPage() {
                   {editingItem ? "Edit" : "Add New"} {activeTab.slice(0, -1)}
                 </h3>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  Update central taxonomy record
+                  Update central central registry taxonomy
                 </p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-muted rounded-xl transition-all">
@@ -293,15 +342,33 @@ export default function ManagementPage() {
               )}
 
               {activeTab === "locations" && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={e => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full bg-muted/30 border border-border rounded-2xl px-5 py-4 text-sm font-bold focus:bg-background transition-all outline-none min-h-[100px]"
-                    placeholder="Enter location address details..."
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Address</label>
+                    <textarea
+                      value={formData.address}
+                      onChange={e => setFormData({ ...formData, address: e.target.value })}
+                      className="w-full bg-muted/30 border border-border rounded-2xl px-5 py-4 text-sm font-bold focus:bg-background transition-all outline-none min-h-[80px]"
+                      placeholder="Enter location address details..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">State / Region <span className="text-red-500">*</span></label>
+                    <select
+                      required
+                      value={formData.state}
+                      onChange={e => setFormData({ ...formData, state: e.target.value })}
+                      className="w-full bg-muted/30 border border-border rounded-2xl px-5 py-4 text-sm font-bold focus:bg-background transition-all outline-none"
+                    >
+                      <option value="" disabled className="text-muted-foreground bg-card">Select State...</option>
+                      {INDIAN_STATES.map((state) => (
+                        <option key={state} value={state} className="bg-card text-foreground font-bold">
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
 
               <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-border/50">

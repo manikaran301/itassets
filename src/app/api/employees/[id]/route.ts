@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from "@/lib/auth";
 import { enforcePermission } from '@/lib/permissions';
 
 async function generateLogCode(): Promise<string> {
@@ -82,6 +82,40 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     // Fetch old value for audit logging
     const oldEmployee = await prisma.employee.findUnique({ where: { id } });
 
+    // Resolve IDs from master tables
+    let resolvedCompanyId = data.companyId && data.companyId.trim() !== "" ? data.companyId : null;
+    let resolvedDepartmentId = null;
+    let resolvedDesignationId = null;
+    let resolvedLocationId = data.locationId && data.locationId.trim() !== "" ? data.locationId : null;
+
+    if (!resolvedCompanyId && data.companyName) {
+      const company = await prisma.company.findFirst({
+        where: { name: { contains: data.companyName, mode: 'insensitive' } }
+      });
+      if (company) resolvedCompanyId = company.id;
+    }
+
+    if (data.department) {
+      const dept = await prisma.department.findFirst({
+        where: { name: { contains: data.department, mode: 'insensitive' } }
+      });
+      if (dept) resolvedDepartmentId = dept.id;
+    }
+
+    if (data.designation) {
+      const desig = await prisma.designation.findFirst({
+        where: { name: { contains: data.designation, mode: 'insensitive' } }
+      });
+      if (desig) resolvedDesignationId = desig.id;
+    }
+
+    if (!resolvedLocationId && data.locationJoining) {
+      const loc = await prisma.location.findFirst({
+        where: { name: { contains: data.locationJoining, mode: 'insensitive' } }
+      });
+      if (loc) resolvedLocationId = loc.id;
+    }
+
     const employee = await prisma.employee.update({
       where: { id },
       data: {
@@ -102,6 +136,18 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
           : { disconnect: true },
         workspace: data.workspaceId
           ? { connect: { id: data.workspaceId } }
+          : { disconnect: true },
+        company: resolvedCompanyId
+          ? { connect: { id: resolvedCompanyId } }
+          : { disconnect: true },
+        dept: resolvedDepartmentId
+          ? { connect: { id: resolvedDepartmentId } }
+          : { disconnect: true },
+        desig: resolvedDesignationId
+          ? { connect: { id: resolvedDesignationId } }
+          : { disconnect: true },
+        loc: resolvedLocationId
+          ? { connect: { id: resolvedLocationId } }
           : { disconnect: true },
       },
     });
@@ -235,6 +281,40 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
+    // Resolve IDs from master tables if provided
+    let resolvedCompanyId = data.companyId && data.companyId.trim() !== "" ? data.companyId : undefined;
+    let resolvedDepartmentId = undefined;
+    let resolvedDesignationId = undefined;
+    let resolvedLocationId = data.locationId && data.locationId.trim() !== "" ? data.locationId : undefined;
+
+    if (resolvedCompanyId === undefined && data.companyName) {
+      const company = await prisma.company.findFirst({
+        where: { name: { contains: data.companyName, mode: 'insensitive' } }
+      });
+      if (company) resolvedCompanyId = company.id;
+    }
+
+    if (data.department) {
+      const dept = await prisma.department.findFirst({
+        where: { name: { contains: data.department, mode: 'insensitive' } }
+      });
+      if (dept) resolvedDepartmentId = dept.id;
+    }
+
+    if (data.designation) {
+      const desig = await prisma.designation.findFirst({
+        where: { name: { contains: data.designation, mode: 'insensitive' } }
+      });
+      if (desig) resolvedDesignationId = desig.id;
+    }
+
+    if (resolvedLocationId === undefined && data.locationJoining) {
+      const loc = await prisma.location.findFirst({
+        where: { name: { contains: data.locationJoining, mode: 'insensitive' } }
+      });
+      if (loc) resolvedLocationId = loc.id;
+    }
+
     const employee = await prisma.employee.update({
       where: { id },
       data: {
@@ -248,6 +328,26 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         ...(data.locationJoining && { locationJoining: data.locationJoining }),
         ...(data.workspaceId && { workspace: { connect: { id: data.workspaceId } } }),
         ...(data.reportingManagerId && { manager: { connect: { id: data.reportingManagerId } } }),
+        ...(resolvedCompanyId !== undefined && {
+          company: resolvedCompanyId
+            ? { connect: { id: resolvedCompanyId } }
+            : { disconnect: true }
+        }),
+        ...(resolvedDepartmentId !== undefined && {
+          dept: resolvedDepartmentId
+            ? { connect: { id: resolvedDepartmentId } }
+            : { disconnect: true }
+        }),
+        ...(resolvedDesignationId !== undefined && {
+          desig: resolvedDesignationId
+            ? { connect: { id: resolvedDesignationId } }
+            : { disconnect: true }
+        }),
+        ...(resolvedLocationId !== undefined && {
+          loc: resolvedLocationId
+            ? { connect: { id: resolvedLocationId } }
+            : { disconnect: true }
+        }),
       },
     });
 

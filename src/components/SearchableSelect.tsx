@@ -11,6 +11,34 @@ interface Option {
   initials?: string;
 }
 
+// Custom lightweight Levenshtein Distance for typo tolerance (Tier 1 Fuzzy Search)
+function getLevenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = Array.from({ length: a.length + 1 }, () => []);
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1, // deletion
+        matrix[i][j - 1] + 1, // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+
+// Custom acronym generator (e.g. "Managing Director" -> "md")
+function getAcronym(label: string): string {
+  return label
+    .split(/[\s\-_]+/)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toLowerCase();
+}
+
 interface SearchableSelectProps {
   options: Option[];
   value: string;
@@ -22,6 +50,7 @@ interface SearchableSelectProps {
   showAvatars?: boolean;
   limit?: number;
   compact?: boolean;
+  disabled?: boolean;
 }
 
 export function SearchableSelect({
@@ -35,11 +64,36 @@ export function SearchableSelect({
   showAvatars = false,
   limit,
   compact = false,
+  disabled = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Track selection frequency in local state + localStorage (Tier 4 Usage Frequency Boost)
+  const [frequencies, setFrequencies] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("mams_select_frequencies");
+      if (stored) {
+        setFrequencies(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Failed to load search frequencies:", e);
+    }
+  }, []);
+
+  const incrementFrequency = (val: string) => {
+    try {
+      const updated = { ...frequencies, [val]: (frequencies[val] || 0) + 1 };
+      setFrequencies(updated);
+      localStorage.setItem("mams_select_frequencies", JSON.stringify(updated));
+    } catch (e) {
+      console.error("Failed to save search frequencies:", e);
+    }
+  };
 
   const selectedOption = useMemo(
     () => options.find((opt) => opt.value === value),
@@ -54,43 +108,99 @@ export function SearchableSelect({
     }
   }, [value, selectedOption, isOpen, options]);
 
-  // ADVANCED SEARCH & RELEVANCE LOGIC
-  const searchLower = search.toLowerCase();
-  
+  // CONTINUOUS SEARCH SCORING SYSTEM (Tiers 1, 2, 4 + Custom Token Matching)
   const sorted = useMemo(() => {
-    // If we have a selected option and the search text matches it exactly, 
-    // we want to show all options but keep the selection at the top.
-    const isExactMatch = selectedOption && searchLower === selectedOption.label.toLowerCase();
+    const isExactMatch = selectedOption && search.toLowerCase() === selectedOption.label.toLowerCase();
     
-    let baseList = isExactMatch ? [...options] : options.filter(opt => 
-      opt.label.toLowerCase().includes(searchLower)
-    );
+    // If exact match exists (dropdown just opened with selection), sort by basic selection frequency
+    if (!search.trim() || isExactMatch) {
+      return [...options].sort((a, b) => {
+        // Boost selected value first
+        if (a.value === value && b.value !== value) return -1;
+        if (b.value === value && a.value !== value) return 1;
 
-    return baseList.sort((a, b) => {
-      const aLabel = a.label.toLowerCase();
-      const bLabel = b.label.toLowerCase();
-      
-      // 1. Exact matches first
-      const aExact = aLabel === searchLower;
-      const bExact = bLabel === searchLower;
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-      
-      // 2. Starts with search term
-      const aStarts = aLabel.startsWith(searchLower);
-      const bStarts = bLabel.startsWith(searchLower);
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-      
-      // 3. Prioritize currently selected value if showing all
-      if (isExactMatch) {
-        if (a.value === value) return -1;
-        if (b.value === value) return 1;
+        const freqA = frequencies[a.value] || 0;
+        const freqB = frequencies[b.value] || 0;
+        if (freqB !== freqA) return freqB - freqA;
+        return a.label.localeCompare(b.label);
+      });
+    }
+
+    const queryLower = search.toLowerCase().trim();
+    const queryTokens = queryLower.split(/\s+/).filter(Boolean);
+
+    const scoredOptions = options.map((opt) => {
+      const labelLower = opt.label.toLowerCase();
+      const labelWords = labelLower.split(/\s+/).filter(Boolean);
+      let score = 0;
+
+      // 1. Exact Match (Huge boost)
+      if (labelLower === queryLower) {
+        score += 1500;
       }
 
-      return 0;
+      // 2. Acronym Match (Tier 3 - e.g. "md" matches "Managing Director")
+      const acronym = getAcronym(opt.label);
+      if (acronym === queryLower) {
+        score += 1000; // Big boost for exact initials match!
+      } else if (acronym.startsWith(queryLower) && queryLower.length >= 2) {
+        score += 400;  // Good boost for prefix initials match!
+      }
+
+      // 3. Starts-With Prefix Match
+      if (labelLower.startsWith(queryLower)) {
+        score += 800;
+      }
+
+      // 4. Substring Index (Earlier in the string is better)
+      const subIdx = labelLower.indexOf(queryLower);
+      if (subIdx !== -1) {
+        score += Math.max(0, 300 - subIdx * 10);
+      }
+
+      // 4. Token & Word-Boundary Matching (Tier 2 Token Scoring)
+      queryTokens.forEach((token) => {
+        let tokenMatched = false;
+        labelWords.forEach((word) => {
+          if (word === token) {
+            score += 150; // Exact word match
+            tokenMatched = true;
+          } else if (word.startsWith(token)) {
+            score += 80; // Word starts with token
+            tokenMatched = true;
+          } else if (word.includes(token)) {
+            score += 30; // Word contains token
+            tokenMatched = true;
+          }
+
+          // 5. Fuzzy Match / Typo Tolerance (Tier 1 Fuzzy Levenshtein Distance)
+          if (!tokenMatched && token.length >= 3 && word.length >= 3) {
+            const dist = getLevenshteinDistance(token, word);
+            const maxAllowedDist = token.length > 5 ? 2 : 1;
+            if (dist <= maxAllowedDist) {
+              score += Math.max(0, 100 - dist * 40); // Inverse penalty based on distance
+            }
+          }
+        });
+      });
+
+      // 6. Selection Frequency Boost (Tier 4 Logarithmic Scaling)
+      const freq = frequencies[opt.value] || 0;
+      if (freq > 0) {
+        score += Math.min(100, Math.log1p(freq) * 30);
+      }
+
+      return { option: opt, score };
     });
-  }, [options, searchLower, selectedOption, value]);
+
+    // Filter out options with 0 score (no match whatsoever)
+    const matches = scoredOptions.filter((item) => item.score > 0);
+
+    // Sort descending by continuous score
+    return matches
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.option);
+  }, [options, search, selectedOption, value, frequencies]);
 
   // Cap rendering to prevent DOM bloat
   const displayLimit = limit ? Math.max(limit, 50) : 50;
@@ -111,6 +221,7 @@ export function SearchableSelect({
   }, []);
 
   const handleSelect = (val: string, label: string) => {
+    incrementFrequency(val);
     onChange(val);
     setSearch(label);
     setIsOpen(false);
@@ -138,9 +249,11 @@ export function SearchableSelect({
             compact 
               ? "bg-muted/30 border border-border px-4 py-2.5 rounded-xl" 
               : "bg-muted/35 border border-border/70 rounded-[22px] px-6 py-4 hover:border-border",
-            isOpen && (compact ? "border-primary/40 shadow-md ring-2 ring-primary/10" : "border-primary/45 shadow-xl shadow-primary/10 ring-4 ring-primary/10")
+            isOpen && (compact ? "border-primary/40 shadow-md ring-2 ring-primary/10" : "border-primary/45 shadow-xl shadow-primary/10 ring-4 ring-primary/10"),
+            disabled && "opacity-30 cursor-not-allowed pointer-events-none bg-muted/5 text-muted-foreground/30 border-border/30"
           )}
           onClick={() => {
+            if (disabled) return;
             setIsOpen(true);
             inputRef.current?.focus();
           }}
@@ -159,6 +272,7 @@ export function SearchableSelect({
           <input
             ref={inputRef}
             type="text"
+            disabled={disabled}
             className={cn(
               "flex-1 min-w-0 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/70",
               compact ? "text-[11px] font-bold" : "text-xs font-bold"
@@ -166,10 +280,12 @@ export function SearchableSelect({
             placeholder={placeholder}
             value={search}
             onFocus={() => {
+              if (disabled) return;
               setIsOpen(true);
               inputRef.current?.select();
             }}
             onChange={(e) => {
+              if (disabled) return;
               setSearch(e.target.value);
               if (!isOpen) setIsOpen(true);
             }}

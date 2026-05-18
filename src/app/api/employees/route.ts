@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 import { getDataScope } from '@/lib/scoping';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from "@/lib/auth";
 import { enforcePermission } from '@/lib/permissions';
 
 // Validation schema for employee creation
@@ -22,6 +22,7 @@ const EmployeeSchema = z.object({
   exitDate: z.string().nullable().optional(),
   status: z.enum(['active', 'exit_pending', 'inactive']).default('active'),
   photoPath: z.string().trim().nullable().optional(),
+  priorExperienceMonths: z.number().int().nonnegative().optional().default(0),
   createdBy: z.string().uuid().nullable().optional().or(z.literal('')),
   workspaceId: z.string().uuid().nullable().optional().or(z.literal('')),
   upcomingId: z.string().uuid().nullable().optional().or(z.literal('')),
@@ -194,6 +195,7 @@ export async function POST(request: Request) {
           exitDate: (data.exitDate && data.exitDate.trim() !== "") ? new Date(data.exitDate) : null,
           status: data.status,
           photoPath: data.photoPath || null,
+          priorExperienceMonths: data.priorExperienceMonths || 0,
           reportingManagerId: managerId || null,
           createdBy: creatorId || null,
           workspace: data.workspaceId ? { connect: { id: data.workspaceId } } : undefined,

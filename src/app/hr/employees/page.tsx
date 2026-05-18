@@ -479,7 +479,7 @@ export default function EmployeesPage() {
                 <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Designation & Dept</th>
                 <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Organization</th>
                 <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Location</th>
-                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Joining Date</th>
+                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Join Date & Experience</th>
                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 text-right pr-10">Actions</th>
               </tr>
             </thead>
@@ -570,19 +570,27 @@ export default function EmployeesPage() {
                         {emp.startDate ? format(new Date(emp.startDate), "MMM dd, yyyy") : "n/a"}
                       </p>
                       <div className="text-[8px] font-bold italic mt-0.5">
-                        {emp.startDate ? (() => {
-                          const start = new Date(emp.startDate);
-                          const diff = new Date().getTime() - start.getTime();
-                          const years = diff / (1000 * 60 * 60 * 24 * 365.25);
-                          if (years < 1) {
-                            const months = Math.floor(years * 12);
-                            if (months === 0) {
-                              return <span className="text-green-500">New Joiner</span>;
-                            }
-                            return <span className="text-muted-foreground/50">{months} Months</span>;
+                        {(() => {
+                          const priorMonths = emp.priorExperienceMonths || 0;
+                          let companyMonths = 0;
+                          if (emp.startDate) {
+                            const start = new Date(emp.startDate);
+                            const diff = new Date().getTime() - start.getTime();
+                            companyMonths = Math.floor(diff / (1000 * 60 * 60 * 24 * 30.44)); 
                           }
-                          return <span className="text-muted-foreground/50">{years.toFixed(1)} Years</span>;
-                        })() : <span className="text-muted-foreground/50">—</span>}
+                          
+                          const totalMonths = companyMonths + priorMonths;
+                          if (totalMonths === 0) return <span className="text-green-500">Fresher</span>;
+                          
+                          const years = Math.floor(totalMonths / 12);
+                          const months = totalMonths % 12;
+                          
+                          let text = "";
+                          if (years > 0) text += `${years} Yr${years > 1 ? 's' : ''} `;
+                          if (months > 0) text += `${months} Mo${months > 1 ? 's' : ''}`;
+                          
+                          return <span className="text-muted-foreground/50" title={`Company Tenure: ${Math.floor(companyMonths/12)} Yrs ${companyMonths%12} Mos | Past: ${Math.floor(priorMonths/12)} Yrs ${priorMonths%12} Mos`}>{text.trim()} Exp</span>;
+                        })()}
                       </div>
                     </td>
 

@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
 
 // Coarse route permissions. Page/module permissions are enforced by the
 // page components and API handlers so users can be granted cross-module access.

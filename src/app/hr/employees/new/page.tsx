@@ -69,6 +69,7 @@ export default function NewEmployeePage() {
     upcomingId: searchParams.get("upcomingId") || "",
     companyId: "",
     locationId: "",
+    priorExperienceMonths: 0,
   });
 
   const [photo, setPhoto] = useState<File | null>(null);
@@ -120,7 +121,7 @@ export default function NewEmployeePage() {
       if (Array.isArray(compData)) setCompanies(compData.map(c => ({ value: c.id, label: c.name })));
       if (Array.isArray(deptData)) setDepartments(deptData.map(d => ({ value: d.name, label: d.name })));
       if (Array.isArray(desigData)) setDesignations(desigData.map(d => ({ value: d.name, label: d.name })));
-      if (Array.isArray(locData)) setLocations(locData.map(l => ({ value: l.id, label: l.name })));
+      if (Array.isArray(locData)) setLocations(locData.map(l => ({ value: l.id, label: l.state ? `${l.name} (${l.state})` : l.name })));
 
       setLoadingManagers(false);
     } catch (error) {
@@ -136,6 +137,16 @@ export default function NewEmployeePage() {
       if (!upcomingId) return;
 
       try {
+        const parseExpToMonths = (expStr: string) => {
+          if (!expStr || expStr.toLowerCase().includes('fresher')) return 0;
+          let totalMonths = 0;
+          const yearsMatch = expStr.match(/(\d+)\s*year/i);
+          if (yearsMatch) totalMonths += parseInt(yearsMatch[1]) * 12;
+          const monthsMatch = expStr.match(/(\d+)\s*month/i);
+          if (monthsMatch) totalMonths += parseInt(monthsMatch[1]);
+          return totalMonths;
+        };
+
         const res = await fetch(`/api/hr/upcoming?id=${upcomingId}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -161,7 +172,8 @@ export default function NewEmployeePage() {
           reportingManagerId: matchedManagerId,
           upcomingId: upcomingId,
           companyId: data.companyId || "",
-          locationId: data.locationId || ""
+          locationId: data.locationId || "",
+          priorExperienceMonths: parseExpToMonths(data.experience || ""),
         }));
         
         // Also sync the companyName and locationJoining for display
@@ -227,8 +239,14 @@ export default function NewEmployeePage() {
         uploadData.append("employeeCode", formData.employeeCode || "");
         uploadData.append("employeeName", formData.fullName || "");
         const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
+        
+        if (!uploadRes.ok) {
+          const uploadResult = await uploadRes.json();
+          throw new Error(uploadResult.error || "Image upload failed. Please check file size and permissions.");
+        }
+        
         const uploadResult = await uploadRes.json();
-        if (uploadRes.ok) photoPath = uploadResult.path;
+        photoPath = uploadResult.path;
       }
 
       const payload = { ...formData, photoPath, createdBy: (session?.user as any)?.id || null };

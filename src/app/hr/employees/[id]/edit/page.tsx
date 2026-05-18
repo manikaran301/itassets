@@ -58,6 +58,11 @@ export default function EditEmployeePage() {
   const [error, setError] = useState("");
   const [isSeatModalOpen, setIsSeatModalOpen] = useState(false);
 
+  const [companies, setCompanies] = useState<{ value: string; label: string }[]>([]);
+  const [departments, setDepartments] = useState<{ value: string; label: string }[]>([]);
+  const [designations, setDesignations] = useState<{ value: string; label: string }[]>([]);
+  const [locations, setLocations] = useState<{ value: string; label: string }[]>([]);
+
   const [formData, setFormData] = useState({
     fullName: "",
     employeeCode: "",
@@ -72,6 +77,8 @@ export default function EditEmployeePage() {
     startDate: "",
     status: "active",
     workspaceId: "",
+    companyId: "",
+    locationId: "",
   });
 
   const [photo, setPhoto] = useState<File | null>(null);
@@ -158,6 +165,35 @@ export default function EditEmployeePage() {
     fetchManagers();
   }, [employeeId]);
 
+  // Fetch Master Data
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [compRes, deptRes, desigRes, locRes] = await Promise.all([
+          fetch("/api/admin/master-data/companies"),
+          fetch("/api/admin/master-data/departments"),
+          fetch("/api/admin/master-data/designations"),
+          fetch("/api/admin/master-data/locations"),
+        ]);
+
+        const [compData, deptData, desigData, locData] = await Promise.all([
+          compRes.json(),
+          deptRes.json(),
+          desigRes.json(),
+          locRes.json(),
+        ]);
+
+        if (Array.isArray(compData)) setCompanies(compData.map(c => ({ value: c.id, label: c.name })));
+        if (Array.isArray(deptData)) setDepartments(deptData.map(d => ({ value: d.name, label: d.name })));
+        if (Array.isArray(desigData)) setDesignations(desigData.map(d => ({ value: d.name, label: d.name })));
+        if (Array.isArray(locData)) setLocations(locData.map(l => ({ value: l.id, label: l.state ? `${l.name} (${l.state})` : l.name })));
+      } catch (err) {
+        console.error("Error fetching master data:", err);
+      }
+    };
+    fetchMasterData();
+  }, []);
+
   // Fetch specific employee details
   useEffect(() => {
     if (!employeeId) return;
@@ -183,6 +219,8 @@ export default function EditEmployeePage() {
             : "",
           status: data.status || "active",
           workspaceId: data.workspaceId || "",
+          companyId: data.companyId || "",
+          locationId: data.locationId || "",
         });
 
         if (data.photoPath) {
@@ -288,8 +326,14 @@ export default function EditEmployeePage() {
           method: "POST",
           body: uploadData,
         });
+        
+        if (!uploadRes.ok) {
+          const uploadResult = await uploadRes.json();
+          throw new Error(uploadResult.error || "Image upload failed. Please check file size and permissions.");
+        }
+        
         const uploadResult = await uploadRes.json();
-        if (uploadRes.ok) photoPath = uploadResult.path;
+        photoPath = uploadResult.path;
       }
 
       const payload = {
@@ -408,37 +452,6 @@ export default function EditEmployeePage() {
     );
   }
 
-  const COMPANIES = [
-    { value: "Manikaran Power Limited (MPL)", label: "Manikaran Power Limited (MPL)" },
-    { value: "Manikaran Renewables Limited (MRL)", label: "Manikaran Renewables Limited (MRL)" },
-    { value: "Manikaran Analytics Limited (MAL)", label: "Manikaran Analytics Limited (MAL)" },
-    { value: "Manikaran Hydro Private Limited (MHPL)", label: "Manikaran Hydro Private Limited (MHPL)" },
-    { value: "50Hertz Limted", label: "50Hertz Limted" },
-    { value: "Manikaran Utility Services Company Limited", label: "Manikaran Utility Services Company Limited" },
-  ];
-
-  const DEPARTMENTS = [
-    { value: "Engineering", label: "Engineering" },
-    { value: "Operations", label: "Operations" },
-    { value: "HR", label: "HR" },
-    { value: "Marketing", label: "Marketing" },
-    { value: "Sales", label: "Sales" },
-    { value: "Logistics", label: "Logistics" },
-    { value: "Finance", label: "Finance" },
-    { value: "Compliance", label: "Compliance" },
-    { value: "IT Support", label: "IT Support" },
-  ];
-
-  const DESIGNATIONS = [
-    { value: "Associate", label: "Associate" },
-    { value: "Senior Associate", label: "Senior Associate" },
-    { value: "Lead", label: "Lead" },
-    { value: "Manager", label: "Manager" },
-    { value: "Director", label: "Director" },
-    { value: "Executive", label: "Executive" },
-    { value: "Intern", label: "Intern" },
-    { value: "Technician", label: "Technician" },
-  ];
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-20">
@@ -589,9 +602,12 @@ export default function EditEmployeePage() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Company/Subsidiary</label>
                     <SearchableSelect
-                      options={COMPANIES}
-                      value={formData.companyName}
-                      onChange={(val) => updateField("companyName", val)}
+                      options={companies}
+                      value={formData.companyId}
+                      onChange={(val) => {
+                        const label = companies.find(c => c.value === val)?.label || val;
+                        setFormData(prev => ({ ...prev, companyId: val, companyName: label }));
+                      }}
                       placeholder="Select Company/Subsidiary..."
                       allowCustom
                     />
@@ -599,7 +615,7 @@ export default function EditEmployeePage() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Department</label>
                     <SearchableSelect
-                      options={DEPARTMENTS}
+                      options={departments}
                       value={formData.department}
                       onChange={(val) => updateField("department", val)}
                       placeholder="Select Department..."
@@ -611,7 +627,7 @@ export default function EditEmployeePage() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Official Designation</label>
                   <SearchableSelect
-                    options={DESIGNATIONS}
+                    options={designations}
                     value={formData.designation}
                     onChange={(val) => updateField("designation", val)}
                     placeholder="Select Seniority..."
@@ -662,18 +678,19 @@ export default function EditEmployeePage() {
                   Deployment Logistics
                 </div>
                 <div className="space-y-4">
-                   <div className="space-y-2">
+                   <div className="space-y-2 overflow-visible">
                       <label className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1">Reporting Location</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/30" />
-                        <input
-                          type="text"
-                          placeholder="Campus / Site Name"
-                          value={formData.locationJoining}
-                          onChange={(e) => updateField("locationJoining", e.target.value)}
-                          className="w-full bg-muted/15 border border-white/5 focus:border-amber-500/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs font-bold outline-none transition-all"
-                        />
-                      </div>
+                      <SearchableSelect
+                        options={locations}
+                        value={formData.locationId}
+                        onChange={(val) => {
+                          const label = locations.find(l => l.value === val)?.label || val;
+                          setFormData(prev => ({ ...prev, locationId: val, locationJoining: label }));
+                        }}
+                        placeholder="Campus / Site"
+                        icon={<MapPin className="w-4 h-4" />}
+                        allowCustom
+                      />
                    </div>
                    <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1">Commencement Date</label>
@@ -791,13 +808,13 @@ export default function EditEmployeePage() {
               <div className="space-y-4">
                 {Array.from(new Set([
                   ...infrastructure.requirements.map(r => r.assetType?.toLowerCase()),
-                  ...infrastructure.requests.filter(r => r.deviceTypeNeeded).map(r => r.deviceTypeNeeded?.toLowerCase()),
+                  ...infrastructure.requests.map(r => r.deviceTypeNeeded ? r.deviceTypeNeeded.toLowerCase() : (r.specialRequirements?.toLowerCase().includes('email') ? 'email' : null)),
                   ...infrastructure.assets.map(a => a.type?.toLowerCase())
                 ].filter(Boolean))).map((type, idx) => {
                   const req = infrastructure.requirements.find(r => r.assetType?.toLowerCase() === type);
-                  const ticket = infrastructure.requests.find(r => r.deviceTypeNeeded?.toLowerCase() === type);
+                  const ticket = infrastructure.requests.find(r => (r.deviceTypeNeeded?.toLowerCase() === type) || (type === 'email' && r.specialRequirements?.toLowerCase().includes('email')));
                   const asset = infrastructure.assets.find(a => a.type?.toLowerCase() === type);
-                  const isFullySetup = !!asset;
+                  const isFullySetup = !!asset || (type === 'email' && infrastructure.emails?.length > 0);
 
                   return (
                     <div key={idx} className={cn(
@@ -810,7 +827,7 @@ export default function EditEmployeePage() {
                             "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all duration-500 shadow-lg",
                             isFullySetup ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-primary/10 text-primary border-primary/20"
                           )}>
-                            {type === 'desktop' ? <Monitor className="w-6 h-6" /> : <Laptop className="w-6 h-6" />}
+                            {type === 'desktop' ? <Monitor className="w-6 h-6" /> : (type === 'email' ? <Mail className="w-6 h-6" /> : (type === 'phone' ? <Smartphone className="w-6 h-6" /> : (type === 'sim' ? <SimIcon className="w-6 h-6" /> : <Laptop className="w-6 h-6" />)))}
                           </div>
                           <div>
                             <h5 className="text-sm font-black uppercase tracking-tight">{type}</h5>

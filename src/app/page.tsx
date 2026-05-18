@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "./api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 
 // Force dynamic rendering - don't pre-render at build time

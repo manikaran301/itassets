@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(
   request: Request,
@@ -58,7 +58,7 @@ export async function POST(
         result = await prisma.designation.create({ data: { name: body.name } });
         break;
       case "locations":
-        result = await prisma.location.create({ data: { name: body.name, address: body.address } });
+        result = await prisma.location.create({ data: { name: body.name, address: body.address, state: body.state } });
         break;
       default:
         return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -80,6 +80,7 @@ export async function PUT(
 
   const { type } = await params;
   const body = await request.json();
+  console.log(`PUT /api/admin/master-data/${type} PAYLOAD:`, body);
   const { id, ...data } = body;
 
   try {
@@ -106,15 +107,16 @@ export async function PUT(
       case "locations":
         result = await prisma.location.update({ 
           where: { id }, 
-          data: { name: body.name, address: body.address, isActive: body.isActive } 
+          data: { name: body.name, address: body.address, state: body.state, isActive: body.isActive } 
         });
         break;
       default:
         return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
     return NextResponse.json(result);
-  } catch (error) {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  } catch (error: any) {
+    console.error(`PUT /api/admin/master-data/${type} error:`, error);
+    return NextResponse.json({ error: error.message || "Update failed" }, { status: 500 });
   }
 }
 

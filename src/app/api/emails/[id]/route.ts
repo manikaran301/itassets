@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from "@/lib/auth";
 import { enforcePermission, hasPermission } from '@/lib/permissions';
 
 export async function GET(
@@ -116,7 +116,7 @@ export async function PATCH(
               emailAccountId: id,
               forwardToAddress: addr,
               isActive: true,
-              createdBy: session.user.id
+              createdBy: userId
             }))
           });
         }
@@ -169,7 +169,7 @@ export async function PATCH(
             where: { id: pendingReq.id },
             data: {
               status: 'fulfilled',
-              fulfilledBy: (session.user as any).id || null,
+              fulfilledBy: userId || null,
               fulfilledAt: new Date(),
               notes: (pendingReq.notes || '') + `\nAuto-fulfilled via email assignment (${finalRecord.emailAddress})`
             }

@@ -23,7 +23,7 @@ export type Employee = PrismaEmployee & {
 
 export type EmployeeListItem = Pick<PrismaEmployee,
   'id' | 'employeeCode' | 'fullName' | 'department' | 'designation' |
-  'status' | 'startDate' | 'deskNumber' | 'companyName' | 'locationJoining' | 'photoPath'
+  'status' | 'startDate' | 'deskNumber' | 'companyName' | 'locationJoining' | 'photoPath' | 'priorExperienceMonths'
 > & {
   manager?: Pick<PrismaEmployee, 'id' | 'fullName' | 'employeeCode'> | null;
   workspace?: { code: string; floor: string } | null;

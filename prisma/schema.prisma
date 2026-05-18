@@ -249,6 +249,7 @@ model Employee {
   deskNumber         String?        @db.VarChar(20)
   startDate          DateTime?      @db.Date
   exitDate           DateTime?      @db.Date
+  priorExperienceMonths Int       @default(0)
   status             EmployeeStatus @default(active)
   photoPath          String?        @db.VarChar(255)
   createdBy          String?        @db.Uuid
@@ -333,6 +334,7 @@ model Location {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String   @unique @db.VarChar(100)
   address   String?  @db.Text
+  state     String?  @db.VarChar(100)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now()) @db.Timestamp
   updatedAt DateTime @updatedAt @db.Timestamp

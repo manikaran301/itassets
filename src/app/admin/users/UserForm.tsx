@@ -295,7 +295,7 @@ export function UserForm({ initialData, action }: UserFormProps) {
                           isSelected ? "text-primary" : "text-muted-foreground",
                         )}
                       >
-                        {loc.name}
+                        {loc.state ? `${loc.name} (${loc.state})` : loc.name}
                       </span>
                       <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">
                         Physical Site

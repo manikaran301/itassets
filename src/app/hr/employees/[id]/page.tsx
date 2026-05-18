@@ -10,6 +10,7 @@ import {
   User,
   Shield,
   Loader2,
+  CheckCircle2,
   XCircle,
   Clock,
   Briefcase,
@@ -391,6 +392,56 @@ export default function EmployeeDetailPage({ params }: PageProps) {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Experience Bifurcation */}
+                  <div className="space-y-2 pt-2 border-t border-white/5 mt-4">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
+                      Experience Portfolio
+                    </p>
+                    <div className="p-4 bg-muted/10 rounded-[24px] border border-white/5 flex flex-col gap-3">
+                      {(() => {
+                        const priorMonths = employee.priorExperienceMonths || 0;
+                        let companyMonths = 0;
+                        if (employee.startDate) {
+                          const start = new Date(employee.startDate);
+                          const diff = new Date().getTime() - start.getTime();
+                          companyMonths = Math.floor(diff / (1000 * 60 * 60 * 24 * 30.44)); 
+                        }
+                        const totalMonths = companyMonths + priorMonths;
+                        
+                        const formatExp = (months: number) => {
+                          if (months === 0) return "0 Months";
+                          const y = Math.floor(months / 12);
+                          const m = months % 12;
+                          let t = "";
+                          if (y > 0) t += `${y} Yr${y>1?'s':''} `;
+                          if (m > 0) t += `${m} Mo${m>1?'s':''}`;
+                          return t.trim();
+                        };
+                        
+                        return (
+                          <>
+                            <div className="flex items-end justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80">Total Experience</span>
+                              <span className="text-xl font-black text-primary tracking-tighter leading-none">{totalMonths === 0 ? "Fresher" : formatExp(totalMonths)}</span>
+                            </div>
+                            {totalMonths > 0 && (
+                              <div className="grid grid-cols-2 gap-2 mt-1">
+                                <div className="bg-card/50 p-2.5 rounded-[16px] border border-white/5 flex flex-col">
+                                  <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-0.5">Past Records</span>
+                                  <span className="text-[10px] font-bold text-foreground/70">{formatExp(priorMonths)}</span>
+                                </div>
+                                <div className="bg-primary/5 p-2.5 rounded-[16px] border border-primary/10 flex flex-col">
+                                  <span className="text-[8px] font-black uppercase tracking-widest text-primary/40 mb-0.5">Company Tenure</span>
+                                  <span className="text-[10px] font-bold text-primary">{formatExp(companyMonths)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -446,25 +497,62 @@ export default function EmployeeDetailPage({ params }: PageProps) {
                 <Shield className="w-4 h-4 text-primary" />
                 Infrastructure Provisioning Status
               </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {[
-                  { icon: Laptop, label: "Laptop", active: employee.assetRequirements?.some((r: any) => r.assetType === 'laptop' && r.status === 'fulfilled') },
-                  { icon: Mail, label: "Email", active: employee.emailAccounts?.length > 0 },
-                  { icon: Smartphone, label: "Mobile", active: employee.assetRequirements?.some((r: any) => r.assetType === 'phone' && r.status === 'fulfilled') },
-                  { icon: SimIcon, label: "Sim Card", active: employee.assetRequirements?.some((r: any) => r.assetType === 'sim' && r.status === 'fulfilled') },
+                  { 
+                    icon: Laptop, 
+                    label: "Laptop", 
+                    active: employee.assetRequirements?.some((r: any) => r.assetType === 'laptop' && r.status === 'fulfilled') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'laptop' && r.status === 'fulfilled'),
+                    pending: employee.assetRequirements?.some((r: any) => r.assetType === 'laptop' && r.status === 'pending') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'laptop' && (r.status === 'pending' || r.status === 'in_progress'))
+                  },
+                  { 
+                    icon: Monitor, 
+                    label: "Desktop", 
+                    active: employee.assetRequirements?.some((r: any) => r.assetType === 'desktop' && r.status === 'fulfilled') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'desktop' && r.status === 'fulfilled'),
+                    pending: employee.assetRequirements?.some((r: any) => r.assetType === 'desktop' && r.status === 'pending') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'desktop' && (r.status === 'pending' || r.status === 'in_progress'))
+                  },
+                  { 
+                    icon: Mail, 
+                    label: "Email", 
+                    active: employee.emailAccounts?.length > 0,
+                    pending: employee.provisioningRequests?.some((r: any) => (r.specialRequirements?.toLowerCase().includes('email') || r.deviceTypeNeeded === 'email') && (r.status === 'pending' || r.status === 'in_progress'))
+                  },
+                  { 
+                    icon: Smartphone, 
+                    label: "Mobile", 
+                    active: employee.assetRequirements?.some((r: any) => r.assetType === 'phone' && r.status === 'fulfilled') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'phone' && r.status === 'fulfilled'),
+                    pending: employee.assetRequirements?.some((r: any) => r.assetType === 'phone' && r.status === 'pending') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'phone' && (r.status === 'pending' || r.status === 'in_progress'))
+                  },
+                  { 
+                    icon: SimIcon, 
+                    label: "Sim Card", 
+                    active: employee.assetRequirements?.some((r: any) => r.assetType === 'sim' && r.status === 'fulfilled') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'sim' && r.status === 'fulfilled'),
+                    pending: employee.assetRequirements?.some((r: any) => r.assetType === 'sim' && r.status === 'pending') || employee.provisioningRequests?.some((r: any) => r.deviceTypeNeeded === 'sim' && (r.status === 'pending' || r.status === 'in_progress'))
+                  },
                 ].map((item, idx) => (
                   <div
                     key={idx}
                     className={cn(
-                      "p-4 rounded-3xl border flex flex-col items-center gap-3 transition-all",
+                      "p-4 rounded-3xl border flex flex-col items-center gap-3 transition-all relative",
                       item.active
-                        ? "bg-primary/10 border-primary/20 text-primary"
+                        ? "bg-primary/10 border-primary/20 text-primary shadow-lg shadow-primary/5"
+                        : item.pending 
+                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500 shadow-lg shadow-amber-500/5"
                         : "bg-muted/10 border-white/5 text-muted-foreground/40 opacity-40 grayscale",
                     )}
                   >
+                    {item.pending && !item.active && (
+                      <div className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full animate-ping" />
+                    )}
+                    {item.active && (
+                      <div className="absolute top-2 right-2 text-primary">
+                        <CheckCircle2 className="w-3 h-3" />
+                      </div>
+                    )}
                     <item.icon className="w-6 h-6" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-center leading-tight">
                       {item.label}
+                      {item.pending && !item.active && <span className="block text-[7px] text-amber-500/80 mt-1">Pending</span>}
                     </span>
                   </div>
                 ))}

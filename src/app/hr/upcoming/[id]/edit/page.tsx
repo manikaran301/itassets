@@ -16,9 +16,10 @@ import {
   CheckCircle2,
   Mail,
   Phone,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/SearchableSelect";
@@ -26,25 +27,60 @@ import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ShieldAlert } from "lucide-react";
 
-const COMPANIES = [
-  { value: "Manikaran Power Limited (MPL)", label: "Manikaran Power Limited (MPL)" },
-  { value: "Manikaran Renewables Limited (MRL)", label: "Manikaran Renewables Limited (MRL)" },
-  { value: "Manikaran Analytics Limited (MAL)", label: "Manikaran Analytics Limited (MAL)" },
-  { value: "Manikaran Hydro Private Limited (MHPL)", label: "Manikaran Hydro Private Limited (MHPL)" },
-  { value: "50Hertz Limted", label: "50Hertz Limted" },
-  { value: "Manikaran Utility Services Company Limited", label: "Manikaran Utility Services Company Limited" },
-];
 
-const DESIGNATIONS = [
-  { value: "Associate", label: "Associate" },
-  { value: "Senior Associate", label: "Senior Associate" },
-  { value: "Lead", label: "Lead" },
-  { value: "Manager", label: "Manager" },
-  { value: "Director", label: "Director" },
-  { value: "Executive", label: "Executive" },
-  { value: "Intern", label: "Intern" },
-  { value: "Technician", label: "Technician" },
-];
+
+function parseExperience(expStr: string | null | undefined) {
+  if (!expStr) return { isFresher: true, years: 0, months: 0 };
+  const clean = expStr.trim().toLowerCase();
+  
+  if (clean === "fresher" || clean === "" || clean === "0" || clean === "0 years" || clean === "0 months") {
+    return { isFresher: true, years: 0, months: 0 };
+  }
+  
+  let years = 0;
+  let months = 0;
+  
+  // Match "X years" or "X year"
+  const yearsMatch = clean.match(/(\d+(?:\.\d+)?)\s*year/);
+  if (yearsMatch) {
+    const val = parseFloat(yearsMatch[1]);
+    years = Math.floor(val);
+    if (val % 1 !== 0) {
+      months = Math.round((val % 1) * 12);
+    }
+  }
+  
+  // Match "Y months" or "Y month"
+  const monthsMatch = clean.match(/(\d+)\s*month/);
+  if (monthsMatch) {
+    months = parseInt(monthsMatch[1], 10);
+  }
+  
+  // Backward compatibility with raw numbers (e.g. "4.5" or "5")
+  if (!yearsMatch && !monthsMatch) {
+    const num = parseFloat(clean);
+    if (!isNaN(num)) {
+      years = Math.floor(num);
+      months = Math.round((num % 1) * 12);
+    }
+  }
+  
+  return { isFresher: false, years, months };
+}
+
+function formatExperience(isFresher: boolean, years: number, months: number) {
+  if (isFresher) return "Fresher";
+  if (years === 0 && months === 0) return "Fresher";
+  
+  const parts = [];
+  if (years > 0) {
+    parts.push(`${years} ${years === 1 ? 'Year' : 'Years'}`);
+  }
+  if (months > 0) {
+    parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
+  }
+  return parts.join(" ");
+}
 
 export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -55,10 +91,33 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
   const [managers, setManagers] = useState<{ value: string; label: string }[]>([]);
   const [locations, setLocations] = useState<{ value: string; label: string }[]>([]);
   const [departments, setDepartments] = useState<{ value: string; label: string }[]>([]);
+  const [companies, setCompanies] = useState<{ value: string; label: string }[]>([]);
+  const [masterCompanies, setMasterCompanies] = useState<any[]>([]);
+  const [masterLocations, setMasterLocations] = useState<any[]>([]);
+  const [designations, setDesignations] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  const [isFresher, setIsFresher] = useState(true);
+  const [expYears, setExpYears] = useState(0);
+  const [expMonths, setExpMonths] = useState(0);
+
+  const handleFresherToggle = (fresher: boolean) => {
+    setIsFresher(fresher);
+    if (fresher) {
+      updateField("experience", "Fresher");
+    } else {
+      updateField("experience", formatExperience(false, expYears, expMonths));
+    }
+  };
+
+  const handleExpChange = (years: number, months: number) => {
+    setExpYears(years);
+    setExpMonths(months);
+    updateField("experience", formatExperience(false, years, months));
+  };
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -67,10 +126,12 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
     email: "",
     phoneNumber: "",
     companyName: "",
+    companyId: "",
     reportingManager: "",
     joiningDate: "",
-    experience: "",
+    experience: "Fresher",
     placeOfPosting: "",
+    locationId: "",
     joiningLocation: "",
   });
 
@@ -97,6 +158,11 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
       if (!res.ok) throw new Error("Failed to fetch joining details.");
       const data = await res.json();
       
+      const parsed = parseExperience(data.experience);
+      setIsFresher(parsed.isFresher);
+      setExpYears(parsed.years);
+      setExpMonths(parsed.months);
+
       setFormData({
         fullName: data.fullName || "",
         designation: data.designation || "",
@@ -104,10 +170,12 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
         email: data.email || "",
         phoneNumber: data.phoneNumber || "",
         companyName: data.companyName || "",
+        companyId: data.companyId || "",
         reportingManager: data.reportingManager || "",
         joiningDate: data.joiningDate ? format(new Date(data.joiningDate), "yyyy-MM-dd") : "",
         experience: data.experience || "",
         placeOfPosting: data.placeOfPosting || "",
+        locationId: data.locationId || "",
         joiningLocation: data.joiningLocation || "",
       });
     } catch (err: any) {
@@ -119,25 +187,42 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
 
   const fetchSupportData = async () => {
     try {
+      // Fetch Managers
       const res = await fetch("/api/employees");
       const employees = await res.json();
       const data = employees.data || employees;
 
       const managerList = data.map((e: any) => ({
-        value: e.fullName,
+        value: `${e.fullName} (${e.employeeCode})`,
         label: `${e.fullName} (${e.employeeCode})`,
       }));
       setManagers(managerList);
 
-      const locList = [...new Set(data.map((e: any) => e.locationJoining).filter(Boolean))].map(
-        (l: any) => ({ value: l as string, label: (l as string).toUpperCase() })
-      );
-      setLocations(locList);
+      // Fetch Master Data
+      const [compRes, deptRes, desigRes, locRes] = await Promise.all([
+        fetch("/api/admin/master-data/companies"),
+        fetch("/api/admin/master-data/departments"),
+        fetch("/api/admin/master-data/designations"),
+        fetch("/api/admin/master-data/locations"),
+      ]);
 
-      const deptList = [...new Set(data.map((e: any) => e.department).filter(Boolean))].map(
-        (d: any) => ({ value: d as string, label: d as string })
-      );
-      setDepartments(deptList);
+      const [compData, deptData, desigData, locData] = await Promise.all([
+        compRes.json(),
+        deptRes.json(),
+        desigRes.json(),
+        locRes.json(),
+      ]);
+
+      if (Array.isArray(compData)) {
+        setMasterCompanies(compData);
+        setCompanies(compData.map(c => ({ value: c.id, label: c.name })));
+      }
+      if (Array.isArray(deptData)) setDepartments(deptData.map(d => ({ value: d.name, label: d.name })));
+      if (Array.isArray(desigData)) setDesignations(desigData.map(d => ({ value: d.name, label: d.name })));
+      if (Array.isArray(locData)) {
+        setMasterLocations(locData);
+        setLocations(locData.map(l => ({ value: l.id, label: l.state ? `${l.name} (${l.state})` : l.name })));
+      }
     } catch (error) {
       console.error("Failed to fetch support data:", error);
     }
@@ -306,7 +391,7 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
                 Designation
               </label>
               <SearchableSelect
-                options={DESIGNATIONS}
+                options={designations}
                 value={formData.designation}
                 onChange={(val) => updateField("designation", val)}
                 placeholder="Select Title..."
@@ -332,9 +417,17 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
                 Company Name
               </label>
               <SearchableSelect
-                options={COMPANIES}
-                value={formData.companyName}
-                onChange={(val) => updateField("companyName", val)}
+                options={companies}
+                value={formData.companyId || formData.companyName}
+                onChange={(val) => {
+                  const comp = masterCompanies.find(c => c.id === val || c.name === val);
+                  if (comp) {
+                    setFormData(prev => ({ ...prev, companyName: comp.name, companyId: comp.id }));
+                  } else {
+                    setFormData(prev => ({ ...prev, companyName: val, companyId: "" }));
+                  }
+                  if (error) setError("");
+                }}
                 placeholder="Select Entity..."
                 allowCustom
               />
@@ -368,19 +461,67 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
-                Total Experience
-              </label>
-              <div className="relative group/field">
-                <History className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
-                <input
-                  type="text"
-                  placeholder="E.g. 4.5 Years"
-                  value={formData.experience}
-                  onChange={(e) => updateField("experience", e.target.value)}
-                  className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs text-foreground outline-none transition-all font-bold"
-                />
+            <div className="space-y-2 col-span-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
+                  Total Experience
+                </label>
+                <div className="text-[9px] font-black text-primary bg-primary/5 px-2.5 py-0.5 rounded border border-primary/10 tracking-widest uppercase">
+                  {formData.experience || "Fresher"}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 bg-muted/25 border border-border/70 rounded-2xl px-4 py-3 transition-all">
+                {/* Fresher toggle */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <GraduationCap className={cn("w-4 h-4 transition-colors", isFresher ? "text-primary" : "text-muted-foreground/40")} />
+                  <span className="text-[9px] font-black uppercase tracking-tight">Fresher</span>
+                  <label className="relative inline-flex items-center cursor-pointer ml-1">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={isFresher}
+                      onChange={(e) => handleFresherToggle(e.target.checked)}
+                    />
+                    <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Divider */}
+                <div className="w-px h-5 bg-border/40 shrink-0" />
+
+                {/* Years */}
+                <select
+                  disabled={isFresher}
+                  value={expYears}
+                  onChange={(e) => handleExpChange(parseInt(e.target.value), expMonths)}
+                  className={cn(
+                    "flex-1 bg-transparent border-none outline-none text-xs font-bold transition-all cursor-pointer",
+                    isFresher && "opacity-30 cursor-not-allowed"
+                  )}
+                >
+                  {Array.from({ length: 31 }, (_, i) => (
+                    <option key={i} value={i}>{i} {i === 1 ? 'Year' : 'Years'}</option>
+                  ))}
+                </select>
+
+                {/* Divider */}
+                <div className="w-px h-5 bg-border/40 shrink-0" />
+
+                {/* Months */}
+                <select
+                  disabled={isFresher}
+                  value={expMonths}
+                  onChange={(e) => handleExpChange(expYears, parseInt(e.target.value))}
+                  className={cn(
+                    "flex-1 bg-transparent border-none outline-none text-xs font-bold transition-all cursor-pointer",
+                    isFresher && "opacity-30 cursor-not-allowed"
+                  )}
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i}>{i} {i === 1 ? 'Month' : 'Months'}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -390,8 +531,16 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
               </label>
               <SearchableSelect
                 options={locations}
-                value={formData.placeOfPosting}
-                onChange={(val) => updateField("placeOfPosting", val)}
+                value={formData.locationId || formData.placeOfPosting}
+                onChange={(val) => {
+                  const loc = masterLocations.find(l => l.id === val || l.name === val);
+                  if (loc) {
+                    setFormData(prev => ({ ...prev, placeOfPosting: loc.name, locationId: loc.id }));
+                  } else {
+                    setFormData(prev => ({ ...prev, placeOfPosting: val, locationId: "" }));
+                  }
+                  if (error) setError("");
+                }}
                 placeholder="Select Location..."
                 allowCustom
               />
@@ -401,16 +550,21 @@ export default function EditUpcomingJoiningPage({ params }: { params: Promise<{ 
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
                 Joining Location Details
               </label>
-              <div className="relative group/field">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within/field:text-primary transition-colors" />
-                <input
-                  type="text"
-                  placeholder="E.g. Main Reception, Block B, Floor 4"
-                  value={formData.joiningLocation}
-                  onChange={(e) => updateField("joiningLocation", e.target.value)}
-                  className="w-full bg-muted/25 border border-border/70 focus:border-primary/40 rounded-2xl pl-12 pr-6 py-3.5 text-xs text-foreground outline-none transition-all font-bold"
-                />
-              </div>
+              <SearchableSelect
+                options={locations}
+                value={formData.joiningLocation}
+                onChange={(val) => {
+                  const loc = masterLocations.find(l => l.id === val || l.name === val);
+                  if (loc) {
+                    updateField("joiningLocation", loc.name);
+                  } else {
+                    updateField("joiningLocation", val);
+                  }
+                }}
+                placeholder="Select Joining Location..."
+                icon={<MapPin className="w-4 h-4" />}
+                allowCustom
+              />
             </div>
           </div>
         </div>
